@@ -19,6 +19,11 @@ p=dst+"/assets/codes/places/prtgRoom.jb"; s=open(p,encoding="utf-8").read()
 for a,b in json.loads(os.environ.get('PATCH','[]')):
     assert a in s, a; s=s.replace(a,b,1)
 open(p,"w",encoding="utf-8").write(s)
+# LPATCH: 아무 파일이나 바꿔치기 (시험용 사본에만) — [[게임 폴더 안의 경로, 원래 글, 바꿀 글], …] · 바꿀 글이 "@파일" 이면 그 파일 내용을 원래 글 뒤에 덧붙임
+for f,a,b in json.loads(os.environ.get('LPATCH','[]')):
+    fp=dst+"/"+f; t=open(fp,encoding="utf-8").read(); assert a in t, (f,a)
+    if b.startswith("@"): b=a+open(b[1:],encoding="utf-8").read()
+    t=t.replace(a,b,1); open(fp,"w",encoding="utf-8").write(t)
 os.system(f'python3 mkzip.py "{TT}" "{TT}.zip" >/dev/null')
 # ── 배속 (게임 속도): 페이지의 시계 (performance.now · Date.now · setTimeout · setInterval · requestAnimationFrame) 를 가상 시계로 바꿔 끼움
 #   SPEED=8 → 처음부터 8 배속 · SEQ 안의 xN → 그때부터 N 배속 (예: x8 로 타이틀 · 조우를 빨리 넘기고 x1 로 이펙트를 찍음 · x0.5 = 느린 화면)

@@ -24,6 +24,8 @@ var public list call moveHeal;
 var public list call moveStatAt;
 var public list call moveFlinch;
 var public list call moveCrit;
+var public string call fxSrcTex;   // 기술을 쓰는 포켓몬의 그림 이름 · 그린 크기 — battleManager.jb 가 moveFx 를 부르기 직전에 fxFrom 으로 넣음 (폭탄 기술의 공 높이)
+var public float call fxSrcSz;
 
 // 상성 배율: 공격 기술 타입 → 방어 포켓몬 타입 1 · 2 (둘째가 없으면 0 → 곱해도 그대로)
 func float typeEff(int atkType, int d1, int d2){
@@ -1128,6 +1130,38 @@ func spClaws(float cx, float cy, float s, string inCol, string outCol, float siz
     }
     spClear(n);
 }
+// 기술을 쓰는 포켓몬의 그림 (이름 · 그린 크기) 을 기억함 — moveFx 바로 앞에서 부름
+func fxFrom(string tex, float sz){
+    fxSrcTex = tex;
+    fxSrcSz = sz;
+}
+// 쏘는 포켓몬 그림의 맨 위 (화면 y): 그림 (96 x 96) 을 위에서부터 2 줄씩 · 줄마다 4 칸 간격으로 훑어 처음 투명하지 않은 픽셀 (dis.isPixelExists) 을 찾음
+//   (cx, cy) = 그림 가운데 · 못 찾거나 그림을 모르면 cy + s * 0.3
+func float sprTop(float cx, float cy, float s){
+    var float call top = cy + s * 0.3;
+    if [fxSrcTex == ""] or [fxSrcSz <= 0]{
+        return(top);
+    }
+    var int call found = 0;
+    var int call py = 0;
+    loop [py < 96] and [found == 0]{
+        var int call px = 4;
+        loop [px < 96] and [found == 0]{
+            var bit call pe = dis.isPixelExists(fxSrcTex, px, py);   // 투명하지 않은 픽셀이면 1
+            if [pe == 1]{
+                found = 1;
+            }
+            px = px + 4;
+        }
+        if [found == 0]{
+            py = py + 2;
+        }
+    }
+    if [found == 1]{
+        top = cy + (48 - py) / 96.0 * fxSrcSz;
+    }
+    return(top);
+}
 // ── 폭탄 기술 (2026-11-22): 빔처럼 빛나는 공 하나 (가운데 inCol · 둘레 outCol 빛 번짐) 를 머리 위에 모음 → 빠르게 날림 → 닿으면 폭발
 // 폭발: (x, y) 에서 큰 빛 (sfxb) 이 터지고 조각 n 개 (sfx1 ~ sfxn) 가 사방으로 튐 · tex 0 = 픽셀 원 (inCol) · 1 ~ 9 = fx_type.png 알갱이 · size = 폭발 크기 (s 에 곱함)
 func spBoom(float x, float y, float s, string inCol, string outCol, float size, int n, int tex, int fr){
@@ -1168,11 +1202,11 @@ func spBoom(float x, float y, float s, string inCol, string outCol, float size, 
     spClear(n);
     dis.removeObj("sfxb");
 }
-// 공 모아 쏘기: 공격하는 포켓몬 머리 위 (s * 0.3) 에 빛 알갱이 8 개 (sfx2 ~ sfx9) 가 맴돌며 모여 공 (sfx1 · 반지름 s * r) 이 커짐 (gather 프레임)
+// 공 모아 쏘기: 공격하는 포켓몬 머리 위 (그림 맨 위 · sprTop) 에 빛 알갱이 8 개 (sfx2 ~ sfx9) 가 맴돌며 모여 공 (sfx1 · 반지름 s * r) 이 커짐 (gather 프레임)
 //   → 공이 fr 프레임 만에 맞는 곳으로 (점점 빨라짐 · 꼬리 sfx10 ~ sfx13) → spBoom
 func spBomb(float ax, float ay, float tx, float ty, float s, string inCol, string outCol, float r, int gather, int fr, float size, int n, int tex){
     var float call hx = ax;
-    var float call hy = ay + s * 0.3;
+    var float call hy = sprTop(ax, ay, s) + s * r * 1.3 + s * 0.06;   // 머리 꼭대기 (그림의 맨 위 픽셀) 에서 공 반지름 + 조금 더 위
     pxCirc(hx, hy, "sfx1", 1, inCol);
     dis.setGlow("sfx1", outCol, s * r * 2.2);
     dis.setObjLayer("sfx1", 8);
