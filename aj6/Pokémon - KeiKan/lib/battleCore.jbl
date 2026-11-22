@@ -26,6 +26,8 @@ var public list call moveFlinch;
 var public list call moveCrit;
 var public string call fxSrcTex;   // 기술을 쓰는 포켓몬의 그림 이름 · 그린 크기 — battleManager.jb 가 moveFx 를 부르기 직전에 fxFrom 으로 넣음 (폭탄 기술의 공 높이)
 var public float call fxSrcSz;
+var public int call fxSrcWx;       // 지금 날씨 (0 없음 · 1 쾌청 · 2 비 · 3 모래바람 · 4 눈) — 웨더볼 · 대지의파동 색
+var public string call fxSrcCol;   // 지금 기술의 타입 색 (moveFx 가 받은 col)
 
 // 상성 배율: 공격 기술 타입 → 방어 포켓몬 타입 1 · 2 (둘째가 없으면 0 → 곱해도 그대로)
 func float typeEff(int atkType, int d1, int d2){
@@ -530,6 +532,7 @@ func moveFx(int mv, float ax, float ay, float tx, float ty, float s, string col)
     if [hasSp(mv) == 1]{   // 따로 만든 이펙트가 있는 기술 (spFx)
         k = 0;
         log("기술 이펙트: %mv% (따로)");
+        fxSrcCol = col;
         spFx(mv, ax, ay, tx, ty, s);
     }
     if [k != 0]{
@@ -666,7 +669,7 @@ func moveFx(int mv, float ax, float ay, float tx, float ty, float s, string col)
 //   moveFx 가 먼저 여기를 봄 (있으면 이것 · 없으면 종류별 이펙트) · 오브젝트 sfx1 ~ sfx16 (끝나면 모두 지움)
 func int hasSp(int mv){
     var list call sp = [192, 411, 247, 53, 58, 85, 56, 412, 406, 315, 63, 416, 76, 451, 62, 61, 324, 430, 60, 820, 795, 796, 800, 711, 714, 888, 907, 905, 744, 705];   // 63 ~ 705 = 빔 기술 (spBeam)
-    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200, 352, 399, 618, 805, 505, 396];   // 타입 텍스쳐 (fx_type.png) 기술
+    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200, 352, 399, 805, 505, 396, 311];   // 타입 텍스쳐 (fx_type.png) 기술
     if [sp.find(mv) != 0]{
         return(1);
     }
@@ -1131,9 +1134,59 @@ func spClaws(float cx, float cy, float s, string inCol, string outCol, float siz
     spClear(n);
 }
 // 기술을 쓰는 포켓몬의 그림 (이름 · 그린 크기) 을 기억함 — moveFx 바로 앞에서 부름
-func fxFrom(string tex, float sz){
+func fxFrom(string tex, float sz, int wx){
     fxSrcTex = tex;
     fxSrcSz = sz;
+    fxSrcWx = wx;
+}
+// 날씨에 따른 이펙트 색 (조금 채도 있게) — 날씨가 없으면 기술 타입 색 (fxSrcCol): 가운데 (wxIn) · 빛 번짐 (wxOut) · 폭발 알갱이 (wxTex · fx_type.png 칸 · 0 = 원)
+func string wxIn(){
+    if [fxSrcWx == 1]{
+        return("#ffd890");
+    }
+    if [fxSrcWx == 2]{
+        return("#b8dcff");
+    }
+    if [fxSrcWx == 3]{
+        return("#f0d49a");
+    }
+    if [fxSrcWx == 4]{
+        return("#e0f6ff");
+    }
+    return("#f6f6f0");
+}
+func string wxOut(){
+    if [fxSrcWx == 1]{
+        return("#ff7a10");
+    }
+    if [fxSrcWx == 2]{
+        return("#1a6aff");
+    }
+    if [fxSrcWx == 3]{
+        return("#c08a2a");
+    }
+    if [fxSrcWx == 4]{
+        return("#3ab8f0");
+    }
+    if [fxSrcCol == ""]{
+        return("#c8c0a0");
+    }
+    return(fxSrcCol);
+}
+func int wxTex(){
+    if [fxSrcWx == 1]{
+        return(1);
+    }
+    if [fxSrcWx == 2]{
+        return(2);
+    }
+    if [fxSrcWx == 3]{
+        return(6);
+    }
+    if [fxSrcWx == 4]{
+        return(5);
+    }
+    return(0);
 }
 // 쏘는 포켓몬 그림의 맨 위 (화면 y): 그림 (96 x 96) 을 위에서부터 2 줄씩 · 줄마다 4 칸 간격으로 훑어 처음 투명하지 않은 픽셀 (dis.isPixelExists) 을 찾음
 //   (cx, cy) = 그림 가운데 · 못 찾거나 그림을 모르면 cy + s * 0.3
@@ -1908,11 +1961,11 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     if [mv == 399]{   // 악의파동: 어두운 보라 고리
         spPulse(ax, ay, tx, ty, s, "#8a6aa8", "#2a0a4a", 0.085, 22, 0);
     }
-    if [mv == 618]{   // 근원의파동: 크고 짙푸른 고리가 길게
-        spPulse(ax, ay, tx, ty, s, "#d8f0ff", "#1a5aff", 0.11, 30, 0);
+    if [mv == 805]{   // 대지의파동: 날씨에 따른 색의 고리 (날씨가 없으면 타입 색)
+        spPulse(ax, ay, tx, ty, s, wxIn(), wxOut(), 0.075, 20, 0);
     }
-    if [mv == 805]{   // 대지의파동: 흙빛이 도는 흰 고리
-        spPulse(ax, ay, tx, ty, s, "#fff6e4", "#c8a060", 0.075, 20, 0);
+    if [mv == 311]{   // 웨더볼: 날씨에 따른 색의 공을 머리 위에 모아 쏨 → 날씨 알갱이로 터짐 (날씨가 없으면 타입 색)
+        spBomb(ax, ay, tx, ty, s, wxIn(), wxOut(), 0.08, 22, 11, 0.3, 10, wxTex(), 0);
     }
     if [mv == 505]{   // 치유파동: 부드러운 분홍 고리 (변화 기술)
         spPulse(ax, ay, tx, ty, s, "#fff0f8", "#ff8ac8", 0.065, 16, 0);

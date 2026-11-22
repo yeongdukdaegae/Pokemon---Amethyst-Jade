@@ -2815,11 +2815,11 @@ run{
                                 }
                                 if [hN == 1] and [disgHit == 0]{   // 첫 타: 기술 이펙트 (원 + 빛 번짐 · lib/battleCore.jbl 의 moveFx · 정해 둔 기술만)
                                     if [side == 1]{
-                                        bc.fxFrom(myTexNow, mySz);
+                                        bc.fxFrom(myTexNow, mySz, weather);
                                         bc.moveFx(um[1], obj.mypoke.Xpos, obj.mypoke.Ypos, obj.opppoke.Xpos, obj.opppoke.Ypos, pfS, mu.typeCol(um[6]));
                                     }
                                     else{
-                                        bc.fxFrom(oppTex, oppSz);
+                                        bc.fxFrom(oppTex, oppSz, weather);
                                         bc.moveFx(um[1], obj.opppoke.Xpos, obj.opppoke.Ypos, obj.mypoke.Xpos, obj.mypoke.Ypos, pfS, mu.typeCol(um[6]));
                                     }
                                 }
@@ -3453,11 +3453,11 @@ run{
                         }
                         if [um[2] == 2] and [bc.hasSp(uMove) == 1]{   // 변화 기술 중 따로 만든 이펙트가 있는 것 (손톱갈기 등 · lib/battleCore.jbl 의 spFx)
                             if [side == 1]{
-                                bc.fxFrom(myTexNow, mySz);
+                                bc.fxFrom(myTexNow, mySz, weather);
                                 bc.moveFx(uMove, obj.mypoke.Xpos, obj.mypoke.Ypos, obj.opppoke.Xpos, obj.opppoke.Ypos, pfS, mu.typeCol(um[6]));
                             }
                             else{
-                                bc.fxFrom(oppTex, oppSz);
+                                bc.fxFrom(oppTex, oppSz, weather);
                                 bc.moveFx(uMove, obj.opppoke.Xpos, obj.opppoke.Ypos, obj.mypoke.Xpos, obj.mypoke.Ypos, pfS, mu.typeCol(um[6]));
                             }
                         }
