@@ -666,7 +666,7 @@ func moveFx(int mv, float ax, float ay, float tx, float ty, float s, string col)
 //   moveFx 가 먼저 여기를 봄 (있으면 이것 · 없으면 종류별 이펙트) · 오브젝트 sfx1 ~ sfx16 (끝나면 모두 지움)
 func int hasSp(int mv){
     var list call sp = [192, 411, 247, 53, 58, 85, 56, 412, 406, 315, 63, 416, 76, 451, 62, 61, 324, 430, 60, 820, 795, 796, 800, 711, 714, 888, 907, 905, 744, 705];   // 63 ~ 705 = 빔 기술 (spBeam)
-    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585];   // 타입 텍스쳐 (fx_type.png) 기술
+    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200];   // 타입 텍스쳐 (fx_type.png) 기술
     if [sp.find(mv) != 0]{
         return(1);
     }
@@ -1219,6 +1219,136 @@ func spRush(float ax, float ay, float tx, float ty, float s, string inCol, strin
     }
     spBoom(tx, ty, s, inCol, outCol, 0.5, 14, 0, 22);
     spBurst(tx, ty, s, s * 0.1, s * 0.45, "#e0c0ff", "#6a1aaa", 10);
+}
+// ── 발구르기 · 땅 흔들기 기술 (2026-11-22): 쓰는 포켓몬이 위아래로 쿵쿵 (pre 프레임) → 배틀 화면 (땅 · 발판 · 포켓몬) 이 위아래로 떨리면서 (카메라 흔들림 · 점점 잦아듦)
+//   맞는 쪽 발밑에서 납작한 충격파 고리 (sfx1 ~ sfx3) 가 퍼지고 돌 조각 nRock 개 (sfx4 ~ · 10 개까지) 가 튀어 오름 (fr 프레임) — 이펙트도 화면과 같이 떨림
+//   amp = 화면 떨림 세기 (s 에 곱함) · ring = 고리 크기 · aura 1 = 쿵쿵 동안 쓰는 쪽에 outCol 기운 (sfx14 ~ sfx16 · 역린)
+//   배틀 UI (상태 상자 · 대화 상자) 는 그대로 (흔들리지 않음)
+func spQuake(float ax, float ay, float tx, float ty, float s, int pre, int fr, float amp, float ring, int nRock, string inCol, string outCol, int aura){
+    var string call ap = "opppoke";   // 쓰는 쪽 그림
+    var float call gx = tx;
+    var float call gy = obj.mybase.Ypos;   // 맞는 쪽 발밑 (발판 가운데)
+    var float call apx = obj.opppoke.Xpos;
+    var float call apy = obj.opppoke.Ypos;
+    if [abs(ax - obj.mypoke.Xpos) < 1] and [abs(ay - obj.mypoke.Ypos) < 1]{
+        ap = "mypoke";
+        gy = obj.oppbase.Ypos;
+        apx = obj.mypoke.Xpos;
+        apy = obj.mypoke.Ypos;
+    }
+    // 1. 쿵쿵: 쓰는 쪽이 위로 튀었다 떨어지기를 되풀이 (8 프레임마다 한 번)
+    var int call qa = 14;
+    if [aura == 1]{
+        loop [qa <= 16]{
+            pxCirc(apx, apy, "sfx%qa%", s * 0.06, inCol);
+            dis.setGlow("sfx%qa%", outCol, s * 0.12);
+            dis.setObjLayer("sfx%qa%", 1);
+            qa = qa + 1;
+        }
+    }
+    var int call qf = 1;
+    loop [qf <= pre]{
+        var float call qk = sin((qf - floor(qf / 8) * 8) * 22.5);   // 0 → 1 → 0 (8 프레임 한 번)
+        dis.setObjPos(ap, [apx, apy + qk * s * 0.045]);
+        if [aura == 1]{
+            qa = 14;
+            loop [qa <= 16]{
+                var float call qaa = qa * 120 + qf * 25;
+                dis.setObjPos("sfx%qa%", [apx + cos(qaa) * s * 0.16, apy - s * 0.12 + sin(qaa) * s * 0.05 + (qf * 4 + qa * 13 - floor((qf * 4 + qa * 13) / 40) * 40) / 40.0 * s * 0.3]);
+                dis.setObjAlpha("sfx%qa%", floor(200 * (0.6 + 0.4 * sin(qf * 50 + qa * 70))));
+                qa = qa + 1;
+            }
+        }
+        wait(16);
+        qf = qf + 1;
+    }
+    dis.setObjPos(ap, [apx, apy]);
+    if [aura == 1]{
+        dis.removeObj("sfx14");
+        dis.removeObj("sfx15");
+        dis.removeObj("sfx16");
+    }
+    // 2. 화면 떨림 + 이펙트: 떨리는 것들의 원래 y 를 기억
+    var float call y0 = obj.ground.Ypos;
+    var float call y2 = obj.ground2.Ypos;
+    var float call y3 = 0;
+    if [dis.idWidthmode == 1]{
+        y3 = obj.ground3.Ypos;
+    }
+    var float call ymb = obj.mybase.Ypos;
+    var float call ymp = obj.mypoke.Ypos;
+    var float call yob = obj.oppbase.Ypos;
+    var float call yop = obj.opppoke.Ypos;
+    var int call qi = 1;
+    loop [qi <= 3]{
+        pxCirc(gx, gy, "sfx%qi%", s * 0.05, inCol);
+        dis.setGlow("sfx%qi%", outCol, s * 0.08);
+        dis.setObjLayer("sfx%qi%", 1);
+        dis.setObjAlpha("sfx%qi%", 0);
+        qi = qi + 1;
+    }
+    qi = 4;
+    loop [qi <= 3 + nRock]{
+        pxTex(gx, gy, "sfx%qi%", s * 0.035 * jaw.random(0.8, 1.4), 6);
+        dis.setObjLayer("sfx%qi%", 2);
+        dis.setObjAlpha("sfx%qi%", 0);
+        dis.rotateObj("sfx%qi%", jaw.random(0, 360), 0);
+        qi = qi + 1;
+    }
+    qf = 1;
+    loop [qf <= fr]{
+        var float call qt = qf / (fr * 1.0);
+        var float call oy = sin(qf * 100) * s * amp * (1 - qt);   // 위아래로 떨림 · 점점 잦아듦
+        dis.setObjPos("ground", [obj.ground.Xpos, y0 + oy]);
+        dis.setObjPos("ground2", [obj.ground2.Xpos, y2 + oy * 0.6]);   // 먼 쪽은 덜
+        if [dis.idWidthmode == 1]{
+            dis.setObjPos("ground3", [obj.ground3.Xpos, y3 + oy * 0.8]);
+        }
+        dis.setObjPos("mybase", [obj.mybase.Xpos, ymb + oy]);
+        dis.setObjPos("mypoke", [obj.mypoke.Xpos, ymp + oy]);
+        dis.setObjPos("oppbase", [obj.oppbase.Xpos, yob + oy * 0.7]);
+        dis.setObjPos("opppoke", [obj.opppoke.Xpos, yop + oy * 0.7]);
+        qi = 1;
+        loop [qi <= 3]{   // 충격파 고리: 8 프레임 간격 · 하나가 18 프레임 동안 납작하게 퍼지며 사라짐
+            var float call qr = (qf - (qi - 1) * 8) / 18.0;
+            if [qr > 0] and [qr <= 1]{
+                var float call qrr = s * ring * (0.15 + 0.85 * qr);
+                dis.setObjPos("sfx%qi%", [gx, gy + oy]);
+                dis.setObjScale("sfx%qi%", [qrr * 2.6, qrr * 0.8]);
+                dis.setObjAlpha("sfx%qi%", floor(230 * (1 - qr)));
+            }
+            if [qr > 1]{
+                dis.setObjAlpha("sfx%qi%", 0);
+            }
+            qi = qi + 1;
+        }
+        qi = 4;
+        loop [qi <= 3 + nRock]{   // 돌 조각: 차례로 땅에서 튀어 올랐다 떨어짐 (하나가 22 프레임)
+            var float call qp = (qf - (qi - 4) * 2) / 22.0;
+            if [qp > 0] and [qp <= 1]{
+                var float call qx = gx + sin(qi * 137) * s * ring * 0.9;
+                dis.setObjPos("sfx%qi%", [qx + sin(qi * 59) * s * 0.05 * qp, gy + oy + sin(qp * 180) * s * (0.12 + 0.08 * sin(qi * 71))]);
+                dis.setObjAlpha("sfx%qi%", floor(255 * min(1, (1 - qp) * 3)));
+                dis.rotateObj("sfx%qi%", 12, 0);
+            }
+            if [qp > 1]{
+                dis.setObjAlpha("sfx%qi%", 0);
+            }
+            qi = qi + 1;
+        }
+        wait(16);
+        qf = qf + 1;
+    }
+    dis.setObjPos("ground", [obj.ground.Xpos, y0]);
+    dis.setObjPos("ground2", [obj.ground2.Xpos, y2]);
+    if [dis.idWidthmode == 1]{
+        dis.setObjPos("ground3", [obj.ground3.Xpos, y3]);
+    }
+    dis.setObjPos("mybase", [obj.mybase.Xpos, ymb]);
+    dis.setObjPos("mypoke", [obj.mypoke.Xpos, ymp]);
+    dis.setObjPos("oppbase", [obj.oppbase.Xpos, yob]);
+    dis.setObjPos("opppoke", [obj.opppoke.Xpos, yop]);
+    spClear(3 + nRock);
 }
 // ── 폭탄 기술 (2026-11-22): 빔처럼 빛나는 공 하나 (가운데 inCol · 둘레 outCol 빛 번짐) 를 머리 위에 모음 → 빠르게 날림 → 닿으면 폭발
 // 폭발: (x, y) 에서 큰 빛 (sfxb) 이 터지고 조각 n 개 (sfx1 ~ sfxn) 가 사방으로 튐 · tex 0 = 픽셀 원 (inCol) · 1 ~ 9 = fx_type.png 알갱이 · size = 폭발 크기 (s 에 곱함)
@@ -1941,6 +2071,28 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     }
     if [mv == 585]{   // 문포스: 큰 분홍 달빛 공을 오래 모음 → 반짝임이 크게 퍼짐
         spBomb(ax, ay, tx, ty, s, "#fff4ff", "#ff7ad8", 0.12, 34, 12, 0.4, 14, 8, 0);
+    }
+    if [mv == 23]{   // 짓밟기: 한 번 쿵 → 짧게 떨림 · 작은 흙먼지 고리
+        spQuake(ax, ay, tx, ty, s, 8, 22, 0.012, 0.18, 3, "#f0e0c0", "#a08050", 0);
+    }
+    if [mv == 89]{   // 지진: 세 번 쿵쿵 → 크게 오래 떨림 · 큰 고리 셋 + 돌 조각이 많이 튐
+        spQuake(ax, ay, tx, ty, s, 24, 48, 0.03, 0.42, 10, "#f4e4c4", "#9a6a30", 0);
+    }
+    if [mv == 90]{   // 땅가르기: 지진보다 더 세게 · 어두운 흙빛
+        spQuake(ax, ay, tx, ty, s, 24, 54, 0.036, 0.45, 10, "#d8c0a0", "#5a3a18", 0);
+    }
+    if [mv == 222]{   // 매그니튜드: 두 번 쿵쿵 → 중간 떨림
+        spQuake(ax, ay, tx, ty, s, 16, 40, 0.022, 0.34, 7, "#f4e4c4", "#9a6a30", 0);
+    }
+    if [mv == 523]{   // 땅고르기: 두 번 쿵쿵 → 땅이 고르게 흔들림 · 넓고 낮은 고리
+        spQuake(ax, ay, tx, ty, s, 16, 36, 0.018, 0.4, 5, "#f0e4cc", "#b08a50", 0);
+    }
+    if [mv == 707]{   // 분함의발구르기: 씩씩대며 세 번 쿵쿵 → 붉은 흙먼지 고리
+        spQuake(ax, ay, tx, ty, s, 24, 40, 0.026, 0.36, 7, "#ffe0c8", "#e0502a", 0);
+    }
+    if [mv == 200]{   // 역린: 붉은 용 기운을 두르고 쿵쿵 → 크게 떨림 · 붉은 보랏빛 충격파
+        spQuake(ax, ay, tx, ty, s, 32, 44, 0.03, 0.4, 8, "#ffe0f0", "#d02a6a", 1);
+        spBurst(tx, ty, s, s * 0.06, s * 0.3, "#ffc0d8", "#c02060", 10);
     }
     if [mv == 51]{   // 용해액: 독 방울이 포물선을 그리며
         spShower(7, ax, ay, tx, ty, s, 6, 0.045, 18, 3, 0.18, 0, 0, 0.05, "#c070ff");

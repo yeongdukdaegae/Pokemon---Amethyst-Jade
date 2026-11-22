@@ -73,10 +73,10 @@ def steel_spots(x, y):   # 가운데 띠 (자석 공)
     return None
 
 
-def sludge(u, v):   # 출렁이는 오물 덩이 + 아래로 처진 방울
+def sludge(u, v):   # 동그란 오물 덩이 + 아래로 살짝 처진 방울
     a = math.atan2(v, u)
-    rr = 0.86 + 0.07 * math.sin(a * 4 + 0.6) + 0.04 * math.sin(a * 7)
-    if v > 0.3: rr += 0.12 * max(0, math.cos((u - 0.25) * 6)) * (v - 0.3) * 2.2   # 처진 방울
+    rr = 0.93 + 0.03 * math.sin(a * 4 + 0.6) + 0.015 * math.sin(a * 7)   # 거의 동그랗게 (살짝만 출렁)
+    if v > 0.45: rr += 0.08 * max(0, math.cos((u - 0.25) * 6)) * (v - 0.45) * 2.2   # 아래로 살짝 처진 방울
     d = math.hypot(u, v) / rr
     if d > 1: return None
     if d > 0.86: return "edge"
