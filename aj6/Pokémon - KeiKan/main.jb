@@ -17,6 +17,7 @@ run{
     // 기술에 맞았을 때의 이펙트 (16 x 16 · 흰색 6 장 → 기술 타입 색으로 물들임)
     mag.importFile("assets/textures/battle/hitfx_1.png") save as ("hitfx1");
     mag.importFile("assets/textures/battle/fx_circle.png") save as ("fxcirc");   // 기술 이펙트의 픽셀 원 (lib/battleCore.jbl 의 pxCirc)
+    mag.importFile("assets/textures/battle/fx_type.png") save as ("fxtype");   // 타입별 이펙트 알갱이 (16 x 16 칸 9 개: 불똥 · 물거품 · 나뭇잎 · 스파크 · 얼음 · 돌 · 독 · 반짝임 · 꽃잎 — lib/battleCore.jbl 의 pxTex)
     mag.importFile("assets/textures/battle/hitfx_2.png") save as ("hitfx2");
     mag.importFile("assets/textures/battle/hitfx_3.png") save as ("hitfx3");
     mag.importFile("assets/textures/battle/hitfx_4.png") save as ("hitfx4");

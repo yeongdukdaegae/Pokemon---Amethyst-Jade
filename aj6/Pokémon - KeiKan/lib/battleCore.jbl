@@ -490,10 +490,10 @@ func float backDY(int id){
 //   색 = 기술 타입 색 · 크기 s = 포켓몬 그림 크기 · 오브젝트 mfx1 ~ mfx8 (끝나면 모두 지움)
 func int fxKind(int mv){
     var list call k1 = [247, 412, 192, 411, 406, 595, 408, 922, 188, 920, 921];
-    var list call k2 = [52, 55, 40, 42, 129, 341, 189, 403, 17, 64, 365];
+    var list call k2 = [40, 42, 129, 341, 189, 403, 17, 64, 365];   // 52 · 55 는 spFx (텍스쳐) 로
     var list call k3 = [53, 58, 56, 315];   // 빔 기술 (451 · 76 · 63 · 61 · 62) 은 spFx 로 옮김 — 53 · 58 · 56 · 315 도 spFx 가 먼저
-    var list call k4 = [33, 98, 29, 36, 38, 370, 280, 409, 89, 57, 399, 435, 405, 44, 10, 163, 404, 282, 7, 8, 9, 424, 423, 422];
-    var list call k5 = [84, 85, 87, 351];
+    var list call k4 = [33, 98, 29, 36, 38, 370, 280, 409, 89, 57, 399, 405, 44, 10, 163, 404, 282, 7, 8, 9, 424, 423, 422];
+    var list call k5 = [85, 351];   // 84 · 87 은 spFx (스파크 텍스쳐) 로
     var list call k6 = [352, 48, 103, 319];
     if [k1.find(mv) != 0]{
         return(1);
@@ -664,7 +664,11 @@ func moveFx(int mv, float ax, float ay, float tx, float ty, float s, string col)
 //   moveFx 가 먼저 여기를 봄 (있으면 이것 · 없으면 종류별 이펙트) · 오브젝트 sfx1 ~ sfx16 (끝나면 모두 지움)
 func int hasSp(int mv){
     var list call sp = [192, 411, 247, 53, 58, 85, 56, 412, 406, 315, 63, 416, 76, 451, 62, 61, 324, 430, 60, 820, 795, 796, 800, 711, 714, 888, 907, 905, 744, 705];   // 63 ~ 705 = 빔 기술 (spBeam)
+    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 51, 124, 584];   // 타입 텍스쳐 (fx_type.png) 기술
     if [sp.find(mv) != 0]{
+        return(1);
+    }
+    if [sp2.find(mv) != 0]{
         return(1);
     }
     return(0);
@@ -877,6 +881,174 @@ func spBubbles(float ax0, float ay0, float tx, float ty, float s, string inCol, 
     }
     spClear(14);
     spBurst(tx, ty, s, s * 0.05, s * 0.26, inCol, outCol, 10);
+}
+
+// ── 타입별 텍스쳐 이펙트 (2026-11-22): fx_type.png (16 x 16 칸 9 개 · 그림 원래 색 그대로)
+//   칸 번호 tex: 1 불똥 · 2 물거품 · 3 나뭇잎 · 4 스파크 · 5 얼음 결정 · 6 돌 · 7 독 방울 · 8 반짝임 · 9 꽃잎
+//   gw = 빛 번짐 세기 (s 에 곱함 · 0 = 없음) · glow = 빛 번짐 색 · spin = 프레임마다 도는 각도 (0 = 안 돎)
+func pxTex(float x, float y, string id, float r, int tex){
+    dis.setObject([x, y], id, [r * 2, r * 2], "#ffffff");
+    mag.setObjTexture(id, "fxtype", [(tex - 1) * 16, 0], [tex * 16, 16]);
+}
+// 알갱이 날리기: 쏘는 곳 (공격하는 쪽의 조금 앞) → 맞는 곳으로 n 개가 gap 프레임 간격으로 (하나가 fr 프레임) · 맞는 곳에서 흩어지며 사라짐
+//   r = 크기 (s 에 곱함) · arc = 포물선 높이 · wob = 흔들림 · 오브젝트 sfx1 ~ sfxn (n ≤ 16)
+func spShower(int tex, float ax0, float ay0, float tx, float ty, float s, int n, float r, int fr, int gap, float arc, float wob, float spin, float gw, string glow){
+    var float call hl0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
+    var float call ax = ax0 + (tx - ax0) / hl0 * s * 0.2;
+    var float call ay = ay0 + (ty - ay0) / hl0 * s * 0.2;
+    var float call hnx = 0 - (ty - ay0) / hl0;   // 줄기에 수직 (알갱이가 겹치지 않게 조금씩 비킴)
+    var float call hny = (tx - ax0) / hl0;
+    var int call hi = 1;
+    loop [hi <= n]{
+        pxTex(ax, ay, "sfx%hi%", s * r * jaw.random(0.8, 1.2), tex);
+        if [gw > 0]{
+            dis.setGlow("sfx%hi%", glow, s * gw);
+        }
+        dis.setObjLayer("sfx%hi%", 7);
+        dis.setObjAlpha("sfx%hi%", 0);
+        if [spin != 0]{
+            dis.rotateObj("sfx%hi%", jaw.random(0, 360), 0);
+        }
+        hi = hi + 1;
+    }
+    var int call hend = (n - 1) * gap + fr + 8;
+    var int call hf = 0;
+    loop [hf <= hend]{
+        hi = 1;
+        loop [hi <= n]{
+            var float call ht = (hf - (hi - 1) * gap) / (fr * 1.0);
+            if [ht > 0]{
+                if [ht <= 1]{
+                    var float call ho = sin(hi * 97) * s * 0.04 + sin(hf * 40 + hi * 67) * s * wob;
+                    var float call hy = sin(ht * 180) * s * arc * (0.7 + 0.3 * sin(hi * 77));
+                    dis.setObjPos("sfx%hi%", [ax + (tx - ax) * ht + hnx * ho, ay + (ty - ay) * ht + hny * ho + hy]);
+                    dis.setObjAlpha("sfx%hi%", 255);
+                }
+                else{
+                    var float call hq = (ht - 1) * fr / 8.0;   // 맞은 뒤 8 프레임: 흩어지며 사라짐
+                    if [hq <= 1]{
+                        dis.setObjPos("sfx%hi%", [tx + cos(hi * 137) * s * 0.15 * hq, ty + sin(hi * 137) * s * 0.15 * hq]);
+                        dis.setObjAlpha("sfx%hi%", floor(255 * (1 - hq)));
+                    }
+                    else{
+                        dis.setObjAlpha("sfx%hi%", 0);
+                    }
+                }
+                if [spin != 0]{
+                    dis.rotateObj("sfx%hi%", spin, 0);
+                }
+            }
+            hi = hi + 1;
+        }
+        wait(16);
+        hf = hf + 1;
+    }
+    spClear(n);
+}
+// 위에서 쏟아짐: 맞는 곳 위 (s * 0.9) 에서 n 개가 차례로 떨어짐 (점점 빨라짐) → 부딪힌 곳에서 사라짐 · sfx1 ~ sfxn
+func spRain(int tex, float tx, float ty, float s, int n, float r, int fr, int gap, float spin, float gw, string glow){
+    var int call ri = 1;
+    loop [ri <= n]{
+        pxTex(tx, ty, "sfx%ri%", s * r * jaw.random(0.8, 1.25), tex);
+        if [gw > 0]{
+            dis.setGlow("sfx%ri%", glow, s * gw);
+        }
+        dis.setObjLayer("sfx%ri%", 7);
+        dis.setObjAlpha("sfx%ri%", 0);
+        if [spin != 0]{
+            dis.rotateObj("sfx%ri%", jaw.random(0, 360), 0);
+        }
+        ri = ri + 1;
+    }
+    var int call rend = (n - 1) * gap + fr + 6;
+    var int call rf = 0;
+    loop [rf <= rend]{
+        ri = 1;
+        loop [ri <= n]{
+            var float call rt = (rf - (ri - 1) * gap) / (fr * 1.0);
+            var float call rx = tx + sin(ri * 131) * s * 0.3;
+            var float call ry = ty + sin(ri * 71) * s * 0.08;
+            if [rt > 0]{
+                if [rt <= 1]{
+                    dis.setObjPos("sfx%ri%", [rx - s * 0.1 * (1 - rt), ry + s * 0.9 * (1 - rt * rt)]);
+                    dis.setObjAlpha("sfx%ri%", 255);
+                }
+                else{
+                    var float call rq = (rt - 1) * fr / 6.0;
+                    dis.setObjAlpha("sfx%ri%", floor(255 * max(0, 1 - rq)));
+                }
+                if [spin != 0]{
+                    dis.rotateObj("sfx%ri%", spin, 0);
+                }
+            }
+            ri = ri + 1;
+        }
+        wait(16);
+        rf = rf + 1;
+    }
+    spClear(n);
+}
+// 맴돌기: (cx, cy) 둘레를 n 개가 납작한 원을 그리며 돌면서 위로 올라감 (fr 프레임) · sfx1 ~ sfxn
+func spSwirl(int tex, float cx, float cy, float s, int n, float r, int fr, float spin, float gw, string glow){
+    var int call wi = 1;
+    loop [wi <= n]{
+        pxTex(cx, cy, "sfx%wi%", s * r * jaw.random(0.8, 1.2), tex);
+        if [gw > 0]{
+            dis.setGlow("sfx%wi%", glow, s * gw);
+        }
+        dis.setObjLayer("sfx%wi%", 7);
+        dis.setObjAlpha("sfx%wi%", 0);
+        wi = wi + 1;
+    }
+    var int call wf = 0;
+    loop [wf <= fr]{
+        var float call wt = wf / (fr * 1.0);
+        var float call wal = 255 * min(1, min(wf / 6.0, (fr - wf) / 8.0));   // 처음 6 프레임 나타남 · 끝 8 프레임 사라짐
+        wi = 1;
+        loop [wi <= n]{
+            var float call wa = wi * 360 / n + wf * 14;
+            var float call wr = s * (0.22 + 0.08 * sin(wf * 9 + wi * 50));
+            var float call wh = s * (-0.3 + 0.6 * wt) + s * 0.25 * ((wi - floor(wi / 3) * 3) - 1);   // 세 층으로 나뉘어 올라감
+            dis.setObjPos("sfx%wi%", [cx + cos(wa) * wr, cy + wh + sin(wa) * wr * 0.3]);
+            dis.setObjAlpha("sfx%wi%", floor(wal));
+            if [spin != 0]{
+                dis.rotateObj("sfx%wi%", spin, 0);
+            }
+            wi = wi + 1;
+        }
+        wait(16);
+        wf = wf + 1;
+    }
+    spClear(n);
+}
+// 지직거림: (cx, cy) 둘레 (반지름 s * rad) 에 스파크 n 개가 3 프레임마다 자리 · 각도 · 크기를 바꾸며 번쩍임 (fr 프레임) · sfx1 ~ sfxn
+func spSparks(float cx, float cy, float s, int n, float r, float rad, int fr){
+    var int call ki = 1;
+    loop [ki <= n]{
+        pxTex(cx, cy, "sfx%ki%", s * r, 4);
+        dis.setGlow("sfx%ki%", "#ffd23a", s * 0.08);
+        dis.setObjLayer("sfx%ki%", 7);
+        ki = ki + 1;
+    }
+    var int call kf = 0;
+    loop [kf <= fr]{
+        if [kf - floor(kf / 3) * 3 == 0]{
+            ki = 1;
+            loop [ki <= n]{
+                var float call ka = jaw.random(0, 360);
+                var float call kd = s * rad * jaw.random(0.2, 1);
+                var float call kr = s * r * jaw.random(0.7, 1.3);
+                dis.setObjPos("sfx%ki%", [cx + cos(ka) * kd, cy + sin(ka) * kd]);
+                dis.setObjScale("sfx%ki%", [kr * 2, kr * 2]);
+                dis.rotateObj("sfx%ki%", jaw.random(-60, 60), 0);
+                dis.setObjAlpha("sfx%ki%", floor(jaw.random(120, 255)));
+                ki = ki + 1;
+            }
+        }
+        wait(16);
+        kf = kf + 1;
+    }
+    spClear(n);
 }
 
 func spFx(int mv, float ax, float ay, float tx, float ty, float s){
@@ -1264,5 +1436,83 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     }
     if [mv == 705]{   // 플뢰르캐논: 굵은 분홍 줄기
         spBeam(ax, ay, tx, ty, s, "#fff0f8", "#ff8ac8", 0.08, 28, 0);
+    }
+    // ── 타입 텍스쳐 기술 (fx_type.png)
+    if [mv == 52]{   // 불꽃세례: 작은 불똥 여섯 개가 통통 튀며 날아감
+        spShower(1, ax, ay, tx, ty, s, 6, 0.05, 16, 3, 0.12, 0.01, 0, 0.08, "#ff7a20");
+        spBurst(tx, ty, s, s * 0.05, s * 0.24, "#ffe066", "#ff7a20", 8);
+    }
+    if [mv == 126]{   // 불대문자: 큰 불똥이 줄지어 날아감 → 맞는 곳에서 불길이 맴돎
+        spShower(1, ax, ay, tx, ty, s, 10, 0.08, 14, 2, 0.06, 0.01, 0, 0.12, "#ff4a2a");
+        spSwirl(1, tx, ty, s, 10, 0.06, 26, 0, 0.1, "#ff4a2a");
+        spBurst(tx, ty, s, s * 0.08, s * 0.4, "#ffe066", "#ff3a1a", 12);
+    }
+    if [mv == 83]{   // 회오리불꽃: 맞는 곳 둘레를 불똥이 맴돌며 솟구침
+        spSwirl(1, tx, ty, s, 12, 0.055, 40, 0, 0.08, "#ff7a20");
+    }
+    if [mv == 145]{   // 거품: 거품 여덟 개가 흔들흔들 느리게 날아감
+        spShower(2, ax, ay, tx, ty, s, 8, 0.04, 24, 3, 0.05, 0.03, 0, 0, "");
+    }
+    if [mv == 55]{   // 물대포: 작은 거품이 촘촘한 줄기로
+        spShower(2, ax, ay, tx, ty, s, 14, 0.03, 12, 1, 0.08, 0.005, 0, 0.04, "#5ab4ff");
+    }
+    if [mv == 75]{   // 잎날가르기: 빙글빙글 도는 나뭇잎 여섯 장
+        spShower(3, ax, ay, tx, ty, s, 6, 0.05, 16, 3, 0.14, 0, 40, 0, "");
+    }
+    if [mv == 345]{   // 매지컬리프: 빛나는 나뭇잎이 굽이치며 날아감 → 반짝
+        spShower(3, ax, ay, tx, ty, s, 8, 0.05, 18, 2, 0.1, 0.04, 30, 0.08, "#ffe866");
+        spRain(8, tx, ty, s, 4, 0.04, 8, 2, 0, 0.06, "#ffe866");
+    }
+    if [mv == 437]{   // 리프스톰: 나뭇잎 폭풍이 맞는 곳을 휘감음
+        spShower(3, ax, ay, tx, ty, s, 12, 0.05, 12, 1, 0.05, 0.03, 35, 0, "");
+        spSwirl(3, tx, ty, s, 14, 0.06, 34, 30, 0, "");
+    }
+    if [mv == 80]{   // 꽃잎댄스: 꽃잎이 맞는 곳 둘레를 춤추듯 돎
+        spSwirl(9, tx, ty, s, 14, 0.045, 46, 15, 0.04, "#ff9ad0");
+    }
+    if [mv == 84]{   // 전기쇼크: 맞는 곳에 스파크가 지직지직
+        spSparks(tx, ty, s, 5, 0.06, 0.3, 24);
+    }
+    if [mv == 209]{   // 스파크: 공격하는 쪽에서 번쩍 → 맞는 곳에 스파크
+        spSparks(ax, ay, s, 4, 0.05, 0.25, 12);
+        spSparks(tx, ty, s, 7, 0.06, 0.3, 21);
+    }
+    if [mv == 87]{   // 번개: 커다란 번개가 위에서 연달아 떨어짐 → 지직거림
+        spRain(4, tx, ty, s, 5, 0.12, 6, 3, 0, 0.14, "#ffd23a");
+        spSparks(tx, ty, s, 8, 0.07, 0.35, 18);
+        spBurst(tx, ty, s, s * 0.08, s * 0.4, "#ffffff", "#ffd23a", 10);
+    }
+    if [mv == 435]{   // 방전: 공격하는 쪽 둘레가 지직거림 → 맞는 곳까지 스파크
+        spSparks(ax, ay, s, 8, 0.06, 0.45, 18);
+        spSparks(tx, ty, s, 8, 0.06, 0.35, 15);
+    }
+    if [mv == 181]{   // 눈싸라기: 눈 결정이 빙글빙글 흩날려 감
+        spShower(5, ax, ay, tx, ty, s, 10, 0.035, 18, 2, 0.06, 0.03, 20, 0.05, "#bfefff");
+    }
+    if [mv == 196]{   // 얼어붙은바람: 눈 결정이 바람에 크게 흔들리며
+        spShower(5, ax, ay, tx, ty, s, 12, 0.04, 20, 2, 0, 0.07, 25, 0.05, "#bfefff");
+    }
+    if [mv == 59]{   // 눈보라: 큰 눈 결정이 몰아치고 → 맞는 곳에 쏟아짐
+        spShower(5, ax, ay, tx, ty, s, 14, 0.05, 14, 1, 0.04, 0.06, 30, 0.06, "#bfefff");
+        spRain(5, tx, ty, s, 10, 0.05, 10, 1, 20, 0.06, "#bfefff");
+    }
+    if [mv == 88]{   // 돌떨구기: 돌 세 개가 높이 포물선을 그리며
+        spShower(6, ax, ay, tx, ty, s, 3, 0.06, 20, 5, 0.3, 0, 12, 0, "");
+    }
+    if [mv == 157]{   // 스톤샤워: 돌덩이가 우르르 쏟아짐
+        spRain(6, tx, ty, s, 10, 0.07, 12, 2, 10, 0, "");
+    }
+    if [mv == 317]{   // 암석봉인: 큰 바위가 둘레에 쿵쿵 떨어짐
+        spRain(6, tx, ty, s, 6, 0.1, 14, 4, 0, 0, "");
+    }
+    if [mv == 51]{   // 용해액: 독 방울이 포물선을 그리며
+        spShower(7, ax, ay, tx, ty, s, 6, 0.045, 18, 3, 0.18, 0, 0, 0.05, "#c070ff");
+    }
+    if [mv == 124]{   // 오물공격: 독 방울이 한꺼번에 뿌려짐 → 독빛이 퍼짐
+        spShower(7, ax, ay, tx, ty, s, 10, 0.05, 16, 1, 0.14, 0.02, 0, 0.05, "#c070ff");
+        spBurst(tx, ty, s, s * 0.06, s * 0.3, "#d8a0ff", "#9b3cff", 10);
+    }
+    if [mv == 584]{   // 요정의바람: 반짝임이 바람에 흔들리며 날아감
+        spShower(8, ax, ay, tx, ty, s, 10, 0.04, 20, 2, 0.04, 0.06, 0, 0.08, "#ff9ad8");
     }
 }
