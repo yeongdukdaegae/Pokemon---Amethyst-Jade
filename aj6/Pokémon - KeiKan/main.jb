@@ -22,6 +22,7 @@ run{
     mag.importFile("assets/textures/battle/fx_ball.png") save as ("fxball");   // 폭탄 기술의 물건 같은 공 (24 x 24 칸 6 개: 알 · 씨앗 · 진흙 덩이 · 쇠 공 · 오물 덩이 · 시럽 방울 — lib/battleCore.jbl 의 bombBall)
     mag.importFile("assets/textures/battle/fx_ring.png") save as ("fxring");   // 파동 기술의 고리 (32 x 32 · 흰색이라 색을 입혀 씀 — lib/battleCore.jbl 의 spPulse)
     mag.importFile("assets/textures/battle/fx_gem.png") save as ("fxgem");   // 파워젬의 보석 바위 (24 x 24 칸 4 개 · 흰 · 회색 조각면이라 색을 입혀 씀 — lib/battleCore.jbl 의 spGems · fxsrc/make_fx_gem.py)
+    mag.importFile("assets/textures/battle/fx_hit.png") save as ("fxhit");   // 타격 아이콘 (32 x 32 칸 2 개: 주먹 · 발바닥 — DPPt 느낌 · 흰색이라 타입 색을 입힐 수 있음 · lib/battleCore.jbl 의 spImpact · fxsrc/make_fx_hit.py)
     mag.importFile("assets/textures/battle/hitfx_2.png") save as ("hitfx2");
     mag.importFile("assets/textures/battle/hitfx_3.png") save as ("hitfx3");
     mag.importFile("assets/textures/battle/hitfx_4.png") save as ("hitfx4");

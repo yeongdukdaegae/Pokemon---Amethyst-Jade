@@ -703,7 +703,7 @@ func moveFx(int mv, float ax, float ay, float tx, float ty, float s, string col)
 //   moveFx 가 먼저 여기를 봄 (있으면 이것 · 없으면 종류별 이펙트) · 오브젝트 sfx1 ~ sfx16 (끝나면 모두 지움)
 func int hasSp(int mv){
     var list call sp = [192, 411, 247, 53, 58, 85, 56, 412, 406, 315, 63, 416, 76, 451, 62, 61, 324, 430, 60, 820, 795, 796, 800, 711, 714, 888, 907, 905, 744, 705];   // 63 ~ 705 = 빔 기술 (spBeam)
-    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200, 352, 399, 805, 505, 396, 311, 408];   // 타입 텍스쳐 (fx_type.png) 기술
+    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200, 352, 399, 805, 505, 396, 311, 408, 7, 8, 9, 418, 325, 4, 5, 146, 183, 223, 264, 309, 327, 359, 409, 612, 721, 817, 818, 857, 889, 24, 25, 26, 27, 67, 136, 167, 299, 490, 688, 813, 823, 853, 370];   // 타입 텍스쳐 (fx_type.png) 기술
     if [sp.find(mv) != 0]{
         return(1);
     }
@@ -1280,11 +1280,11 @@ func gemObj(string id, float x, float y, float sz, int c, string col){
     dis.setObject([x, y], id, [sz, sz], "#ffffff");
     mag.setObjTexture(id, "fxgem", [(c - 1) * 24, 0], [c * 24, 24]);
     dis.setObjColor(id, col);   // 그림을 입히면 흰색이 됨 → 다시 색을 입힘 (흰 · 회색 조각면이라 밝은 색이 그대로)
-    dis.setGlow(id, col, sz * 0.25);
+    dis.setGlow(id, col, sz * 0.7);   // 빛 번짐 (진하게)
     dis.setObjLayer(id, 2);
 }
 func spGems(float ax, float ay, float tx, float ty, float s){
-    var list call gc = ["#ff7a8a", "#ffd84a", "#7af0ff", "#9cff7a", "#c89cff"];   // 밝은 계열 다섯 색
+    var list call gc = ["#ffa0b0", "#ffea8a", "#a8f8ff", "#c0ffa0", "#e0c0ff"];   // 밝은 계열 다섯 색 (파스텔에 가깝게 밝게)
     var list call gx0 = [0, 0, 0, 0, 0];   // 날아가기 시작한 자리
     var list call gy0 = [0, 0, 0, 0, 0];
     var list call gox = [0, 0, 0, 0, 0];   // 맞는 곳에서 조금씩 비킴 (겹치지 않게)
@@ -1293,7 +1293,7 @@ func spGems(float ax, float ay, float tx, float ty, float s){
     var list call shy = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     var list call svx = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     var list call svy = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    var float call gsz = s * 0.1;   // 보석 한 변 (가까이 = fxKa · 날아가며 pk)
+    var float call gsz = s * 0.14;   // 보석 한 변 (가까이 = fxKa · 날아가며 pk)
     var float call rx = s * fxKa * 0.34;   // 도는 타원 (가로 · 세로)
     var float call ry = s * fxKa * 0.11;
     var float call oy = ay + s * fxKa * 0.04;
@@ -1375,6 +1375,75 @@ func spGems(float ax, float ay, float tx, float ty, float s){
         gf = gf + 1;
     }
     spClear(15);
+}
+// ── 타격 아이콘 (2026-11-22): 펀치 = 주먹 · 킥 = 발바닥 (fx_hit.png · DPPt 느낌 · 흰색이라 타입 색을 입힐 수 있음)
+//   맞는 곳에서 아이콘 (sfx1) 이 빠르게 커지며 (0.3 → 1.25 → 1 배 · 4 프레임) 나타나고 · 뒤에 하얀 충격 빛 (sfxb) 이 터짐 → hold 프레임 뒤 사라짐
+//   cell 1 주먹 · 2 발바닥 · 0 = 아이콘 없이 충격 빛만 (조금 크게) · size = 아이콘 한 변 (s 에 곱함) · rot = 기울기
+func spImpact(float x, float y, float s, int cell, string col, float size, int hold, float rot){
+    var float call isz = s * size;
+    if [cell > 0]{
+        dis.setObject([x, y], "sfx1", [isz, isz], "#ffffff");
+        mag.setObjTexture("sfx1", "fxhit", [(cell - 1) * 32, 0], [cell * 32, 32]);
+        dis.setObjColor("sfx1", col);   // 그림을 입히면 흰색이 됨 → 다시 색을 입힘 (흰색이면 그대로)
+        dis.setObjLayer("sfx1", 2);
+        dis.rotateObj("sfx1", rot, 0);
+        if [col != "#ffffff"]{
+            dis.setGlow("sfx1", col, isz * 0.35);
+        }
+    }
+    var float call fsz = isz * 0.9;
+    if [cell == 0]{
+        fsz = isz * 1.3;
+    }
+    pxCirc(x, y, "sfxb", fsz * 0.2, "#ffffff");
+    dis.setGlow("sfxb", "#fff6d8", s * 0.12);
+    dis.setObjLayer("sfxb", 1);
+    var list call pop = [0.3, 0.85, 1.25, 1.1, 1.0];
+    var int call f = 1;
+    var int call fe = 5 + hold + 5;
+    loop [f <= fe]{
+        if [cell > 0]{
+            var float call k = 1;
+            if [f <= 5]{
+                k = pop[f];
+            }
+            dis.setObjScale("sfx1", [isz * k, isz * k]);
+            if [f > 5 + hold]{
+                dis.setObjAlpha("sfx1", floor(255 * (fe - f) / 5.0));
+            }
+        }
+        var float call ft = min(1, f / 7.0);   // 충격 빛: 빠르게 퍼지며 사라짐
+        dis.setObjScale("sfxb", [fsz * (0.4 + 0.9 * ft), fsz * (0.4 + 0.9 * ft)]);
+        dis.setObjAlpha("sfxb", floor(230 * (1 - ft)));
+        wait(16);
+        f = f + 1;
+    }
+    if [cell > 0]{
+        dis.removeObj("sfx1");
+    }
+    dis.removeObj("sfxb");
+}
+// 펀치 · 킥 아이콘 크기: 위력에 따라 (20 이하 0.2 · 150 이상 0.42 · 위력이 없는 기술 (로킥 등) 은 60 으로 봄)
+func float hitSize(int mv){
+    var list call hm = movedex[mv];
+    var float call pw = hm[3];
+    if [pw <= 0]{
+        pw = 60;
+    }
+    pw = max(20, min(150, pw));
+    return(0.2 + 0.22 * (pw - 20) / 130.0);
+}
+// 인파이트: 주먹 · 발바닥 · 충격 빛이 맞는 곳 둘레 여기저기에서 빠르게 번갈아 (9 번) → 마지막에 큰 충격
+func spCloseCombat(float tx, float ty, float s){
+    var list call cc = [1, 2, 0, 2, 1, 0, 1, 2, 0];
+    var int call ci = 1;
+    loop [ci <= 9]{
+        var float call cx0 = tx + jaw.random(-1, 1) * s * 0.13;
+        var float call cy0 = ty + jaw.random(-1, 1) * s * 0.11;
+        spImpact(cx0, cy0, s, cc[ci], "#ffffff", 0.26, 1, jaw.random(-25, 25));
+        ci = ci + 1;
+    }
+    spImpact(tx, ty, s, 0, "#ffffff", 0.5, 2, 0);
 }
 // ── 돌진 (2026-11-22): 공격하는 포켓몬 둘레에 기운 (sfx1 ~ sfx10) 이 맴돌며 진해짐 (20 프레임) → 몸 크기의 빛 덩이 (sfx11) 가 잔상 (sfx12 ~ sfx15) 을 남기며 7 프레임 만에 들이받음
 //   → 맞는 곳에서 충격파 (spBoom) · r = 빛 덩이 반지름 (s 에 곱함)
@@ -2289,6 +2358,33 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     }
     if [mv == 157]{   // 스톤샤워: 중간 · 작은 바위가 하늘에서 1 초쯤 쏟아짐
         spRain(6, tx, ty, sT, 16, 0.05, 14, 3, 12, 0, "");
+    }
+    if [mv == 7] or [mv == 8] or [mv == 9] or [mv == 418] or [mv == 325]{   // 불꽃 · 냉동 · 번개펀치 · 불릿펀치 · 섀도펀치: 타입 색 주먹 (크기는 위력과 상관없이 같게)
+        var string call pcol = "#ff9050";
+        if [mv == 8]{
+            pcol = "#a8ecff";
+        }
+        if [mv == 9]{
+            pcol = "#ffe650";
+        }
+        if [mv == 418]{
+            pcol = "#d0dcec";
+        }
+        if [mv == 325]{
+            pcol = "#b080e8";
+        }
+        spImpact(tx, ty, sT, 1, pcol, 0.32, 8, jaw.random(-12, 12));
+    }
+    var list call punchMv = [4, 5, 146, 183, 223, 264, 309, 327, 359, 409, 612, 721, 817, 818, 857, 889];   // 펀치 기술 (주먹)
+    var list call kickMv = [24, 25, 26, 27, 67, 136, 167, 299, 490, 688, 813, 823, 853];   // 킥 기술 (발바닥 · 땅을 구르는 기술 · 지진류는 빼고)
+    if [punchMv.find(mv) != 0]{   // 주먹이 빠르게 커지며 나타남 · 위력에 따라 크기
+        spImpact(tx, ty, sT, 1, "#ffffff", hitSize(mv), 8, jaw.random(-12, 12));
+    }
+    if [kickMv.find(mv) != 0]{   // 발바닥
+        spImpact(tx, ty, sT, 2, "#ffffff", hitSize(mv), 8, jaw.random(-20, 20));
+    }
+    if [mv == 370]{   // 인파이트: 주먹 · 발 · 충격이 연달아
+        spCloseCombat(tx, ty, sT);
     }
     if [mv == 408]{   // 파워젬: 여러 색 보석 바위가 차츰 나타나 쓰는 쪽 둘레를 돌다가 → 맞는 곳으로 빠르게 날아가 부서짐
         spGems(ax, ay, tx, ty, s);

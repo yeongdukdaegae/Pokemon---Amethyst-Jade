@@ -24,13 +24,13 @@ def cell(spec, seed):
         a, b = pts[i], pts[(i + 1) % len(pts)]
         mx, my = (a[0] + b[0]) / 2 - cx, (a[1] + b[1]) / 2 - cy
         lit = (-mx * 0.7 - my * 0.7) / max(1e-6, math.hypot(mx, my))   # 빛 (왼쪽 위) 쪽이면 1
-        v = int(205 + 50 * lit)   # 155 ~ 255
+        v = int(228 + 27 * lit)   # 201 ~ 255 (밝게)
         d.polygon([(px, py), a, b], fill=(v, v, v, 255))
     # 윗면 (가운데 작은 조각) 은 가장 밝게
     top = [(px + (p[0] - px) * 0.38, py + (p[1] - py) * 0.38) for p in pts]
     d.polygon(top, fill=(255, 255, 255, 255))
     # 테두리 (어두운 회색 · 색을 입히면 진한 같은 색)
-    d.polygon(pts, outline=(120, 120, 120, 255))
+    d.polygon(pts, outline=(160, 160, 160, 255))
     # 반짝임 두 점
     d.point([(int(px - 1), int(py - 1)), (int(px), int(py - 2))], fill=(255, 255, 255, 255))
     return im
