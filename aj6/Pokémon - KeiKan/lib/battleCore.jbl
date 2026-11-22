@@ -5,6 +5,8 @@ Use moveUi call mu;
 Use Magellan call mag;
 Use soundMaster call sou;
 Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+Use Canvas call can;   // SeongBin 을 쓰려면 함께 있어야 함
+Use SeongBin call seo;   // 카메라 (발구르기 기술의 화면 떨림)
 
 // 배틀 계산 · 메시지
 //   typeChart · movedex 는 pokeDataManager.jb · moveManager.jb 가 채움
@@ -1351,7 +1353,7 @@ func spRush(float ax, float ay, float tx, float ty, float s, string inCol, strin
 // ── 발구르기 · 땅 흔들기 기술 (2026-11-22): 쓰는 포켓몬이 위아래로 쿵쿵 (pre 프레임) → 배틀 화면 (땅 · 발판 · 포켓몬) 이 위아래로 떨리면서 (카메라 흔들림 · 점점 잦아듦)
 //   맞는 쪽 발밑에서 납작한 충격파 고리 (sfx1 ~ sfx3) 가 퍼지고 돌 조각 nRock 개 (sfx4 ~ · 10 개까지) 가 튀어 오름 (fr 프레임) — 이펙트도 화면과 같이 떨림
 //   amp = 화면 떨림 세기 (s 에 곱함) · ring = 고리 크기 · aura 1 = 쿵쿵 동안 쓰는 쪽에 outCol 기운 (sfx14 ~ sfx16 · 역린)
-//   배틀 UI (상태 상자 · 대화 상자) 는 그대로 (흔들리지 않음)
+//   화면 떨림 = SeongBin 카메라 (cam.default) 를 위아래로 옮김 → 배틀 화면 전체 (UI 도) 가 같이 떨림 · 끝나면 [0, 0] (배틀 장면의 처음 자리) 으로
 func spQuake(float ax, float ay, float tx, float ty, float s, int pre, int fr, float amp, float ring, int nRock, string inCol, string outCol, int aura){
     var string call ap = "opppoke";   // 쓰는 쪽 그림
     var float call gx = tx;
@@ -1396,17 +1398,8 @@ func spQuake(float ax, float ay, float tx, float ty, float s, int pre, int fr, f
         dis.removeObj("sfx15");
         dis.removeObj("sfx16");
     }
-    // 2. 화면 떨림 + 이펙트: 떨리는 것들의 원래 y 를 기억
-    var float call y0 = obj.ground.Ypos;
-    var float call y2 = obj.ground2.Ypos;
-    var float call y3 = 0;
-    if [dis.idWidthmode == 1]{
-        y3 = obj.ground3.Ypos;
-    }
-    var float call ymb = obj.mybase.Ypos;
-    var float call ymp = obj.mypoke.Ypos;
-    var float call yob = obj.oppbase.Ypos;
-    var float call yop = obj.opppoke.Ypos;
+    // 2. 화면 떨림 (카메라) + 이펙트
+    seo.setUpCam();   // 이미 켜져 있으면 그대로
     var int call qi = 1;
     loop [qi <= 3]{
         pxCirc(gx, gy, "sfx%qi%", s * fxKt * 0.05, inCol);
@@ -1427,21 +1420,13 @@ func spQuake(float ax, float ay, float tx, float ty, float s, int pre, int fr, f
     loop [qf <= fr]{
         var float call qt = qf / (fr * 1.0);
         var float call oy = sin(qf * 100) * s * amp * (1 - qt);   // 위아래로 떨림 · 점점 잦아듦
-        dis.setObjPos("ground", [obj.ground.Xpos, y0 + oy]);
-        dis.setObjPos("ground2", [obj.ground2.Xpos, y2 + oy * 0.6]);   // 먼 쪽은 덜
-        if [dis.idWidthmode == 1]{
-            dis.setObjPos("ground3", [obj.ground3.Xpos, y3 + oy * 0.8]);
-        }
-        dis.setObjPos("mybase", [obj.mybase.Xpos, ymb + oy]);
-        dis.setObjPos("mypoke", [obj.mypoke.Xpos, ymp + oy]);
-        dis.setObjPos("oppbase", [obj.oppbase.Xpos, yob + oy * 0.7]);
-        dis.setObjPos("opppoke", [obj.opppoke.Xpos, yop + oy * 0.7]);
+        seo.cam.default.moveCamto([0, oy]);
         qi = 1;
         loop [qi <= 3]{   // 충격파 고리: 8 프레임 간격 · 하나가 18 프레임 동안 납작하게 퍼지며 사라짐
             var float call qr = (qf - (qi - 1) * 8) / 18.0;
             if [qr > 0] and [qr <= 1]{
                 var float call qrr = s * fxKt * ring * (0.15 + 0.85 * qr);
-                dis.setObjPos("sfx%qi%", [gx, gy + oy]);
+                dis.setObjPos("sfx%qi%", [gx, gy]);
                 dis.setObjScale("sfx%qi%", [qrr * 2.6, qrr * 0.8]);
                 dis.setObjAlpha("sfx%qi%", floor(230 * (1 - qr)));
             }
@@ -1455,7 +1440,7 @@ func spQuake(float ax, float ay, float tx, float ty, float s, int pre, int fr, f
             var float call qp = (qf - (qi - 4) * 2) / 22.0;
             if [qp > 0] and [qp <= 1]{
                 var float call qx = gx + sin(qi * 137) * s * fxKt * ring * 0.9;
-                dis.setObjPos("sfx%qi%", [qx + sin(qi * 59) * s * 0.05 * qp, gy + oy + sin(qp * 180) * s * fxKt * (0.12 + 0.08 * sin(qi * 71))]);
+                dis.setObjPos("sfx%qi%", [qx + sin(qi * 59) * s * 0.05 * qp, gy + sin(qp * 180) * s * fxKt * (0.12 + 0.08 * sin(qi * 71))]);
                 dis.setObjAlpha("sfx%qi%", floor(255 * min(1, (1 - qp) * 3)));
                 dis.rotateObj("sfx%qi%", 12, 0);
             }
@@ -1467,15 +1452,7 @@ func spQuake(float ax, float ay, float tx, float ty, float s, int pre, int fr, f
         wait(16);
         qf = qf + 1;
     }
-    dis.setObjPos("ground", [obj.ground.Xpos, y0]);
-    dis.setObjPos("ground2", [obj.ground2.Xpos, y2]);
-    if [dis.idWidthmode == 1]{
-        dis.setObjPos("ground3", [obj.ground3.Xpos, y3]);
-    }
-    dis.setObjPos("mybase", [obj.mybase.Xpos, ymb]);
-    dis.setObjPos("mypoke", [obj.mypoke.Xpos, ymp]);
-    dis.setObjPos("oppbase", [obj.oppbase.Xpos, yob]);
-    dis.setObjPos("opppoke", [obj.opppoke.Xpos, yop]);
+    seo.cam.default.moveCamto([0, 0]);
     spClear(3 + nRock);
 }
 // ── 파동 기술 (2026-11-22): 빔처럼 쏘는 곳 → 맞는 곳으로 이어지지만, 원이 아니라 고리 (fx_ring.png) 가 줄지어 날아감
