@@ -664,7 +664,7 @@ func moveFx(int mv, float ax, float ay, float tx, float ty, float s, string col)
 //   moveFx 가 먼저 여기를 봄 (있으면 이것 · 없으면 종류별 이펙트) · 오브젝트 sfx1 ~ sfx16 (끝나면 모두 지움)
 func int hasSp(int mv){
     var list call sp = [192, 411, 247, 53, 58, 85, 56, 412, 406, 315, 63, 416, 76, 451, 62, 61, 324, 430, 60, 820, 795, 796, 800, 711, 714, 888, 907, 905, 744, 705];   // 63 ~ 705 = 빔 기술 (spBeam)
-    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584];   // 타입 텍스쳐 (fx_type.png) 기술
+    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921];   // 타입 텍스쳐 (fx_type.png) 기술
     if [sp.find(mv) != 0]{
         return(1);
     }
@@ -1073,6 +1073,60 @@ func spRockDrop(float tx, float ty, float s, float r, float h, int hover, int fr
     }
     spClear(1);
     spRockHit(tx, ty, s, 4 + floor(r * 60), r * 0.45, 0.1 + r * 1.2, 16);
+}
+// ── 발톱 기술 (2026-11-22): fx_claw.png (32 x 32 칸 4 개 · 흰색 그림에 inCol 을 입히고 outCol 로 빛 번짐)
+//   (cx, cy) 에 발톱 자국 n 개 (sfx1 ~ sfxn) 를 gap 프레임 간격으로 그음 · 하나당: 그어짐 4 프레임 → hold 프레임 유지 → 6 프레임 동안 가늘어지며 사라짐
+//   size = 한 변 (s 에 곱함) · 짝수 번째 자국은 90 도 돌려 반대 방향 (X 자로 엇갈림) · rot0 = 모두 더 돌리는 각도
+func clawCell(string id, int c, string col){
+    mag.setObjTexture(id, "fxclaw", [(c - 1) * 32, 0], [c * 32, 32]);
+    dis.setObjColor(id, col);   // 그림을 바꾸면 색이 흰색이 됨 → 다시 입힘
+}
+func spClaws(float cx, float cy, float s, string inCol, string outCol, float size, int n, int gap, int hold, float rot0){
+    var int call ci = 1;
+    loop [ci <= n]{
+        var float call cox = sin(ci * 97) * s * 0.05 * min(1, n - 1);
+        var float call coy = sin(ci * 61) * s * 0.04 * min(1, n - 1);
+        dis.setObject([cx + cox, cy + coy], "sfx%ci%", [s * size, s * size], "#ffffff");
+        clawCell("sfx%ci%", 1, inCol);
+        dis.setGlow("sfx%ci%", outCol, s * 0.05);
+        dis.setObjLayer("sfx%ci%", 8);
+        dis.setObjAlpha("sfx%ci%", 0);
+        var float call crot = rot0;
+        if [ci - floor(ci / 2) * 2 == 0]{
+            crot = crot + 90;
+        }
+        if [crot != 0]{
+            dis.rotateObj("sfx%ci%", crot, 0);
+        }
+        ci = ci + 1;
+    }
+    var int call cend = (n - 1) * gap + 4 + hold + 6;
+    var int call cf = 0;
+    loop [cf <= cend]{
+        ci = 1;
+        loop [ci <= n]{
+            var int call cl = cf - (ci - 1) * gap;
+            if [cl == 0]{
+                dis.setObjAlpha("sfx%ci%", 255);
+            }
+            if [cl == 2]{
+                clawCell("sfx%ci%", 2, inCol);
+            }
+            if [cl == 4]{
+                clawCell("sfx%ci%", 3, inCol);
+            }
+            if [cl == 5 + hold]{
+                clawCell("sfx%ci%", 4, inCol);
+            }
+            if [cl > 5 + hold]{
+                dis.setObjAlpha("sfx%ci%", floor(255 * max(0, 1 - (cl - 5 - hold) / 6.0)));
+            }
+            ci = ci + 1;
+        }
+        wait(16);
+        cf = cf + 1;
+    }
+    spClear(n);
 }
 // 맴돌기: (cx, cy) 둘레를 n 개가 납작한 원을 그리며 돌면서 위로 올라감 (fr 프레임) · sfx1 ~ sfxn
 func spSwirl(int tex, float cx, float cy, float s, int n, float r, int fr, float spin, float gw, string glow){
@@ -1598,6 +1652,41 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     }
     if [mv == 920]{   // 록다운: 큰 바위가 상대 바로 위에 잠깐 생겼다가 빠르게 내리꽂힘
         spRockDrop(tx, ty, s, 0.14, 0.5, 24, 6, 1);
+    }
+    if [mv == 10]{   // 할퀴기: 흰 발톱 자국 한 번
+        spClaws(tx, ty, s, "#ffffff", "#c8d4e8", 0.3, 1, 0, 6, 0);
+    }
+    if [mv == 154]{   // 마구할퀴기: 작은 발톱 자국이 엇갈리며 세 번 빠르게
+        spClaws(tx, ty, s, "#ffffff", "#c8d4e8", 0.26, 3, 7, 3, 0);
+    }
+    if [mv == 163]{   // 베어가르기: 크고 길게 남는 푸른빛 자국
+        spClaws(tx, ty, s, "#f4fbff", "#7cc4ff", 0.42, 1, 0, 10, 0);
+    }
+    if [mv == 232]{   // 메탈클로: 은빛 자국 + 쇳빛 번쩍
+        spClaws(tx, ty, s, "#f8fbff", "#9fb4cc", 0.34, 1, 0, 8, 0);
+        spBurst(tx, ty, s, s * 0.03, s * 0.16, "#ffffff", "#b8c8d8", 8);
+    }
+    if [mv == 306]{   // 브레이크클로: 주황빛 자국 두 개가 X 자로
+        spClaws(tx, ty, s, "#fff2e0", "#ff9a4a", 0.36, 2, 6, 6, 0);
+    }
+    if [mv == 337]{   // 드래곤클로: 크고 푸른 보랏빛 자국 X 자 + 용 기운
+        spClaws(tx, ty, s, "#eef0ff", "#5a5cff", 0.42, 2, 6, 8, 0);
+        spBurst(tx, ty, s, s * 0.04, s * 0.24, "#c8ccff", "#5a5cff", 10);
+    }
+    if [mv == 421]{   // 섀도클로: 그림자 빛 보라 자국 + 어둠이 퍼짐
+        spClaws(tx, ty, s, "#e0c8ff", "#5a1a9a", 0.42, 1, 0, 10, 15);
+        spBurst(tx, ty, s, s * 0.04, s * 0.24, "#7a3ab8", "#2a0a4a", 10);
+    }
+    if [mv == 468]{   // 손톱갈기: 자기 몸 앞에서 작은 금빛 자국 둘 (발톱을 감)
+        spClaws(ax, ay, s, "#fffbe0", "#ffd84a", 0.22, 2, 8, 4, 0);
+    }
+    if [mv == 827]{   // 페이탈클로: 독빛 자국 X 자 + 독 방울이 튐
+        spClaws(tx, ty, s, "#f4e0ff", "#b040ff", 0.38, 2, 6, 6, 0);
+        spBurst(tx, ty, s, s * 0.04, s * 0.22, "#d8a0ff", "#9b3cff", 10);
+    }
+    if [mv == 921]{   // 플레임클로: 불빛 자국 X 자 + 불똥이 맴돌며 피어오름
+        spClaws(tx, ty, s, "#fff2c0", "#ff6a20", 0.38, 2, 6, 6, 0);
+        spSwirl(1, tx, ty, s, 8, 0.045, 26, 0, 0.08, "#ff7a20");
     }
     if [mv == 51]{   // 용해액: 독 방울이 포물선을 그리며
         spShower(7, ax, ay, tx, ty, s, 6, 0.045, 18, 3, 0.18, 0, 0, 0.05, "#c070ff");
