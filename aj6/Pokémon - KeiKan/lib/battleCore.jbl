@@ -703,7 +703,7 @@ func moveFx(int mv, float ax, float ay, float tx, float ty, float s, string col)
 //   moveFx 가 먼저 여기를 봄 (있으면 이것 · 없으면 종류별 이펙트) · 오브젝트 sfx1 ~ sfx16 (끝나면 모두 지움)
 func int hasSp(int mv){
     var list call sp = [192, 411, 247, 53, 58, 85, 56, 412, 406, 315, 63, 416, 76, 451, 62, 61, 324, 430, 60, 820, 795, 796, 800, 711, 714, 888, 907, 905, 744, 705];   // 63 ~ 705 = 빔 기술 (spBeam)
-    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200, 352, 399, 805, 505, 396, 311];   // 타입 텍스쳐 (fx_type.png) 기술
+    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200, 352, 399, 805, 505, 396, 311, 408];   // 타입 텍스쳐 (fx_type.png) 기술
     if [sp.find(mv) != 0]{
         return(1);
     }
@@ -1272,6 +1272,109 @@ func float sprTop(float cx, float cy, float s){
         top = cy + fxSrcSz * 0.4;
     }
     return(top);
+}
+// ── 파워젬 (2026-11-22): 밝은 여러 색의 보석 바위 (fx_gem.png) 5 개 (sfx1 ~ sfx5) 가 하나씩 차츰 나타나 쓰는 포켓몬 둘레를 돎 (타원 · 원근)
+//   → 차례로 궤도를 벗어나 맞는 곳으로 빠르게 날아가 부서짐 (조각 둘씩 · sfx6 ~ sfx15 · 튀며 떨어지고 사라짐)
+//   돌기 · 날기 · 부서짐이 한 흐름 (gem i 는 4 프레임 간격으로 나타나고 · 46 + 4 (i - 1) 프레임에 날아감 · 9 프레임 만에 닿음)
+func gemObj(string id, float x, float y, float sz, int c, string col){
+    dis.setObject([x, y], id, [sz, sz], "#ffffff");
+    mag.setObjTexture(id, "fxgem", [(c - 1) * 24, 0], [c * 24, 24]);
+    dis.setObjColor(id, col);   // 그림을 입히면 흰색이 됨 → 다시 색을 입힘 (흰 · 회색 조각면이라 밝은 색이 그대로)
+    dis.setGlow(id, col, sz * 0.25);
+    dis.setObjLayer(id, 2);
+}
+func spGems(float ax, float ay, float tx, float ty, float s){
+    var list call gc = ["#ff7a8a", "#ffd84a", "#7af0ff", "#9cff7a", "#c89cff"];   // 밝은 계열 다섯 색
+    var list call gx0 = [0, 0, 0, 0, 0];   // 날아가기 시작한 자리
+    var list call gy0 = [0, 0, 0, 0, 0];
+    var list call gox = [0, 0, 0, 0, 0];   // 맞는 곳에서 조금씩 비킴 (겹치지 않게)
+    var list call goy = [0, 0, 0, 0, 0];
+    var list call shx = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];   // 조각: 위치 · 속도
+    var list call shy = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    var list call svx = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    var list call svy = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    var float call gsz = s * 0.1;   // 보석 한 변 (가까이 = fxKa · 날아가며 pk)
+    var float call rx = s * fxKa * 0.34;   // 도는 타원 (가로 · 세로)
+    var float call ry = s * fxKa * 0.11;
+    var float call oy = ay + s * fxKa * 0.04;
+    var int call gi = 1;
+    loop [gi <= 5]{
+        gox[gi] = jaw.random(-1, 1) * s * fxKt * 0.06;
+        goy[gi] = jaw.random(-1, 1) * s * fxKt * 0.05;
+        gemObj("sfx%gi%", ax, oy, gsz * fxKa * 0.3, gi - floor((gi - 1) / 4) * 4, gc[gi]);
+        dis.setObjAlpha("sfx%gi%", 0);
+        dis.rotateObj("sfx%gi%", jaw.random(0, 360), 0);
+        gi = gi + 1;
+    }
+    var int call gf = 1;
+    var int call gEnd = 46 + 4 * 4 + 9 + 16;
+    loop [gf <= gEnd]{
+        gi = 1;
+        loop [gi <= 5]{
+            var int call gj = 0;
+            var int call gn = 0;
+            var int call gq = 0;
+            var int call gfire = 46 + (gi - 1) * 4;   // 날아가는 프레임
+            var int call gshow = 1 + (gi - 1) * 4;    // 나타나기 시작하는 프레임
+            if [gf < gfire] and [gf >= gshow]{   // 나타나며 돎
+                var float call gth = gf * 7 + gi * 72;
+                var float call gk = min(1, (gf - gshow) / 10.0);   // 나타남 (크기 · 진하기)
+                var float call gpx = ax + cos(gth) * rx;
+                var float call gpy = oy + sin(gth) * ry + sin(gf * 9 + gi * 40) * s * 0.008;
+                dis.setObjPos("sfx%gi%", [gpx, gpy]);
+                dis.setObjScale("sfx%gi%", [gsz * fxKa * (0.3 + 0.7 * gk), gsz * fxKa * (0.3 + 0.7 * gk)]);
+                dis.setObjAlpha("sfx%gi%", floor(255 * gk));
+                dis.rotateObj("sfx%gi%", 4, 0);
+                gx0[gi] = gpx;
+                gy0[gi] = gpy;
+            }
+            var float call gt = (gf - gfire) / 9.0;
+            if [gt > 0] and [gt <= 1]{   // 날아감: 점점 빨라짐
+                var float call ge = gt * gt;
+                dis.setObjPos("sfx%gi%", [gx0[gi] + (tx + gox[gi] - gx0[gi]) * ge, gy0[gi] + (ty + goy[gi] - gy0[gi]) * ge]);
+                dis.setObjScale("sfx%gi%", [gsz * pk(ge), gsz * pk(ge)]);
+                dis.rotateObj("sfx%gi%", 14, 0);
+            }
+            if [gf == gfire + 9]{   // 닿음: 보석이 사라지고 조각 둘이 튐
+                dis.setObjAlpha("sfx%gi%", 0);
+                gj = 0;
+                loop [gj <= 1]{
+                    gn = 4 + gi * 2 + gj;   // sfx6 ~ sfx15
+                    gq = gn - 5;
+                    shx[gq] = tx + gox[gi];
+                    shy[gq] = ty + goy[gi];
+                    var float call ga = jaw.random(20, 160);
+                    if [gj == 1]{
+                        ga = ga + 180;
+                    }
+                    svx[gq] = cos(ga) * s * fxKt * 0.012;
+                    svy[gq] = sin(ga) * s * fxKt * 0.01 + s * fxKt * 0.008;
+                    gemObj("sfx%gn%", shx[gq], shy[gq], gsz * fxKt * 0.45, 1 + floor(jaw.random(0, 3.99)), gc[gi]);
+                    dis.rotateObj("sfx%gn%", jaw.random(0, 360), 0);
+                    gj = gj + 1;
+                }
+            }
+            var float call gs = (gf - gfire - 9) / 16.0;   // 조각: 튀며 떨어지고 사라짐
+            if [gs > 0] and [gs <= 1]{
+                gj = 0;
+                loop [gj <= 1]{
+                    gn = 4 + gi * 2 + gj;
+                    gq = gn - 5;
+                    shx[gq] = shx[gq] + svx[gq];
+                    shy[gq] = shy[gq] + svy[gq];
+                    svy[gq] = svy[gq] - s * fxKt * 0.0022;
+                    dis.setObjPos("sfx%gn%", [shx[gq], shy[gq]]);
+                    dis.setObjAlpha("sfx%gn%", floor(255 * (1 - gs)));
+                    dis.rotateObj("sfx%gn%", 18, 0);
+                    gj = gj + 1;
+                }
+            }
+            gi = gi + 1;
+        }
+        wait(16);
+        gf = gf + 1;
+    }
+    spClear(15);
 }
 // ── 돌진 (2026-11-22): 공격하는 포켓몬 둘레에 기운 (sfx1 ~ sfx10) 이 맴돌며 진해짐 (20 프레임) → 몸 크기의 빛 덩이 (sfx11) 가 잔상 (sfx12 ~ sfx15) 을 남기며 7 프레임 만에 들이받음
 //   → 맞는 곳에서 충격파 (spBoom) · r = 빛 덩이 반지름 (s 에 곱함)
@@ -2186,6 +2289,9 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     }
     if [mv == 157]{   // 스톤샤워: 중간 · 작은 바위가 하늘에서 1 초쯤 쏟아짐
         spRain(6, tx, ty, sT, 16, 0.05, 14, 3, 12, 0, "");
+    }
+    if [mv == 408]{   // 파워젬: 여러 색 보석 바위가 차츰 나타나 쓰는 쪽 둘레를 돌다가 → 맞는 곳으로 빠르게 날아가 부서짐
+        spGems(ax, ay, tx, ty, s);
     }
     if [mv == 920]{   // 록다운: 큰 바위가 상대 바로 위에 잠깐 생겼다가 빠르게 내리꽂힘
         spRockDrop(tx, ty, sT, 0.14, 0.5, 24, 6, 1);
