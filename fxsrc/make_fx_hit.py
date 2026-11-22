@@ -23,13 +23,11 @@ def outline(im):
 
 def fist():
     im = Image.new("RGBA", (C, C), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
-    # 손등 (둥근 네모) + 손목
+    # 손등 (둥근 네모 · 손목 없음)
     d.rounded_rectangle([6, 5, 25, 23], radius=5, fill=W)
-    d.rectangle([10, 22, 21, 27], fill=W)
     # 그늘: 오른쪽 · 아래
     d.rounded_rectangle([20, 7, 25, 23], radius=3, fill=SH)
     d.rectangle([6, 20, 25, 23], fill=SH)
-    d.rectangle([18, 22, 21, 27], fill=SH)
     # 손가락 네 마디 (위쪽 반): 하나씩 둥글게 → 위 끝이 울퉁불퉁 (마디) · 사이 금
     d.rectangle([6, 9, 25, 15], fill=W)
     for k, x in enumerate((6, 11, 16, 21)):
@@ -39,12 +37,11 @@ def fist():
     d.line([7, 14, 24, 14], fill=LINE)   # 손가락 끝 (접힌 곳)
     # 엄지: 손가락 아래를 가로지름 (왼쪽에서)
     d.rounded_rectangle([6, 15, 19, 19], radius=2, fill=W, outline=LINE)
-    # 손목 띠
-    d.line([10, 24, 21, 24], fill=LINE)
     # 반짝임
     d.point([(8, 7), (9, 7), (8, 8)], fill=W)
     outline(im)
-    return im
+    sh = Image.new("RGBA", (C, C), (0, 0, 0, 0)); sh.alpha_composite(im, (0, 2))
+    return sh
 
 def blob(d, x0, y0, x1, y1, col):
     # 모서리를 깎은 네모 (작은 발가락)
@@ -77,12 +74,12 @@ out.alpha_composite(fist(), (0, 0))
 out.alpha_composite(foot(), (C, 0))
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 out.save(os.path.join(root, "aj6", "Pokémon - KeiKan", "assets", "textures", "battle", "fx_hit.png"))
-# 미리 보기: 흰색 그대로 · 불꽃 · 얼음 · 전기 · 강철 · 고스트 색을 입힌 주먹 + 발바닥
-cols = [(255, 255, 255), (255, 140, 80), (150, 230, 255), (255, 225, 70), (190, 205, 225), (160, 110, 210)]
+# 미리 보기: 격투 타입 색 (기본) · 불꽃 · 얼음 · 전기 · 강철 · 고스트 색을 입힌 주먹 + 발바닥
+cols = [(224, 156, 48), (255, 140, 80), (150, 230, 255), (255, 225, 70), (190, 205, 225), (160, 110, 210)]
 pv = Image.new("RGBA", (C * 6 * 7, C * 6), (40, 44, 60, 255))
 for k, col in enumerate(cols + [None]):
     g = out.crop((0, 0, C, C)) if col else out.crop((C, 0, C * 2, C))
-    col = col or (255, 255, 255)
+    col = col or (224, 156, 48)
     p = g.load()
     for y in range(C):
         for x in range(C):

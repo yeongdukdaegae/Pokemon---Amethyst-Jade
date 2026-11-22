@@ -1378,6 +1378,7 @@ func spGems(float ax, float ay, float tx, float ty, float s){
 }
 // ── 타격 아이콘 (2026-11-22): 펀치 = 주먹 · 킥 = 발바닥 (fx_hit.png · DPPt 느낌 · 흰색이라 타입 색을 입힐 수 있음)
 //   맞는 곳에서 아이콘 (sfx1) 이 빠르게 커지며 (0.3 → 1.25 → 1 배 · 4 프레임) 나타나고 · 뒤에 하얀 충격 빛 (sfxb) 이 터짐 → hold 프레임 뒤 사라짐
+//   기본 색 = 격투 타입 색 (mu.typeCol(7)) · 몇몇 펀치는 그 기술 타입 색
 //   cell 1 주먹 · 2 발바닥 · 0 = 아이콘 없이 충격 빛만 (조금 크게) · size = 아이콘 한 변 (s 에 곱함) · rot = 기울기
 func spImpact(float x, float y, float s, int cell, string col, float size, int hold, float rot){
     var float call isz = s * size;
@@ -1440,7 +1441,7 @@ func spCloseCombat(float tx, float ty, float s){
     loop [ci <= 9]{
         var float call cx0 = tx + jaw.random(-1, 1) * s * 0.13;
         var float call cy0 = ty + jaw.random(-1, 1) * s * 0.11;
-        spImpact(cx0, cy0, s, cc[ci], "#ffffff", 0.26, 1, jaw.random(-25, 25));
+        spImpact(cx0, cy0, s, cc[ci], mu.typeCol(7), 0.26, 1, jaw.random(-25, 25));   // 격투 타입 색
         ci = ci + 1;
     }
     spImpact(tx, ty, s, 0, "#ffffff", 0.5, 2, 0);
@@ -2378,10 +2379,10 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     var list call punchMv = [4, 5, 146, 183, 223, 264, 309, 327, 359, 409, 612, 721, 817, 818, 857, 889];   // 펀치 기술 (주먹)
     var list call kickMv = [24, 25, 26, 27, 67, 136, 167, 299, 490, 688, 813, 823, 853];   // 킥 기술 (발바닥 · 땅을 구르는 기술 · 지진류는 빼고)
     if [punchMv.find(mv) != 0]{   // 주먹이 빠르게 커지며 나타남 · 위력에 따라 크기
-        spImpact(tx, ty, sT, 1, "#ffffff", hitSize(mv), 8, jaw.random(-12, 12));
+        spImpact(tx, ty, sT, 1, mu.typeCol(7), hitSize(mv), 8, jaw.random(-12, 12));   // 기본 색 = 격투 타입 색
     }
     if [kickMv.find(mv) != 0]{   // 발바닥
-        spImpact(tx, ty, sT, 2, "#ffffff", hitSize(mv), 8, jaw.random(-20, 20));
+        spImpact(tx, ty, sT, 2, mu.typeCol(7), hitSize(mv), 8, jaw.random(-20, 20));
     }
     if [mv == 370]{   // 인파이트: 주먹 · 발 · 충격이 연달아
         spCloseCombat(tx, ty, sT);
