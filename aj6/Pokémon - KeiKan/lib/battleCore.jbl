@@ -2053,7 +2053,7 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spPulse(ax, ay, tx, ty, s, trIn(), trOut(), 0.075, 20, 0);
     }
     if [mv == 311]{   // 웨더볼: 날씨에 따른 색의 공을 머리 위에 모아 쏨 → 날씨 알갱이로 터짐 (날씨가 없으면 타입 색)
-        spBomb(ax, ay, tx, ty, s, wxIn(), wxOut(), 0.08, 22, 11, 0.3, 10, wxTex(), 0, 0);
+        spBomb(ax, ay, tx, ty, s, wxIn(), wxOut(), 0.08, 22, 11, 0.3, 10, wxTex(), 0, 1);
     }
     if [mv == 505]{   // 치유파동: 부드러운 분홍 고리 (변화 기술)
         spPulse(ax, ay, tx, ty, s, "#fff0f8", "#ff8ac8", 0.065, 16, 0);
@@ -2267,28 +2267,28 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spSwirl(1, tx, ty, sT, 8, 0.045, 26, 0, 0.08, "#ff7a20");
     }
     if [mv == 121]{   // 알폭탄: 크림빛 공 → 하얀 폭발
-        spBomb(ax, ay, tx, ty, s, "#fffef0", "#ffd870", 0.09, 22, 12, 0.3, 10, 0, 1, 0);
+        spBomb(ax, ay, tx, ty, s, "#fffef0", "#ffd870", 0.09, 22, 12, 0.3, 10, 0, 1, 1);
     }
     if [mv == 188]{   // 오물폭탄: 보랏빛 공 → 독 방울이 사방으로
-        spBomb(ax, ay, tx, ty, s, "#f0d8ff", "#9b3cff", 0.09, 22, 12, 0.3, 10, 7, 5, 0);
+        spBomb(ax, ay, tx, ty, s, "#f0d8ff", "#9b3cff", 0.09, 22, 12, 0.3, 10, 7, 5, 1);
     }
     if [mv == 402]{   // 씨폭탄: 초록빛 공 → 나뭇잎이 사방으로
-        spBomb(ax, ay, tx, ty, s, "#f0ffd8", "#5ac83a", 0.0825, 20, 12, 0.28, 10, 3, 2, 0);
+        spBomb(ax, ay, tx, ty, s, "#f0ffd8", "#5ac83a", 0.0825, 20, 12, 0.28, 10, 3, 2, 1);
     }
     if [mv == 426]{   // 진흙폭탄: 흙빛 공 → 흙덩이가 사방으로
-        spBomb(ax, ay, tx, ty, s, "#f0dcc0", "#8a5a2a", 0.09, 22, 12, 0.3, 10, 6, 3, 0);
+        spBomb(ax, ay, tx, ty, s, "#f0dcc0", "#8a5a2a", 0.09, 22, 12, 0.3, 10, 6, 3, 1);
     }
     if [mv == 443]{   // 마그넷봄: 은빛 공 → 쇳빛 폭발 (빠르게)
-        spBomb(ax, ay, tx, ty, s, "#ffffff", "#a8bcd0", 0.075, 18, 9, 0.26, 10, 0, 4, 0);
+        spBomb(ax, ay, tx, ty, s, "#ffffff", "#a8bcd0", 0.075, 18, 9, 0.26, 10, 0, 4, 1);
     }
     if [mv == 491]{   // 애시드봄: 연보라 공 → 독 방울
-        spBomb(ax, ay, tx, ty, s, "#f4e4ff", "#c060ff", 0.075, 20, 12, 0.26, 8, 7, 0, 0);
+        spBomb(ax, ay, tx, ty, s, "#f4e4ff", "#c060ff", 0.075, 20, 12, 0.26, 8, 7, 0, 1);
     }
     if [mv == 903]{   // 시럽봄: 호박빛 공 → 끈끈한 방울
-        spBomb(ax, ay, tx, ty, s, "#fff0d0", "#ff8a2a", 0.09, 22, 13, 0.28, 10, 0, 6, 0);
+        spBomb(ax, ay, tx, ty, s, "#fff0d0", "#ff8a2a", 0.09, 22, 13, 0.28, 10, 0, 6, 1);
     }
     if [mv == 585]{   // 문포스: 큰 분홍 달빛 공을 오래 모음 → 반짝임이 크게 퍼짐
-        spBomb(ax, ay, tx, ty, s, "#fff4ff", "#ff7ad8", 0.12, 34, 12, 0.4, 14, 8, 0, 0);
+        spBomb(ax, ay, tx, ty, s, "#fff4ff", "#ff7ad8", 0.12, 34, 12, 0.4, 14, 8, 0, 1);
     }
     if [mv == 23]{   // 짓밟기: 한 번 쿵 → 짧게 떨림 · 작은 흙먼지 고리
         spQuake(ax, ay, tx, ty, s, 8, 22, 0.012, 0.18, 3, "#f0e0c0", "#a08050", 0);
