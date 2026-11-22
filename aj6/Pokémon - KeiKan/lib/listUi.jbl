@@ -17,7 +17,7 @@ var public list call luIcons;
 var public list call luOff;
 var public list call luCounts;   // 줄 오른쪽 끝의 글자 (개수 등 · 비어 있거나 모자라면 없음) — 쓰지 않으면 [] 로
 var public int call luResult;
-var public int call luBase;     // 레이어에 더할 값 (0 = 배틀 · 필드 메뉴 위에서 쓸 때 70) — 0 이 아니면 화면에 고정 (setUi)
+var public int call luBase;     // 레이어에 더할 값 (0 = 배틀 · 필드 메뉴 위에서 쓸 때 70) — 늘 화면에 고정 (setUi)
 
 // 지금 보이는 줄들을 다시 그림: top = 맨 윗줄에 보이는 항목 번호 · sel = 고른 항목
 func paint(float x, float top, float w, float rowH, int rows, int first, int sel){
@@ -99,7 +99,7 @@ func open(float xRight, float yBottom, float w, float rowH, int rows){
     var int call sel = 1;
     var int call n = luLabels.length;
     paint(x, top, w, rowH, rows, first, sel);
-    if [luBase != 0]{   // 화면에 고정 (필드에서는 카메라가 플레이어를 따라감)
+    if [1 == 1]{   // 화면에 고정 (필드에서는 카메라가 플레이어를 따라감 · 배틀에서도 — 배틀 UI (상태 상자 등) 가 setUi 라 고정하지 않으면 그 아래에 그려짐)
         can.setUi("lubd");
         can.setUi("lubg");
         can.setUi("lusel");

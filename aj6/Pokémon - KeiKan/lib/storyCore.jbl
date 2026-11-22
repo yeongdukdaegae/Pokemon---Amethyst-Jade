@@ -187,7 +187,7 @@ func chooseStarter(int k){
         log("라이벌의 스타팅: " + lang[50 + rp]);
         ft.say(lang[rivalLine(7211)]);
         ft.close();
-        // 박사가 몬스터볼 10 개를 줌 (가방에 있으면 개수만 늘림)
+        // 박사가 몬스터볼 25 개를 줌 (가방에 있으면 개수만 늘림)
         ft.open(lang[7215]);
         ft.say(lang[7238]);
         ft.close();
@@ -196,19 +196,19 @@ func chooseStarter(int k){
         loop [bi <= bag.length]{
             var compound call be = bag[bi];
             if [be[1] == 4]{
-                be[2] = be[2] + 10;
+                be[2] = be[2] + 25;
                 bag[bi] = be;
                 gotB = 1;
             }
             bi = bi + 1;
         }
         if [gotB == 0]{
-            var compound call nb = [4, 10];
+            var compound call nb = [4, 25];
             bag.add(nb);
         }
-        log("몬스터볼 10 개를 받음");
+        log("몬스터볼 25 개를 받음");
         ft.open("");
-        ft.say(replaceStr(replaceStr(lang[7239], "{item}", lang[3004]), "{n}", "10"));
+        ft.say(replaceStr(replaceStr(lang[7239], "{item}", lang[3004]), "{n}", "25"));
         ft.close();
         // 박사가 PC 계정이 적힌 종이 (계정 메모 · 도구 901) 를 줌 → 포켓몬센터 구석의 PC 에서 활성화 (lib/pcCore.jbl)
         ft.open(lang[7215]);
