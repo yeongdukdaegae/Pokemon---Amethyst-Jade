@@ -1478,8 +1478,8 @@ func spGas(float ax0, float ay0, float tx, float ty, float s, string inCol, stri
             if [gt > 0] and [gt <= 1]{   // 날아감: 처음엔 빠르고 끝에서 느려짐 (연기) · 흔들리며 부풂
                 var float call ge = 1 - (1 - gt) * (1 - gt);
                 var float call gw = sin(gt * 360 + gi * 67) * s * wob * (0.3 + gt);
-                if [linger < 0]{   // 용의숨결: 같은 빠르기 · 곧게
-                    ge = gt;
+                if [linger < 0]{   // 용의숨결: 같은 빠르기 · 곧게 · 맞는 곳 너머까지 (1.35 배 · 더 앞으로 뻗음)
+                    ge = gt * 1.35;
                     gw = 0;
                 }
                 var float call gx = ax + (tx + gex[gi] - ax) * ge + gnx * gw;
@@ -1492,7 +1492,7 @@ func spGas(float ax0, float ay0, float tx, float ty, float s, string inCol, stri
                     ga = ga * min(1, (1 - gt) * 3);   // 숨결: 닿으며 사라짐
                 }
                 if [linger < 0]{
-                    ga = alpha * min(1, gt * 8) * (1 - gt);   // 용의숨결: 날아가는 동안 점점 옅어짐
+                    ga = alpha * min(1, gt * 8) * (1 - gt * gt);   // 용의숨결: 날아가는 동안 점점 옅어짐 (처음엔 천천히 · 끝에서 빨리)
                 }
                 dis.setObjAlpha("sfx%gi%", floor(ga));
             }
@@ -1589,6 +1589,199 @@ func spPowder(float ax, float ay, float tx, float ty, float s, string col, int n
         pf = pf + 1;
     }
     spClear(n);
+}
+// ── 화염방사 (2026-11-22): 불꽃 (fx_type 1 번 불똥 · 크게) 16 개 (sfx1 ~ sfx16) 를 돌려 쓰며 hold 프레임 동안 입 (몸 앞) 에서 맞는 곳으로 줄지어 뿜음
+//   하나가 14 프레임: 날아가며 0.05 → 0.13 s 로 커지고 · 줄기 둘레로 조금씩 퍼지고 · 빛 (노랑 → 주황 → 빨강) · 끝에서 옅어짐 → 맞는 곳에서 빛이 터짐
+func spFlame(float ax0, float ay0, float tx, float ty, float s, int hold){
+    var float call fl0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
+    var float call ax = ax0 + (tx - ax0) / fl0 * s * fxKa * 0.2;
+    var float call ay = ay0 + (ty - ay0) / fl0 * s * fxKa * 0.2;
+    var float call fnx = 0 - (ty - ay0) / fl0;
+    var float call fny = (tx - ax0) / fl0;
+    var list call fgl = ["#fff27a", "#ffb030", "#ff6a1a", "#ff3a10"];   // 빛 번짐: 노랑 → 빨강
+    var int call fk = 1;
+    loop [fk <= 16]{
+        pxTex(ax, ay, "sfx%fk%", s * 0.04, 1);
+        dis.setObjLayer("sfx%fk%", 2);
+        dis.setObjAlpha("sfx%fk%", 0);
+        fk = fk + 1;
+    }
+    var int call life = 14;
+    var int call fEnd = hold + life;
+    var int call ff = 0;
+    loop [ff <= fEnd]{
+        fk = 1;
+        loop [fk <= 16]{
+            var float call fp = ff + (fk - 1) * life / 16.0;   // 이 불꽃의 나이 (돌려 씀)
+            var int call fc = floor(fp / life);
+            var float call fl = fp - fc * life;
+            var float call fs0 = ff - fl;   // 뿜은 프레임
+            if [fs0 >= 0] and [fs0 <= hold]{
+                var float call ft = fl / life;
+                var float call fj = sin(fc * 61 + fk * 43);   // 불꽃마다 다른 값 (-1 ~ 1)
+                var float call fsp = fj * s * 0.16 * ft + sin(ff * 53 + fk * 29) * s * 0.03 * ft;   // 퍼짐 (끝으로 갈수록 넓게 · 일렁임)
+                var float call fu = min(1.05, ft * (0.92 + 0.12 * sin(fc * 37 + fk * 71)));   // 줄기 위의 자리 (불꽃마다 빠르기가 조금 다름)
+                var float call fx = ax + (tx - ax) * fu + fnx * fsp;
+                var float call fy = ay + (ty - ay) * fu + fny * fsp + ft * s * 0.03;
+                var float call fr = s * (0.045 + 0.13 * ft * ft) * (0.75 + 0.5 * (0.5 + 0.5 * sin(fc * 53 + fk * 19))) * pk(fu);   // 끝에서 크게 부풂
+                dis.setObjPos("sfx%fk%", [fx, fy]);
+                dis.setObjScale("sfx%fk%", [fr * 2.8, fr * 2.8]);
+                dis.setGlow("sfx%fk%", fgl[min(4, 1 + floor(ft * 4))], fr * 1.3);
+                dis.setObjAlpha("sfx%fk%", floor((200 + 55 * sin(ff * 71 + fk * 13)) * min(1, (1 - ft) * 2.5)));
+                dis.rotateObj("sfx%fk%", 9 + fk * 3, 0);
+            }
+            else{
+                dis.setObjAlpha("sfx%fk%", 0);
+            }
+            fk = fk + 1;
+        }
+        wait(16);
+        ff = ff + 1;
+    }
+    spClear(16);
+    spBurst(tx, ty, s, s * fxKt * 0.04, s * fxKt * 0.22, "#ffe080", "#ff5a10", 12);
+}
+// 냉동빔의 끝: 맞는 곳 둘레에 얼음 조각 (fx_type 5 번) n 개 (sfx1 ~ sfxn) 가 차례로 돋아나 (커짐) 잠깐 반짝이다 사라짐
+func spIceHit(float tx, float ty, float s, int n){
+    var int call ii = 1;
+    loop [ii <= n]{
+        pxTex(tx + sin(ii * 131) * s * 0.13, ty + cos(ii * 71) * s * 0.11, "sfx%ii%", s * 0.04, 5);
+        dis.setGlow("sfx%ii%", "#8adcff", s * 0.06);
+        dis.setObjLayer("sfx%ii%", 2);
+        dis.setObjAlpha("sfx%ii%", 0);
+        dis.rotateObj("sfx%ii%", ii * 47, 0);
+        ii = ii + 1;
+    }
+    var int call iEnd = n * 2 + 20;
+    var int call iff = 1;
+    loop [iff <= iEnd]{
+        ii = 1;
+        loop [ii <= n]{
+            var float call it = (iff - (ii - 1) * 2) / 8.0;
+            if [it > 0]{
+                var float call ik = min(1, it);
+                dis.setObjScale("sfx%ii%", [s * 0.04 * 2.8 * (0.3 + 0.9 * ik), s * 0.04 * 2.8 * (0.3 + 0.9 * ik)]);
+                var float call ia = 255;
+                if [iff > iEnd - 8]{
+                    ia = 255 * (iEnd - iff) / 8.0;
+                }
+                dis.setObjAlpha("sfx%ii%", floor(ia));
+            }
+            ii = ii + 1;
+        }
+        wait(16);
+        iff = iff + 1;
+    }
+    spClear(n);
+}
+// ── 10만볼트 (2026-11-22): 쓰는 쪽 앞에서 지그재그 전격 (이어진 선분 7 개 · sfx1 ~ sfx7 · 하얀 심 + 노란 빛) 이 grow 프레임 동안 상대까지 뻗고
+//   hold 프레임 동안 3 프레임마다 모양이 바뀌며 지직거림 (둘레에 불똥 sfx8 ~ sfx16 이 튐) → 상대에게 충격파 (노란 고리 둘 sfx17 · sfx18 이 퍼짐 · 번쩍)
+//   선분 = 네모를 두 꺾이는 곳 사이에 놓고 그 방향으로 돌림 (rotateObj 는 더해 돌리므로 지금 각도 ban 을 기억해 차이만큼)
+func spBolt(float ax0, float ay0, float tx, float ty, float s, int grow, int hold){
+    var float call bl0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
+    var float call ax = ax0 + (tx - ax0) / bl0 * s * fxKa * 0.2;
+    var float call ay = ay0 + (ty - ay0) / bl0 * s * fxKa * 0.2;
+    var float call bnx = 0 - (ty - ay0) / bl0;
+    var float call bny = (tx - ax0) / bl0;
+    var list call zz = [0, 0, 0, 0, 0, 0, 0, 0];   // 꺾이는 곳 8 개의 옆 비킴 (양 끝은 0)
+    var list call zx = [0, 0, 0, 0, 0, 0, 0, 0];
+    var list call zy = [0, 0, 0, 0, 0, 0, 0, 0];
+    var list call ban = [0, 0, 0, 0, 0, 0, 0];   // 선분의 지금 각도
+    var int call bk = 1;
+    loop [bk <= 7]{
+        dis.setObject([ax, ay], "sfx%bk%", [1, 1], "#fffbe0");
+        dis.setGlow("sfx%bk%", "#ffd23a", s * 0.07);
+        dis.setObjLayer("sfx%bk%", 2);
+        dis.setObjAlpha("sfx%bk%", 0);
+        bk = bk + 1;
+    }
+    bk = 8;
+    loop [bk <= 16]{
+        pxTex(ax, ay, "sfx%bk%", s * 0.025, 4);   // 불똥 (fx_type 4 번 스파크)
+        dis.setGlow("sfx%bk%", "#ffd23a", s * 0.04);
+        dis.setObjLayer("sfx%bk%", 2);
+        dis.setObjAlpha("sfx%bk%", 0);
+        bk = bk + 1;
+    }
+    var int call bf = 1;
+    loop [bf <= grow + hold]{
+        if [bf - floor(bf / 3) * 3 == 1]{   // 3 프레임마다 지그재그를 새로
+            var int call zi = 2;
+            loop [zi <= 7]{
+                zz[zi] = (zi - floor(zi / 2) * 2 - 0.5) * 2 * s * jaw.random(0.04, 0.1);
+                zi = zi + 1;
+            }
+        }
+        var float call bg = min(1, bf / (grow * 1.0));   // 뻗은 정도
+        var int call zj = 1;
+        loop [zj <= 8]{
+            var float call zu = (zj - 1) / 7.0;
+            zx[zj] = ax + (tx - ax) * zu + bnx * zz[zj] * pk(zu);
+            zy[zj] = ay + (ty - ay) * zu + bny * zz[zj] * pk(zu);
+            zj = zj + 1;
+        }
+        bk = 1;
+        loop [bk <= 7]{
+            var float call bu0 = (bk - 1) / 7.0;
+            if [bu0 < bg]{
+                var float call bpart = min(1, (bg - bu0) * 7);   // 뻗는 중인 마지막 선분은 일부만
+                var float call bx1 = zx[bk];
+                var float call by1 = zy[bk];
+                var float call bx2 = bx1 + (zx[bk + 1] - bx1) * bpart;
+                var float call by2 = by1 + (zy[bk + 1] - by1) * bpart;
+                var float call blen = sqrt((bx2 - bx1) * (bx2 - bx1) + (by2 - by1) * (by2 - by1));
+                var float call bang = atan2(by2 - by1, bx2 - bx1);
+                dis.setObjPos("sfx%bk%", [(bx1 + bx2) / 2, (by1 + by2) / 2]);
+                dis.setObjScale("sfx%bk%", [blen + s * 0.012, s * 0.016 * pk(bu0) * jaw.random(0.8, 1.4)]);
+                dis.rotateObj("sfx%bk%", bang - ban[bk], 0);
+                ban[bk] = bang;
+                dis.setObjAlpha("sfx%bk%", floor(jaw.random(200, 255)));
+            }
+            bk = bk + 1;
+        }
+        bk = 8;
+        loop [bk <= 16]{   // 불똥: 꺾이는 곳 둘레에서 튀었다 사라짐 (프레임마다 다른 곳)
+            if [bg >= 1] or [jaw.random(0, 1) < bg]{
+                var int call bz = 1 + floor(jaw.random(0, 7.99));
+                dis.setObjPos("sfx%bk%", [zx[bz] + jaw.random(-1, 1) * s * 0.06, zy[bz] + jaw.random(-1, 1) * s * 0.06]);
+                dis.setObjAlpha("sfx%bk%", floor(jaw.random(0, 255)));
+                dis.rotateObj("sfx%bk%", 37, 0);
+            }
+            bk = bk + 1;
+        }
+        wait(16);
+        bf = bf + 1;
+    }
+    spClear(16);
+    // 충격파: 노란 고리 둘이 차례로 퍼지며 옅어짐 + 번쩍
+    ringObj("sfx17", tx, ty, "#fff27a");
+    dis.setGlow("sfx17", "#ffd23a", s * 0.1);
+    dis.setObjLayer("sfx17", 2);
+    ringObj("sfx18", tx, ty, "#ffffff");
+    dis.setGlow("sfx18", "#ffd23a", s * 0.08);
+    dis.setObjLayer("sfx18", 2);
+    dis.setObjAlpha("sfx18", 0);
+    pxCirc(tx, ty, "sfxb", s * fxKt * 0.06, "#ffffff");
+    dis.setGlow("sfxb", "#ffe040", s * 0.3);
+    dis.setObjLayer("sfxb", 1);
+    var int call wf = 1;
+    loop [wf <= 18]{
+        var float call w1 = min(1, wf / 12.0);
+        var float call w2 = min(1, max(0, (wf - 5) / 12.0));
+        dis.setObjScale("sfx17", [s * fxKt * (0.1 + 0.55 * w1), s * fxKt * (0.1 + 0.55 * w1)]);
+        dis.setObjAlpha("sfx17", floor(255 * (1 - w1)));
+        dis.setObjScale("sfx18", [s * fxKt * (0.08 + 0.45 * w2), s * fxKt * (0.08 + 0.45 * w2)]);
+        if [wf > 5]{
+            dis.setObjAlpha("sfx18", floor(230 * (1 - w2)));
+        }
+        dis.setObjScale("sfxb", [s * fxKt * (0.12 + 0.2 * w1), s * fxKt * (0.12 + 0.2 * w1)]);
+        dis.setObjAlpha("sfxb", floor(255 * (1 - w1)));
+        wait(16);
+        wf = wf + 1;
+    }
+    dis.removeObj("sfx17");
+    dis.removeObj("sfx18");
+    dis.removeObj("sfxb");
 }
 // ── 돌진 (2026-11-22): 공격하는 포켓몬 둘레에 기운 (sfx1 ~ sfx10) 이 맴돌며 진해짐 (20 프레임) → 몸 크기의 빛 덩이 (sfx11) 가 잔상 (sfx12 ~ sfx15) 을 남기며 7 프레임 만에 들이받음
 //   → 맞는 곳에서 충격파 (spBoom) · r = 빛 덩이 반지름 (s 에 곱함)
@@ -2147,106 +2340,15 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spClear(4);
         spBurst(tx, ty, sT, sT * 0.08, sT * 0.34, "#3c2050", "#9b5cff", 14);
     }
-    if [mv == 53]{   // 화염방사: 불꽃 알갱이가 줄지어 뿜어져 나가며 커짐 (노랑 → 주황 → 빨강)
-        var int call k4 = 1;
-        loop [k4 <= 12]{
-            pxCirc(ax, ay, "sfx%k4%", s * 0.02, "#ffe066");
-            dis.setGlow("sfx%k4%", "#ff7a20", s * 0.08);
-            dis.setObjLayer("sfx%k4%", 2);
-            k4 = k4 + 1;
-        }
-        var int call f4 = 0;
-        loop [f4 <= 34]{
-            k4 = 1;
-            loop [k4 <= 12]{
-                var float call p4 = f4 / 14.0 + k4 / 12.0;
-                var float call t4 = p4 - floor(p4);
-                if [f4 < 14]{
-                    t4 = min(t4, f4 / 14.0);
-                }
-                var float call r4 = s * (0.02 + 0.06 * t4);
-                dis.setObjPos("sfx%k4%", [ax + (tx - ax) * t4 + sin(k4 * 77 + f4 * 30) * s * 0.03 * t4, ay + (ty - ay) * t4 + cos(k4 * 53 + f4 * 30) * s * 0.03 * t4]);
-                dis.setObjScale("sfx%k4%", [r4 * 2, r4 * 2]);
-                var string call c4 = "#ffe066";
-                if [t4 > 0.35]{
-                    c4 = "#ff9a2e";
-                }
-                if [t4 > 0.7]{
-                    c4 = "#ff4a2a";
-                }
-                dis.setObjColor("sfx%k4%", c4);
-                k4 = k4 + 1;
-            }
-            wait(16);
-            f4 = f4 + 1;
-        }
-        spClear(12);
-        spBurst(tx, ty, sT, sT * 0.06, sT * 0.3, "#ff9a2e", "#ff4a2a", 10);
+    if [mv == 53]{   // 화염방사: 큰 불꽃 (fx_type 불똥) 이 입에서 줄지어 뿜어져 나가며 커지고 · 노랑 → 주황 → 빨강 빛 → 맞는 곳에서 불꽃이 일렁임
+        spFlame(ax, ay, tx, ty, s, 40);
     }
-    if [mv == 58]{   // 냉동빔: 얇은 빛 줄기 → 맞는 곳에 얼음 조각이 하나씩 돋아남
-        var int call k5 = 1;
-        loop [k5 <= 10]{
-            pxCirc(ax, ay, "sfx%k5%", s * 0.025, "#e8fbff");
-            dis.setGlow("sfx%k5%", "#7fd8ff", s * 0.08);
-            dis.setObjLayer("sfx%k5%", 2);
-            k5 = k5 + 1;
-        }
-        var int call f5 = 0;
-        loop [f5 <= 26]{
-            k5 = 1;
-            loop [k5 <= 10]{
-                var float call p5 = f5 / 10.0 + k5 / 10.0;
-                var float call t5 = p5 - floor(p5);
-                if [f5 < 10]{
-                    t5 = min(t5, f5 / 10.0);
-                }
-                dis.setObjPos("sfx%k5%", [ax + (tx - ax) * t5, ay + (ty - ay) * t5]);
-                k5 = k5 + 1;
-            }
-            wait(16);
-            f5 = f5 + 1;
-        }
-        spClear(10);
-        var int call c5 = 1;
-        loop [c5 <= 6]{
-            pxCirc(tx + cos(c5 * 60) * s * 0.18, ty + sin(c5 * 60) * s * 0.18, "sfx%c5%", s * 0.035, "#ffffff");
-            dis.setGlow("sfx%c5%", "#7fd8ff", s * 0.1);
-            dis.setObjLayer("sfx%c5%", 2);
-            wait(40);
-            c5 = c5 + 1;
-        }
-        wait(120);
-        spClear(6);
-        spBurst(tx, ty, sT, sT * 0.06, sT * 0.28, "#e8fbff", "#7fd8ff", 10);
+    if [mv == 58]{   // 냉동빔: 빔보다 조금 가는 차가운 빛줄기 (spBeam · 은빛 반짝임) → 맞는 곳에 얼음 조각이 돋아났다 사라짐
+        spBeam(ax, ay, tx, ty, s, "#f4fdff", "#6ad0ff", 0.05, 26, 2);
+        spIceHit(tx, ty, sT, 6);
     }
-    if [mv == 85]{   // 10만볼트: 위에서 맞는 곳으로 지그재그 번개가 세 번 번쩍임 → 번쩍
-        var int call k6 = 1;
-        loop [k6 <= 9]{
-            pxCirc(tx, ty, "sfx%k6%", s * 0.03, "#ffffff");
-            dis.setGlow("sfx%k6%", "#ffd23a", s * 0.1);
-            dis.setObjLayer("sfx%k6%", 2);
-            k6 = k6 + 1;
-        }
-        var int call z6 = 1;
-        loop [z6 <= 3]{
-            k6 = 1;
-            loop [k6 <= 9]{   // 번개 모양: 위 (맞는 곳 + 0.9 s) 에서 맞는 곳까지 좌우로 엇갈림
-                var float call zx = tx + (k6 - floor(k6 / 2) * 2 - 0.5) * s * 0.12 * jaw.random(0.5, 1.5);
-                dis.setObjPos("sfx%k6%", [zx, ty + s * 0.9 * (1 - k6 / 9.0)]);
-                dis.setObjAlpha("sfx%k6%", 255);
-                k6 = k6 + 1;
-            }
-            wait(70);
-            k6 = 1;
-            loop [k6 <= 9]{
-                dis.setObjAlpha("sfx%k6%", 0);
-                k6 = k6 + 1;
-            }
-            wait(40);
-            z6 = z6 + 1;
-        }
-        spClear(9);
-        spBurst(tx, ty, sT, sT * 0.08, sT * 0.36, "#ffffff", "#ffd23a", 10);
+    if [mv == 85]{   // 10만볼트: 쓰는 쪽 앞에서 지그재그 전격이 상대까지 뻗어 지직거림 → 상대에게 충격파 (고리 둘 · 번쩍)
+        spBolt(ax, ay, tx, ty, s, 8, 20);
     }
     if [mv == 56]{   // 하이드로펌프: 굵은 물줄기 두 줄 → 물방울이 사방으로 튐
         var int call k7 = 1;
@@ -2551,7 +2653,7 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spGas(ax, ay, tx, ty, s, "#ffd0ea", "#ff80c0", 10, 30, 3, 0.03, 0.08, 130, 20, 0.07);
     }
     if [mv == 225]{   // 용의숨결: 보랏빛 푸른 숨결이 더 빠르게 곧게 날아가며 점점 옅어져 사라짐
-        spGas(ax, ay, tx, ty, s, "#a890ff", "#5030e0", 14, 9, 1, 0.035, 0.1, 230, -1, 0);
+        spGas(ax, ay, tx, ty, s, "#a890ff", "#5030e0", 16, 13, 2, 0.035, 0.11, 235, -1, 0);
     }
     if [mv == 524]{   // 얼어붙는숨결: 하얀 냉기 숨결
         spGas(ax, ay, tx, ty, s, "#e0f6ff", "#70c0ff", 14, 14, 1, 0.03, 0.09, 180, 0, 0.02);
