@@ -1322,7 +1322,7 @@ run{
                 bc.setMsg("wildappeared", lang[3895], msgS, msgW);
                 bc.waitMsg(1200);
                 battleOver = 3;
-                goTo(6367);   // 배틀 끝 (도주)
+                goTo(6351);   // 배틀 끝 (도주)
             }
             bc.setMsg("wildappeared", lang[3896], msgS, msgW);
             bc.waitMsg(1200);
@@ -1699,7 +1699,7 @@ run{
         }
         if [pendingMove != 0]{
             if [caughtNow == 1]{   // 잡음: 행동 없이 턴 끝의 경험치 처리로
-                goTo(5362);   // 포획 경험치
+                goTo(5346);   // 포획 경험치
             }
             // ── 한 턴: 메뉴 상자는 그대로 · 메뉴 글자와 커서는 숨김 (턴이 끝나면 다시) · 왼쪽 상자에 메시지 ──
             dis.disableObj("bselect");
@@ -2797,34 +2797,6 @@ run{
                                 blN = 2;
                                 drMs = 250;
                             }
-                            if [hd > 0]{   // 이펙트가 나타날 때 상성에 맞는 효과음
-                                sou.setSpeaker("battlesfx");
-                                if [ef > 1]{
-                                    sou.playSfx("battlesfx", "hitSuperEffective", 3000);
-                                }
-                            if [disgHit == 1]{   // 탈이 받아낸 공격: 보통 효과음
-                                sou.setSpeaker("battlesfx");
-                                sou.playSfx("battlesfx", "hit", 3000);
-                            }
-                                if [ef == 1]{
-                                    sou.playSfx("battlesfx", "hit", 3000);
-                                }
-                            if [disgHit == 1]{   // 탈이 받아낸 공격: 보통 효과음
-                                sou.setSpeaker("battlesfx");
-                                sou.playSfx("battlesfx", "hit", 3000);
-                            }
-                                if [ef < 1]{
-                                    sou.playSfx("battlesfx", "hitNotVeryEffective", 3000);
-                                }
-                            if [disgHit == 1]{   // 탈이 받아낸 공격: 보통 효과음
-                                sou.setSpeaker("battlesfx");
-                                sou.playSfx("battlesfx", "hit", 3000);
-                            }
-                            }
-                            if [disgHit == 1]{   // 탈이 받아낸 공격: 보통 효과음
-                                sou.setSpeaker("battlesfx");
-                                sou.playSfx("battlesfx", "hit", 3000);
-                            }
                             if [hd > 0] or [disgHit == 1]{   // 맞은 쪽에 이펙트 (탈이 받아낸 공격도) (기술 타입 색 · 불투명) — 상대는 그동안 그림이 깜빡임 · 연타는 절반 시간
                                 var int call fxMs = 70;
                                 if [nHits > 1]{
@@ -2853,6 +2825,18 @@ run{
                                         fxMb = 0;
                                     }
                                     bc.hitFx(obj.mypoke.Xpos, obj.mypoke.Ypos, pfS * 0.7, mu.typeCol(um[6]), fxMs, fxMb, "mypoke");   // 내 포켓몬: 뒷모습 위 · 그동안 깜빡임
+                                }
+                            }
+                            if [hd > 0] or [disgHit == 1]{   // 맞는 효과음: 체력이 깎이기 시작할 때 (이펙트 · 깜빡임 뒤) · 상성에 맞게 · 탈이 받아낸 공격은 보통
+                                sou.setSpeaker("battlesfx");
+                                if [disgHit == 1] or [ef == 1]{
+                                    sou.playSfx("battlesfx", "hit", 3000);
+                                }
+                                else if [ef > 1]{
+                                    sou.playSfx("battlesfx", "hitSuperEffective", 3000);
+                                }
+                                else{
+                                    sou.playSfx("battlesfx", "hitNotVeryEffective", 3000);
                                 }
                             }
                             su.drainHpMs(tBox, tHp - dmg, tHp - dmg - hd, tMax, drMs);
@@ -4565,7 +4549,7 @@ run{
                 k = k + 1;
             }
             if [battleOver == 3]{   // 날려버리기 · 울부짖기 · 순간이동: 배틀이 그대로 끝남
-                goTo(6367);   // 배틀 끝 (도망)
+                goTo(6351);   // 배틀 끝 (도망)
             }
             // 턴 끝: 방어 · 버티기는 그 턴만 · 이번 턴에 안 썼으면 연속 횟수는 0
             var int call zs = 1;
@@ -5050,7 +5034,13 @@ run{
                             if [fD > fHp]{
                                 fD = fHp;
                             }
-                            sou.setSpeaker("battlesfx");
+                            if [fs == 2]{
+                                bc.hitFx(obj.opppoke.Xpos, obj.opppoke.Ypos, pfS * 0.7, mu.typeCol(fM[6]), 70, 1, "opppoke");
+                            }
+                            else{
+                                bc.hitFx(obj.mypoke.Xpos, obj.mypoke.Ypos, pfS * 0.7, mu.typeCol(fM[6]), 70, 1, "mypoke");
+                            }
+                            sou.setSpeaker("battlesfx");   // 맞는 효과음: 체력이 깎이기 시작할 때
                             if [fEf > 1]{
                                 sou.playSfx("battlesfx", "hitSuperEffective", 3000);
                             }
@@ -5059,12 +5049,6 @@ run{
                             }
                             if [fEf < 1]{
                                 sou.playSfx("battlesfx", "hitNotVeryEffective", 3000);
-                            }
-                            if [fs == 2]{
-                                bc.hitFx(obj.opppoke.Xpos, obj.opppoke.Ypos, pfS * 0.7, mu.typeCol(fM[6]), 70, 1, "opppoke");
-                            }
-                            else{
-                                bc.hitFx(obj.mypoke.Xpos, obj.mypoke.Ypos, pfS * 0.7, mu.typeCol(fM[6]), 70, 1, "mypoke");
                             }
                             su.drainHpMs(fBox, fHp, fHp - fD, fMax, 500);
                             if [fs == 1]{
@@ -5933,7 +5917,7 @@ run{
             }
             forceSw = 0;
             if [battleOver != 0]{
-                goTo(6367);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
+                goTo(6351);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
             }
             if ([myChg != 0] or [myRech == 1]) and [myHp > 0]{   // 모으는 중 · 반동으로 쉬는 턴: 메뉴 없이 다음 턴
                 var compound call cgM = myPoke[22];
