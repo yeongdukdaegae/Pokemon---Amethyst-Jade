@@ -710,7 +710,7 @@ func spFly(string id, float ax, float ay, float tx, float ty, float s, int fr, f
 // ── 빔 기술 공통 (2026-11-22): 공격하는 쪽 → 맞는 쪽으로 이어지는 굵은 빛줄기
 //   몸통 = 픽셀 원 14 개 (sfx1 ~ sfx14 · 가운데 inCol · 둘레 outCol 빛 번짐) · sfx15 = 쏘는 곳 빛 · sfx16 = 줄기 끝 빛
 //   w = 굵기 (반지름 = s * w) · hold = 유지 프레임 · 뻗기 10 프레임 → 유지 (굵기가 떨림) → 12 프레임 동안 가늘어지며 사라짐 → spBurst
-//   mode: 0 보통 · 1 무지개 (색이 흘러감) · 2 은빛 (반짝임) · 3 물결 (줄기가 굽이침) · 4 두 줄 · 5 전기 (줄기가 지직거림) · 6 빨강 · 초록 번갈아
+//   mode: 0 보통 · 1 무지개 (색이 흘러감) · 2 은빛 (반짝임) · 3 물결 (줄기가 굽이침) · 4 · 7 줄기 전체를 위 · 아래로 조금 비킴 (두 번 쏘는 기술) · 5 전기 (줄기가 지직거림) · 6 빨강 · 초록 번갈아
 func spBeam(float ax0, float ay0, float tx, float ty, float s, string inCol, string outCol, float w, int hold, int mode){
     var list call rb = ["#ff5a5a", "#ffb04a", "#fff06a", "#7cff8a", "#6ad8ff", "#7a8cff", "#d07aff"];
     var float call bl0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
@@ -755,11 +755,11 @@ func spBeam(float ax0, float ay0, float tx, float ty, float s, string inCol, str
             if [mode == 3]{
                 off = sin(bt * 720 - bf * 40) * s * 0.05;
             }
-            if [mode == 4]{   // 두 줄: 홀수 · 짝수가 한 줄씩 (줄마다 7 개)
-                var float call side = bi - floor(bi / 2) * 2 - 0.5;
-                bt = floor((bi - 1) / 2) / 6.0 * ext;
-                off = side * s * 0.12 * (1 - bt * 0.5);
-                rr = rr * 0.7;
+            if [mode == 4]{   // 위로 비킴 (맞는 곳으로 갈수록 모임)
+                off = s * 0.07 * (1 - bt * 0.7);
+            }
+            if [mode == 7]{   // 아래로 비킴
+                off = 0 - s * 0.07 * (1 - bt * 0.7);
             }
             if [mode == 5]{
                 off = jaw.random(-1, 1) * s * 0.03;
@@ -1385,7 +1385,7 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spBeam(ax, ay, tx, ty, s, "#ffffe8", "#ffd84a", 0.07, 26, 0);
     }
     if [mv == 451]{   // 차지빔: 지직거리는 노란 전기 줄기
-        spBeam(ax, ay, tx, ty, s, "#fffbd0", "#ffd23a", 0.05, 22, 5);
+        spBeam(ax, ay, tx, ty, s, "#fffbd0", "#ffd23a", 0.06, 22, 5);
     }
     if [mv == 62]{   // 오로라빔: 색이 무지개처럼 흘러가는 줄기
         spBeam(ax, ay, tx, ty, s, "#f4fbff", "#7ad8ff", 0.055, 26, 1);
@@ -1394,13 +1394,13 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spBubbles(ax, ay, tx, ty, s, "#d8f2ff", "#5ab4ff", 34);
     }
     if [mv == 324]{   // 시그널빔: 빨강 · 초록이 번갈아 깜빡이는 물결 줄기
-        spBeam(ax, ay, tx, ty, s, "#f8ffe8", "#a0e040", 0.05, 22, 6);
+        spBeam(ax, ay, tx, ty, s, "#f8ffe8", "#a0e040", 0.06, 22, 6);
     }
     if [mv == 430]{   // 러스터캐논: 반짝이는 은빛 줄기
         spBeam(ax, ay, tx, ty, s, "#ffffff", "#b8c8d8", 0.07, 24, 2);
     }
     if [mv == 60]{   // 환상빔: 굽이치는 분홍 줄기
-        spBeam(ax, ay, tx, ty, s, "#ffe8ff", "#ff6ad0", 0.045, 22, 3);
+        spBeam(ax, ay, tx, ty, s, "#ffe8ff", "#ff6ad0", 0.06, 22, 3);
     }
     if [mv == 820]{   // 드래곤에너지: 굵은 남빛 용의 기운
         spBeam(ax, ay, tx, ty, s, "#e8f0ff", "#5a6cff", 0.085, 30, 0);
@@ -1421,11 +1421,13 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     if [mv == 714]{   // 섀도레이: 보랏빛 달빛 줄기
         spBeam(ax, ay, tx, ty, s, "#ece0ff", "#7a3aff", 0.075, 28, 0);
     }
-    if [mv == 888]{   // 트윈빔: 나란한 분홍 줄기 두 개
-        spBeam(ax, ay, tx, ty, s, "#ffe8ff", "#ff6ad0", 0.05, 22, 4);
+    if [mv == 888]{   // 트윈빔: 분홍 줄기가 위 · 아래에서 한 번씩 (두 번)
+        spBeam(ax, ay, tx, ty, s, "#ffe8ff", "#ff6ad0", 0.06, 10, 4);
+        spBeam(ax, ay, tx, ty, s, "#ffe8ff", "#ff6ad0", 0.06, 10, 7);
     }
-    if [mv == 907]{   // 변덕레이저: 나란한 남빛 줄기 두 개
-        spBeam(ax, ay, tx, ty, s, "#e8f0ff", "#6a5cff", 0.05, 24, 4);
+    if [mv == 907]{   // 변덕레이저: 남빛 줄기가 위 · 아래에서 한 번씩 (두 번)
+        spBeam(ax, ay, tx, ty, s, "#e8f0ff", "#6a5cff", 0.065, 12, 4);
+        spBeam(ax, ay, tx, ty, s, "#e8f0ff", "#6a5cff", 0.065, 12, 7);
     }
     if [mv == 905]{   // 일렉트로빔: 전기가 모임 → 지직거리는 굵은 줄기
         spGather(ax, ay, tx, ty, s, "#fffbd0", "#ffd23a", 22);
