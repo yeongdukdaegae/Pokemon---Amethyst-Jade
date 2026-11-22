@@ -956,7 +956,7 @@ run{
                 oldId3 = "gym1";
                 oldL3 = 2;
                 oldC3 = 1;
-                gf.leave();   // 글라이더 · 찌르꼬 · 투명벽을 지우고 체육관 전용 도구를 거둠
+                gf.suspend();   // 글라이더 · 찌르꼬 · 투명벽을 지우되 상태 (글라이더 · 양력 · …) 와 체육관 전용 도구는 남김 → 이어하기에서 그대로
             }
             if [curMap == 11]{
                 oldId3 = "gymlobby1";
@@ -1427,11 +1427,16 @@ run{
                 ft.close();
                 canMove = 1;
             }
-            if [gr == 1]{   // 양력 0: 떨어짐 → 로비
+            if [gr == 1] or [gr == 3]{   // 양력 0 (1) · 날지 않는데 하늘 위 (3): 떨어짐 → 로비 접수처 앞
                 canMove = 0;
                 sou.playSfx("ui", "choose", 2000);
                 ft.open("");
-                ft.say(lang[7493]);
+                if [gr == 1]{
+                    ft.say(lang[7493]);
+                }
+                else{
+                    ft.say(lang[7515]);
+                }
                 ft.close();
                 canMove = 1;
                 gyFall = 1;
@@ -1888,12 +1893,12 @@ run{
             wy = 3016;
             wd = 4;
         }
-        if [place == 12] and [canMove == 1] and [gyFall == 1]{   // 양력이 다 떨어짐 → 로비의 경기장 문 앞 (lib/gymFly.jbl)
+        if [place == 12] and [canMove == 1] and [gyFall == 1]{   // 떨어짐 (양력 0 · 하늘 위) → 로비 접수처 (데스크) 앞 (3 열 4 줄 · 위를 봄 · lib/gymFly.jbl)
             gyFall = 0;
             warp = 11;
-            wx = 19056;
-            wy = 3144;
-            wd = 3;
+            wx = 18968;
+            wy = 3112;
+            wd = 4;
         }
         if [place == 12] and [canMove == 1] and [obj.prtg.Ypos < 2998]{   // 체육관 안 매트 → 로비의 경기장 문 바로 앞 (8 · 9 열 2 줄)
             warp = 11;

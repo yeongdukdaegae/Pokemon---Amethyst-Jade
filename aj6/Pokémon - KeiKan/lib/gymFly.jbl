@@ -14,8 +14,9 @@ Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
 //   이륙: 글라이더를 찬 뒤 발판 위에서 Z (바라보는 칸에 상호작용이 없을 때) → 날기 시작 · 이륙 전에는 발판 밖으로 못 나감 · 하늘을 지나 발판에 닿으면 착지 (다시 Z 로 이륙)
 //   equip(): 시작 발판의 글라이더를 Z (fsAct 3888 · fieldSelect.jb) → 착용 → 시작 발판 투명벽을 없앰 · 양력 게이지
 //   tick(x, y, canMove): 매 프레임 (prtgRoom.jb) — 하늘 위에서는 양력이 줄고 (움직인 거리 + 시간) 발판 위에서는 100 으로 · Z = 부스터 (양력 +10)
-//     돌려주는 값: 0 없음 · 1 양력 0 (떨어짐 → 로비) · 2 들어온 뒤 처음 (도구를 받았다는 대사) · 100 + k = 찌르꼬 k 와 부딪힘 (배틀)
+//     돌려주는 값: 0 없음 · 1 양력 0 (떨어짐 → 로비 접수처 앞) · 3 글라이더로 날지 않는데 발판 밖 (하늘) 에 있음 (떨어짐 → 로비 접수처 앞) · 2 들어온 뒤 처음 (도구를 받았다는 대사) · 100 + k = 찌르꼬 k 와 부딪힘 (배틀)
 //   trainerAt(x, y): 체육관 트레이너 (lib/fieldNpc.jbl 31 ~ 33) 가 선 5 x 5 발판에 올라섰으면 그 사람 번호 (아직 안 이겼을 때)
+//   suspend(): 리포트를 쓰고 타이틀로 나갈 때 (prtgRoom.jb) — 지금 상태를 gyRes 에 (리포트와 같은 형식) 남기고 그림만 지움 · 도구는 그대로 → 이어하기에서 enter 가 이어 함
 //   leave(): 맵을 지울 때 (나감 · 떨어짐 · 전멸) — 그린 것 · 투명벽을 지우고 체육관 전용 도구를 거둠
 //   리포트: saveManager.jb 가 체육관 상태 (글라이더 · 나는 중 · 양력 · 부스터 · 찌르꼬 · 바람 · 방향) 를 20 번째 칸에 · 불러오면 enter 가 이어 함 (도구는 가방에 그대로)
 //   바람 이펙트: 화면에 흰 바람 줄기가 바람 방향으로 흐름 (fxMake · fxMove)
@@ -35,6 +36,7 @@ var public list call npRow;
 var public list call npTr;
 var public int call gyIn;      // 1 = 체육관 안 (enter 뒤 · leave 전)
 var public int call gyGlide;   // 1 = 글라이더를 참
+var public int call gyKeep;    // 1 = leaveNow 가 체육관 전용 도구를 거두지 않음 (suspend)
 var public int call gyFly;     // 0 = 서 있음 · 1 = 나는 중 (발판 위에서 Z 로 이륙 · 멈출 수 없음) · 2 = 착지해서 미끄러지는 중 (멈추면 0)
 var public int call gyCd;      // 이륙 뒤 부스터를 못 쓰는 프레임 수
 var public int call gyAir;
@@ -486,7 +488,16 @@ func int tick(float px, float py, int cm){
             }
             k = k + 1;
         }
-        if [gyGlide == 1] and [gyFly == 0]{   // 글라이더를 찼지만 아직 이륙 전: 발판 밖으로 못 나감 (나가려 하면 제자리로) · Z = 이륙
+        if [res == 0] and [gyFly != 1] and [py >= cy(35) - 8] and [onPlat(px, py) == 0] and [onPlat(gyPx, gyPy) == 0]{   // 날지 않는데 하늘 위 (글라이더가 없어도): 떨어짐 → 로비 접수처 앞 (prtgRoom.jb)
+            gyFly = 0;
+            gyVx = 0;
+            gyVy = 0;
+            res = 3;
+            log("체육관: 발판 밖으로 떨어짐 (글라이더 %gyGlide%)");
+        }
+        if [res == 3]{
+        }
+        else if [gyGlide == 1] and [gyFly == 0]{   // 글라이더를 찼지만 아직 이륙 전: 발판 밖으로 못 나감 (나가려 하면 제자리로) · Z = 이륙
             gyLift = 100;
             if [onPlat(px, py) == 0]{
                 dis.setObjPos("prtg", [gyPx, gyPy]);
@@ -614,6 +625,16 @@ func leave(){
         leaveNow();
     }
 }
+// 리포트를 쓰고 타이틀로 (이어하기는 리포트 파일을 다시 읽지 않고 지금 값으로 이어 함): 상태를 gyRes 에 남기고 · 도구는 가방에 그대로
+func suspend(){
+    if [gyIn == 1]{
+        gyRes = [1, gyGlide, gyFly, gyLift, gyBoost, gyOn[1], gyOn[2], gyOn[3], gyOn[4], gyWd, gyDx, gyDy, gyMsg];
+        log("체육관 안: 타이틀로 (상태를 남김 · 글라이더 %gyGlide% · 양력 %gyLift%)");
+        gyKeep = 1;
+        leaveNow();
+        gyKeep = 0;
+    }
+}
 func leaveNow(){
     gyIn = 0;
     fxRemove();
@@ -655,13 +676,15 @@ func leaveNow(){
         }
         k = k + 1;
     }
-    var int call n3 = bg.countOf(903);
-    if [n3 > 0]{
-        bg.take(903, n3);
+    if [gyKeep == 0]{
+        var int call n3 = bg.countOf(903);
+        if [n3 > 0]{
+            bg.take(903, n3);
+        }
+        var int call n4 = bg.countOf(904);
+        if [n4 > 0]{
+            bg.take(904, n4);
+        }
+        log("체육관 안: 나감 (체육관 전용 도구를 거둠)");
     }
-    var int call n4 = bg.countOf(904);
-    if [n4 > 0]{
-        bg.take(904, n4);
-    }
-    log("체육관 안: 나감 (체육관 전용 도구를 거둠)");
 }
