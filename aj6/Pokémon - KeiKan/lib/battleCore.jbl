@@ -1674,23 +1674,23 @@ func spIceHit(float tx, float ty, float s, int n){
     }
     spClear(n);
 }
-// ── 10만볼트 (2026-11-22): 쓰는 쪽 앞에서 지그재그 전격 (이어진 선분 7 개 · sfx1 ~ sfx7 · 하얀 심 + 노란 빛) 이 grow 프레임 동안 상대까지 뻗고
-//   hold 프레임 동안 3 프레임마다 모양이 바뀌며 지직거림 (둘레에 불똥 sfx8 ~ sfx16 이 튐) → 상대에게 충격파 (노란 고리 둘 sfx17 · sfx18 이 퍼짐 · 번쩍)
+// ── 10만볼트 (2026-11-22): 지그재그 전격 덩이 (이어진 선분 7 개 · sfx1 ~ sfx7 · 하얀 심 + 노란 빛 · 줄기 길이의 0.35) 가 쓰는 쪽 앞에서 fly 프레임 만에 상대까지 빠르게 날아감
+//   (2 프레임마다 모양이 바뀌며 지직 · 뒤에 불똥 sfx8 ~ sfx16) → 닿은 상대에게 스파크 16 개 (sfx1 ~ sfx16) 가 사방으로 튀고 · 충격파 고리 셋 (sfx17 ~ sfx19) 이 차례로 퍼지며 번쩍 (sfxb) · hit 프레임
 //   선분 = 네모를 두 꺾이는 곳 사이에 놓고 그 방향으로 돌림 (rotateObj 는 더해 돌리므로 지금 각도 ban 을 기억해 차이만큼)
-func spBolt(float ax0, float ay0, float tx, float ty, float s, int grow, int hold){
+func spBolt(float ax0, float ay0, float tx, float ty, float s, int fly, int hit){
     var float call bl0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
     var float call ax = ax0 + (tx - ax0) / bl0 * s * fxKa * 0.2;
     var float call ay = ay0 + (ty - ay0) / bl0 * s * fxKa * 0.2;
     var float call bnx = 0 - (ty - ay0) / bl0;
     var float call bny = (tx - ax0) / bl0;
-    var list call zz = [0, 0, 0, 0, 0, 0, 0, 0];   // 꺾이는 곳 8 개의 옆 비킴 (양 끝은 0)
+    var list call zz = [0, 0, 0, 0, 0, 0, 0, 0];   // 꺾이는 곳 8 개의 옆 비킴
     var list call zx = [0, 0, 0, 0, 0, 0, 0, 0];
     var list call zy = [0, 0, 0, 0, 0, 0, 0, 0];
     var list call ban = [0, 0, 0, 0, 0, 0, 0];   // 선분의 지금 각도
     var int call bk = 1;
     loop [bk <= 7]{
         dis.setObject([ax, ay], "sfx%bk%", [1, 1], "#fffbe0");
-        dis.setGlow("sfx%bk%", "#ffd23a", s * 0.07);
+        dis.setGlow("sfx%bk%", "#ffd23a", s * 0.08);
         dis.setObjLayer("sfx%bk%", 2);
         dis.setObjAlpha("sfx%bk%", 0);
         bk = bk + 1;
@@ -1703,84 +1703,106 @@ func spBolt(float ax0, float ay0, float tx, float ty, float s, int grow, int hol
         dis.setObjAlpha("sfx%bk%", 0);
         bk = bk + 1;
     }
+    // 1. 날아감
     var int call bf = 1;
-    loop [bf <= grow + hold]{
-        if [bf - floor(bf / 3) * 3 == 1]{   // 3 프레임마다 지그재그를 새로
+    loop [bf <= fly + 1]{
+        if [bf - floor(bf / 2) * 2 == 1]{   // 2 프레임마다 지그재그를 새로 (양 끝은 0)
             var int call zi = 2;
             loop [zi <= 7]{
-                zz[zi] = (zi - floor(zi / 2) * 2 - 0.5) * 2 * s * jaw.random(0.04, 0.1);
+                zz[zi] = (zi - floor(zi / 2) * 2 - 0.5) * 2 * s * jaw.random(0.03, 0.075);
                 zi = zi + 1;
             }
         }
-        var float call bg = min(1, bf / (grow * 1.0));   // 뻗은 정도
+        var float call uh = min(1, bf / (fly * 1.0));   // 머리
+        var float call ut = max(0, uh - 0.35);         // 꼬리
         var int call zj = 1;
         loop [zj <= 8]{
-            var float call zu = (zj - 1) / 7.0;
+            var float call zu = ut + (uh - ut) * (zj - 1) / 7.0;
             zx[zj] = ax + (tx - ax) * zu + bnx * zz[zj] * pk(zu);
             zy[zj] = ay + (ty - ay) * zu + bny * zz[zj] * pk(zu);
             zj = zj + 1;
         }
         bk = 1;
         loop [bk <= 7]{
-            var float call bu0 = (bk - 1) / 7.0;
-            if [bu0 < bg]{
-                var float call bpart = min(1, (bg - bu0) * 7);   // 뻗는 중인 마지막 선분은 일부만
-                var float call bx1 = zx[bk];
-                var float call by1 = zy[bk];
-                var float call bx2 = bx1 + (zx[bk + 1] - bx1) * bpart;
-                var float call by2 = by1 + (zy[bk + 1] - by1) * bpart;
-                var float call blen = sqrt((bx2 - bx1) * (bx2 - bx1) + (by2 - by1) * (by2 - by1));
-                var float call bang = atan2(by2 - by1, bx2 - bx1);
-                dis.setObjPos("sfx%bk%", [(bx1 + bx2) / 2, (by1 + by2) / 2]);
-                dis.setObjScale("sfx%bk%", [blen + s * 0.012, s * 0.016 * pk(bu0) * jaw.random(0.8, 1.4)]);
-                dis.rotateObj("sfx%bk%", bang - ban[bk], 0);
-                ban[bk] = bang;
-                dis.setObjAlpha("sfx%bk%", floor(jaw.random(200, 255)));
-            }
+            var float call bx1 = zx[bk];
+            var float call by1 = zy[bk];
+            var float call bx2 = zx[bk + 1];
+            var float call by2 = zy[bk + 1];
+            var float call blen = sqrt((bx2 - bx1) * (bx2 - bx1) + (by2 - by1) * (by2 - by1));
+            var float call bang = atan2(by2 - by1, bx2 - bx1);
+            dis.setObjPos("sfx%bk%", [(bx1 + bx2) / 2, (by1 + by2) / 2]);
+            dis.setObjScale("sfx%bk%", [blen + s * 0.012, s * 0.018 * pk(uh) * jaw.random(0.8, 1.4)]);
+            dis.rotateObj("sfx%bk%", bang - ban[bk], 0);
+            ban[bk] = bang;
+            dis.setObjAlpha("sfx%bk%", floor(jaw.random(210, 255)));
             bk = bk + 1;
         }
         bk = 8;
-        loop [bk <= 16]{   // 불똥: 꺾이는 곳 둘레에서 튀었다 사라짐 (프레임마다 다른 곳)
-            if [bg >= 1] or [jaw.random(0, 1) < bg]{
-                var int call bz = 1 + floor(jaw.random(0, 7.99));
-                dis.setObjPos("sfx%bk%", [zx[bz] + jaw.random(-1, 1) * s * 0.06, zy[bz] + jaw.random(-1, 1) * s * 0.06]);
-                dis.setObjAlpha("sfx%bk%", floor(jaw.random(0, 255)));
-                dis.rotateObj("sfx%bk%", 37, 0);
-            }
+        loop [bk <= 16]{   // 불똥: 지나간 자리에 튀었다 사라짐
+            var int call bz = 1 + floor(jaw.random(0, 7.99));
+            dis.setObjPos("sfx%bk%", [zx[bz] + jaw.random(-1, 1) * s * 0.05, zy[bz] + jaw.random(-1, 1) * s * 0.05]);
+            dis.setObjAlpha("sfx%bk%", floor(jaw.random(0, 255)));
+            dis.rotateObj("sfx%bk%", 37, 0);
             bk = bk + 1;
         }
         wait(16);
         bf = bf + 1;
     }
     spClear(16);
-    // 충격파: 노란 고리 둘이 차례로 퍼지며 옅어짐 + 번쩍
-    ringObj("sfx17", tx, ty, "#fff27a");
-    dis.setGlow("sfx17", "#ffd23a", s * 0.1);
-    dis.setObjLayer("sfx17", 2);
-    ringObj("sfx18", tx, ty, "#ffffff");
-    dis.setGlow("sfx18", "#ffd23a", s * 0.08);
-    dis.setObjLayer("sfx18", 2);
-    dis.setObjAlpha("sfx18", 0);
-    pxCirc(tx, ty, "sfxb", s * fxKt * 0.06, "#ffffff");
-    dis.setGlow("sfxb", "#ffe040", s * 0.3);
+    // 2. 닿음: 스파크 16 개가 사방으로 튐 (지직 · 깜빡) + 충격파 고리 셋 + 번쩍
+    var list call spa = [];   // 스파크 방향 · 빠르기
+    var list call spv = [];
+    bk = 1;
+    loop [bk <= 16]{
+        pxTex(tx, ty, "sfx%bk%", s * fxKt * jaw.random(0.025, 0.045), 4);
+        dis.setGlow("sfx%bk%", "#ffe040", s * 0.06);
+        dis.setObjLayer("sfx%bk%", 2);
+        dis.rotateObj("sfx%bk%", jaw.random(0, 360), 0);
+        spa.add(bk * 22.5 + jaw.random(-10, 10));
+        spv.add(s * fxKt * jaw.random(0.018, 0.034));
+        bk = bk + 1;
+    }
+    var int call ri = 17;
+    loop [ri <= 19]{
+        ringObj("sfx%ri%", tx, ty, "#fff27a");
+        dis.setGlow("sfx%ri%", "#ffd23a", s * 0.1);
+        dis.setObjLayer("sfx%ri%", 2);
+        dis.setObjAlpha("sfx%ri%", 0);
+        ri = ri + 1;
+    }
+    pxCirc(tx, ty, "sfxb", s * fxKt * 0.08, "#ffffff");
+    dis.setGlow("sfxb", "#ffe040", s * 0.35);
     dis.setObjLayer("sfxb", 1);
     var int call wf = 1;
-    loop [wf <= 18]{
-        var float call w1 = min(1, wf / 12.0);
-        var float call w2 = min(1, max(0, (wf - 5) / 12.0));
-        dis.setObjScale("sfx17", [s * fxKt * (0.1 + 0.55 * w1), s * fxKt * (0.1 + 0.55 * w1)]);
-        dis.setObjAlpha("sfx17", floor(255 * (1 - w1)));
-        dis.setObjScale("sfx18", [s * fxKt * (0.08 + 0.45 * w2), s * fxKt * (0.08 + 0.45 * w2)]);
-        if [wf > 5]{
-            dis.setObjAlpha("sfx18", floor(230 * (1 - w2)));
+    loop [wf <= hit]{
+        var float call wt = wf / (hit * 1.0);
+        bk = 1;
+        loop [bk <= 16]{   // 스파크: 바깥으로 튀며 지직 (깜빡 · 돎) · 끝에서 옅어짐
+            var float call sd = spv[bk] * wf * (1 - wt * 0.4);
+            dis.setObjPos("sfx%bk%", [tx + cos(spa[bk]) * sd + jaw.random(-1, 1) * s * 0.01, ty + sin(spa[bk]) * sd * 0.8 + jaw.random(-1, 1) * s * 0.01]);
+            dis.setObjAlpha("sfx%bk%", floor(jaw.random(120, 255) * (1 - wt)));
+            dis.rotateObj("sfx%bk%", 41, 0);
+            bk = bk + 1;
         }
-        dis.setObjScale("sfxb", [s * fxKt * (0.12 + 0.2 * w1), s * fxKt * (0.12 + 0.2 * w1)]);
-        dis.setObjAlpha("sfxb", floor(255 * (1 - w1)));
+        ri = 17;
+        loop [ri <= 19]{   // 충격파: 4 프레임 간격으로 하나씩 · 하나가 14 프레임 동안 퍼지며 옅어짐
+            var float call rw = (wf - (ri - 17) * 4) / 14.0;
+            if [rw > 0] and [rw <= 1]{
+                dis.setObjScale("sfx%ri%", [s * fxKt * (0.1 + 0.7 * rw), s * fxKt * (0.1 + 0.7 * rw)]);
+                dis.setObjAlpha("sfx%ri%", floor(255 * (1 - rw)));
+            }
+            if [rw > 1]{
+                dis.setObjAlpha("sfx%ri%", 0);
+            }
+            ri = ri + 1;
+        }
+        var float call wb = min(1, wf / 10.0);
+        dis.setObjScale("sfxb", [s * fxKt * (0.14 + 0.26 * wb), s * fxKt * (0.14 + 0.26 * wb)]);
+        dis.setObjAlpha("sfxb", floor(255 * (1 - wb)));
         wait(16);
         wf = wf + 1;
     }
-    dis.removeObj("sfx17");
-    dis.removeObj("sfx18");
+    spClear(19);
     dis.removeObj("sfxb");
 }
 // ── 돌진 (2026-11-22): 공격하는 포켓몬 둘레에 기운 (sfx1 ~ sfx10) 이 맴돌며 진해짐 (20 프레임) → 몸 크기의 빛 덩이 (sfx11) 가 잔상 (sfx12 ~ sfx15) 을 남기며 7 프레임 만에 들이받음
@@ -2347,8 +2369,8 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spBeam(ax, ay, tx, ty, s, "#f4fdff", "#6ad0ff", 0.05, 26, 2);
         spIceHit(tx, ty, sT, 6);
     }
-    if [mv == 85]{   // 10만볼트: 쓰는 쪽 앞에서 지그재그 전격이 상대까지 뻗어 지직거림 → 상대에게 충격파 (고리 둘 · 번쩍)
-        spBolt(ax, ay, tx, ty, s, 8, 20);
+    if [mv == 85]{   // 10만볼트: 지그재그 전격 덩이가 쓰는 쪽 앞에서 상대까지 빠르게 날아감 → 닿은 상대에게 스파크가 사방으로 튀고 충격파 고리 셋 · 번쩍
+        spBolt(ax, ay, tx, ty, s, 9, 26);
     }
     if [mv == 56]{   // 하이드로펌프: 굵은 물줄기 두 줄 → 물방울이 사방으로 튐
         var int call k7 = 1;
