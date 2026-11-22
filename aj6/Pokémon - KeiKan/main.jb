@@ -62,6 +62,7 @@ run{
     mag.importFolder("assets/textures/items");   // 지닌 도구 아이콘: item_ + 본가 도구 번호
     mag.importFolder("assets/textures/ow");      // 포켓몬 필드 그림 (ow_ + 도감 번호 · 『하트골드 · 소울실버』 데리고 걷기 그림 · 32 x 32 칸 8 장을 세로로: 위 0 1 · 아래 2 3 · 왼쪽 4 5 · 오른쪽 6 7 · 강철톤만 64 x 64)
     mag.importFolder("assets/textures/poke/white");   // 하얀 실루엣 (w + 그림 이름): 등장할 때 하얀 상태에서 원래 색으로
+    mag.importFolder("assets/sounds/sfx/moves");   // 기술 효과음 se_<이름> — pret/pokeemerald 기술 효과음 MIDI 를 소리로 만든 것 (fxsrc/make_move_se.py · 짝은 make_move_se_map.py)
     mag.importFolder("assets/sounds/cries");   // 울음소리: cry + 도감 번호 · 기절할 때 cryf + 도감 번호 (0.8 배속 · 음높이도 낮아짐 — 미리 만들어 둔 파일)
     mag.importFolder("assets/textures/types");   // 타입 아이콘 type_0 ~ type_20 (흰색 · 원본 svg 는 svg 폴더)
     can.setUpScene();

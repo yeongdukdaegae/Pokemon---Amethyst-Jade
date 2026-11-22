@@ -46,6 +46,8 @@ async def main():
     pg=await b.new_page(viewport={'width':int(os.environ.get('VW','1280')),'height':int(os.environ.get('VH','800'))}); errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
     await pg.add_init_script(CLOCK.replace('__SPEED__',str(SPD[0])))
     await pg.add_init_script("delete window.showOpenFilePicker;delete window.showSaveFilePicker;window.__lt=[];try{new PerformanceObserver(l=>{for(const e of l.getEntries())window.__lt.push([Math.round(e.startTime),Math.round(e.duration)])}).observe({type:'longtask',buffered:true})}catch(e){}")
+    # SND=1: 소리 재생 기록 (AudioBufferSourceNode.start 마다 [시각 ms, 길이 s] · 디코드 실패 수) → 끝에 SND 줄로 찍음
+    if os.environ.get('SND'): await pg.add_init_script("window.__snd=[];window.__sndErr=0;(()=>{const st=AudioBufferSourceNode.prototype.start;AudioBufferSourceNode.prototype.start=function(...a){try{window.__snd.push([Math.round(performance.now()),this.buffer?+this.buffer.duration.toFixed(2):0])}catch(e){};return st.apply(this,a)};const dc=BaseAudioContext.prototype.decodeAudioData;BaseAudioContext.prototype.decodeAudioData=function(b,ok,er){const p=dc.call(this,b,ok,er);if(p&&p.catch)p.catch(()=>{window.__sndErr++});return p}})()")
     await pg.goto('file://'+os.path.abspath(os.environ.get('JB','JawBreaker.html'))+''); await pg.wait_for_timeout(300)
     await pg.set_input_files('#filein',TT+'.zip')
     for q in range(100):
@@ -84,5 +86,6 @@ async def main():
       if ':' in k: k,ms=k.split(':'); ms=int(ms)
       await key(K[k],ms); await w(350)
     await w(800); await shot('end'); print('LONGTASKS',await pg.evaluate('window.__lt'))
+    if os.environ.get('SND'): print('SND',await pg.evaluate('[window.__sndErr,window.__snd.slice(-12)]'))
     L=await log(); print([l for l in L.split('\n') if any(x in l for x in os.environ.get('GREP','✖|맵|단차|야생|트레이너|보스').split('|'))][-14:]); print('ERR',[l for l in L.split('\n') if '✖' in l][:3], errs[:2])
 asyncio.run(main())
