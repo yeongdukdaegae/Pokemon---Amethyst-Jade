@@ -20,4 +20,5 @@ func GenDialogue(float x, float y, float scalex, float scaley, string uuid, stri
         dis.setObjLayer("%uuid%c%i%", 4);
         i = i + 1;
     }
+    can.setUi("%uuid%");   // 화면에 고정 (자식 · 테두리 · 글자도 같이) — 대화 상자는 배틀에서만 씀
 }

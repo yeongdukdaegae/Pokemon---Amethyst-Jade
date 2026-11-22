@@ -1353,7 +1353,7 @@ func spRush(float ax, float ay, float tx, float ty, float s, string inCol, strin
 // ── 발구르기 · 땅 흔들기 기술 (2026-11-22): 쓰는 포켓몬이 위아래로 쿵쿵 (pre 프레임) → 배틀 화면 (땅 · 발판 · 포켓몬) 이 위아래로 떨리면서 (카메라 흔들림 · 점점 잦아듦)
 //   맞는 쪽 발밑에서 납작한 충격파 고리 (sfx1 ~ sfx3) 가 퍼지고 돌 조각 nRock 개 (sfx4 ~ · 10 개까지) 가 튀어 오름 (fr 프레임) — 이펙트도 화면과 같이 떨림
 //   amp = 화면 떨림 세기 (s 에 곱함) · ring = 고리 크기 · aura 1 = 쿵쿵 동안 쓰는 쪽에 outCol 기운 (sfx14 ~ sfx16 · 역린)
-//   화면 떨림 = SeongBin 카메라 (cam.default) 를 위아래로 옮김 → 배틀 화면 전체 (UI 도) 가 같이 떨림 · 끝나면 [0, 0] (배틀 장면의 처음 자리) 으로
+//   화면 떨림 = SeongBin 카메라 (cam.default) 를 위아래로 옮김 → 땅 · 발판 · 포켓몬 · 이펙트가 같이 떨림 · 배틀 UI 는 can.setUi 로 고정되어 그대로 · 끝나면 [0, 0] (배틀 장면의 처음 자리) 으로
 func spQuake(float ax, float ay, float tx, float ty, float s, int pre, int fr, float amp, float ring, int nRock, string inCol, string outCol, int aura){
     var string call ap = "opppoke";   // 쓰는 쪽 그림
     var float call gx = tx;

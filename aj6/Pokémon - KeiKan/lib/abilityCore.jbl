@@ -1,6 +1,7 @@
 Lib id abilityCore;
 Use jawbreaker call jaw;
 Use DisPlayer call dis;
+Use Canvas call can;   // can.setUi: 배틀 UI 를 화면에 고정
 Use battleCore call bc;
 Use Magellan call mag;
 Use soundMaster call sou;
@@ -54,13 +55,17 @@ func pop(int side, string pk, int a){
         col = "#d04848";
     }
     dis.setObject([x0, y], "abpop", [w, h], "#182028");
+    can.setUi("abpop");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("abpop", 20);
     dis.setObjAlpha("abpop", 235);
     dis.setObject([x0, y - h / 2 + h * 0.06], "abpopbar", [w, h * 0.12], col);
+    can.setUi("abpopbar");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("abpopbar", 21);
     dis.setText([x0, y + h * 0.2], replaceStr(lang[1440], "{poke}", pk), "abpopa", h * 0.24, false, "#d8e0f0");
+    can.setUi("abpopa");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("abpopa", 21);
     dis.setText([x0, y - h * 0.12], lang[1500 + a], "abpopb", h * 0.36, false, "#ffffff");
+    can.setUi("abpopb");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("abpopb", 21);
     log("특성 발동: " + pk + " — " + lang[1500 + a]);
     dis.setObjPos("abpop", [x1, y]) for 150;

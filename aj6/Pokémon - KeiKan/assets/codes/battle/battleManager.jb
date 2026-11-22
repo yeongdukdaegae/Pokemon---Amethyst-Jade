@@ -360,6 +360,7 @@ run{
         // 음악은 배틀에 들어오기 전 (prtgRoom.jb 의 돌입 연출) 에 이미 시작됨 — wildBattle: 원본 90 초부터 재생 뒤 92.6 ~ 180 초 반복
         // 하얀 커튼: 돌입 연출의 하얀 화면에서 이어짐 → 장면이 다 차려지면 재빠르게 걷힘
         dis.setObject([0, 0], "bcurtain", [dis.displayX * 2, dis.displayY * 2], "#ffffff");
+        can.setUi("bcurtain");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjLayer("bcurtain", 90);
         dis.removeObj("bwhite");   // 돌입 연출의 하얀 화면 (prtgRoom.jb) 은 여기서 없앰 — 배틀 커튼이 이어받음 · 배틀이 끝나고 방으로 돌아올 때 하얀 화면이 비치지 않게
         // 나타나는 포켓몬: 앞모습 그림이 있는 포켓몬 중 무작위 (도감 번호 → keidex 자리)
@@ -851,6 +852,7 @@ run{
         dis.setObjScale("wildappearedpadding", [w2, dH]) for 300;
         dis.setObjPos("wildappeared", [dX - dW / 2 + w2 / 2, dY]) for 300;   // 왼쪽 끝 = dX - dW / 2 그대로
         u.GenUiBox(dis.displayX / 2 + w3 / 2 + 10, dY, w3, dH, "battlemenu", "");   // 화면 오른쪽 밖에서
+        can.setUi("battlemenu");   // 배틀 UI: 화면에 고정 (자식도 같이)
         dis.setObjPos("battlemenu", [dX + dW / 2 - w3 / 2, dY]) for 300;            // 오른쪽 끝 = 원래 상자의 오른쪽 끝
         wait(300);
         log("배틀: 내 %myName% vs 야생 %nowPokeName% — 무엇을 할까?");
@@ -864,9 +866,13 @@ run{
         }
         mcw = ms * 26 / 30;
         dis.setText([0, 0], lang[16], "bmenu1", ms, false, "#ffffff");
+        can.setUi("bmenu1");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setText([0, 0], lang[17], "bmenu2", ms, false, "#ffffff");
+        can.setUi("bmenu2");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setText([0, 0], lang[18], "bmenu3", ms, false, "#ffffff");
+        can.setUi("bmenu3");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setText([0, 0], lang[19], "bmenu4", ms, false, "#ffffff");
+        can.setUi("bmenu4");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         mW = max(max(obj.bmenu1.Xscale, obj.bmenu2.Xscale), max(obj.bmenu3.Xscale, obj.bmenu4.Xscale));
         if [dis.idWidthmode == 1] and [mW > w3 / 2 - mPad - mcw * 1.4]{   // PC: 칸에 안 들어가면 글자를 줄임
             ms = ms * (w3 / 2 - mPad - mcw * 1.4) / mW;
@@ -894,9 +900,13 @@ run{
             menuX[2, 2] = menuX[1, 2];
         }
         dis.setText([menuX[1, 1] + mcw * 0.8, menuY[1, 1]], lang[16], "bmenu1", ms, false, "#ffffff");
+        can.setUi("bmenu1");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setText([menuX[1, 2] + mcw * 0.8, menuY[1, 2]], lang[17], "bmenu2", ms, false, "#ffffff");
+        can.setUi("bmenu2");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setText([menuX[2, 1] + mcw * 0.8, menuY[2, 1]], lang[18], "bmenu3", ms, false, "#ffffff");
+        can.setUi("bmenu3");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setText([menuX[2, 2] + mcw * 0.8, menuY[2, 2]], lang[19], "bmenu4", ms, false, "#ffffff");
+        can.setUi("bmenu4");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         j = 1;
         loop [j <= 4]{
             dis.setTextNudge("bmenu%j%", "left");
@@ -905,6 +915,7 @@ run{
         }
         mag.importFile("assets/textures/ui/1/select.png") save as ("select");   // 이어하기로 왔으면 아직 없음
         dis.setObject([menuX[1, 1], menuY[1, 1]], "bselect", [mcw, mcw * 30 / 26], "#ffffff");
+        can.setUi("bselect");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         mag.setObjTexture("bselect", "select", [0, 0], [208, 240]);
         dis.setObjLayer("bselect", 7);
 
@@ -946,6 +957,7 @@ run{
                 qS = qS * 0.9;
             }
             dis.setText([qX, qY], lang[1455], "wildappearedc1", qS, false, "#ffffff");
+            can.setUi("wildappearedc1");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
             dis.setTextNudge("wildappearedc1", "left");
             dis.setObjLayer("wildappearedc1", 4);
             dis.setTxtContent("wildappearedc2", "　 " + lang[1456]);
@@ -990,6 +1002,7 @@ run{
                 }
             }
             dis.setText([qX, qY], replaceStr(lang[14], "{poke}", myName), "wildappearedc1", msgS, false, "#ffffff");   // 글자 크기를 원래대로
+            can.setUi("wildappearedc1");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
             dis.setTextNudge("wildappearedc1", "left");
             dis.setObjLayer("wildappearedc1", 4);
             dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
@@ -1309,7 +1322,7 @@ run{
                 bc.setMsg("wildappeared", lang[3895], msgS, msgW);
                 bc.waitMsg(1200);
                 battleOver = 3;
-                goTo(6354);   // 배틀 끝 (도주)
+                goTo(6367);   // 배틀 끝 (도주)
             }
             bc.setMsg("wildappeared", lang[3896], msgS, msgW);
             bc.waitMsg(1200);
@@ -1686,7 +1699,7 @@ run{
         }
         if [pendingMove != 0]{
             if [caughtNow == 1]{   // 잡음: 행동 없이 턴 끝의 경험치 처리로
-                goTo(5349);   // 포획 경험치
+                goTo(5362);   // 포획 경험치
             }
             // ── 한 턴: 메뉴 상자는 그대로 · 메뉴 글자와 커서는 숨김 (턴이 끝나면 다시) · 왼쪽 상자에 메시지 ──
             dis.disableObj("bselect");
@@ -4552,7 +4565,7 @@ run{
                 k = k + 1;
             }
             if [battleOver == 3]{   // 날려버리기 · 울부짖기 · 순간이동: 배틀이 그대로 끝남
-                goTo(6354);   // 배틀 끝 (도망)
+                goTo(6367);   // 배틀 끝 (도망)
             }
             // 턴 끝: 방어 · 버티기는 그 턴만 · 이번 턴에 안 썼으면 연속 횟수는 0
             var int call zs = 1;
@@ -5920,7 +5933,7 @@ run{
             }
             forceSw = 0;
             if [battleOver != 0]{
-                goTo(6354);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
+                goTo(6367);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
             }
             if ([myChg != 0] or [myRech == 1]) and [myHp > 0]{   // 모으는 중 · 반동으로 쉬는 턴: 메뉴 없이 다음 턴
                 var compound call cgM = myPoke[22];
@@ -5932,7 +5945,7 @@ run{
                     pendingMove = cgM[1];   // 쉬는 턴: 기술은 나가지 않음 (턴을 넘기려고 넣어 둠)
                     pendingSlot = 1;
                 }
-                goTo(1000);   // 행동 선택 메뉴로 (모으는 기술의 2 턴째)
+                goTo(1013);   // 행동 선택 메뉴로 (모으는 기술의 2 턴째)
             }
             dis.setTxtContent("wildappearedc1", replaceStr(lang[14], "{poke}", myName));   // 다시 "무엇을 할까?"
             dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
@@ -6059,13 +6072,13 @@ run{
             var compound call swM = myPoke[22];
             pendingMove = swM[1];   // 턴을 진행하려고 넣어 둠 (나가지 않음)
             pendingSlot = 1;
-            goTo(1000);   // 행동 선택 메뉴로 (교체한 턴 진행)
+            goTo(1013);   // 행동 선택 메뉴로 (교체한 턴 진행)
         }
         if [oppSwTurn == 1]{   // 상대가 교체한 턴: 맡아 둔 내 기술로 턴을 진행
             oppSwTurn = 0;
             pendingMove = heldMove;
             pendingSlot = heldSlot;
-            goTo(1000);   // 행동 선택 메뉴로 (상대가 교체한 턴 진행)
+            goTo(1013);   // 행동 선택 메뉴로 (상대가 교체한 턴 진행)
         }
         isUi = 1;
         setup("assets/codes/ui/menuSelection.jb");   // 방향키로 selectedBox 를 옮김 (isUi 가 1 인 동안)
@@ -6131,7 +6144,7 @@ run{
                         pendBall = blIds[luResult];
                         bg.take(pendBall, 1);   // 던진 볼은 가방에서 하나 줄어듦
                     }
-                    goTo(1000);   // 행동 선택 메뉴로 (볼 메뉴에서 돌아옴)
+                    goTo(1013);   // 행동 선택 메뉴로 (볼 메뉴에서 돌아옴)
                 }
                 if [choice == 2] and [battleForm == 2]{
                     isUi = 0;
@@ -6142,7 +6155,7 @@ run{
                     dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                     dis.setTxtContent("wildappearedc3", "");
                     dis.setTxtContent("wildappearedc4", "");
-                    goTo(1000);   // 행동 선택 메뉴로 (트레이너의 포켓몬은 잡을 수 없음)
+                    goTo(1013);   // 행동 선택 메뉴로 (트레이너의 포켓몬은 잡을 수 없음)
                 }
                 if [choice == 4]{
                     // 도주: 야생이면 다음 줄 (메뉴 줄) 에서 도망칠지 판정 · 트레이너 배틀은 도망칠 수 없음
@@ -6194,11 +6207,11 @@ run{
                         dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                         dis.setTxtContent("wildappearedc3", "");
                         dis.setTxtContent("wildappearedc4", "");
-                        goTo(1000);   // 행동 선택 메뉴로 (갇혀서 도주 불가)
+                        goTo(1013);   // 행동 선택 메뉴로 (갇혀서 도주 불가)
                     }
                     if [battleForm == 1]{
                         pendRun = 1;
-                        goTo(1000);   // 행동 선택 메뉴로 (도주 판정)
+                        goTo(1013);   // 행동 선택 메뉴로 (도주 판정)
                     }
                     bc.setMsg("wildappeared", lang[3897], msgS, msgW);
                     bc.waitMsg(1300);
@@ -6206,7 +6219,7 @@ run{
                     dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                     dis.setTxtContent("wildappearedc3", "");
                     dis.setTxtContent("wildappearedc4", "");
-                    goTo(1000);   // 행동 선택 메뉴로 (트레이너 배틀은 도주 불가)
+                    goTo(1013);   // 행동 선택 메뉴로 (트레이너 배틀은 도주 불가)
                 }
                 if [choice == 3]{
                     // 포켓몬: 교체 화면 (배틀 화면 + 대화 상자 자리를 덮음) — 고르면 교체 · X 로 메뉴로
@@ -6219,7 +6232,7 @@ run{
                         pendSwitch = swTo;
                     }
                     selectedBox = [1, 1];
-                    goTo(1000);   // 행동 선택 메뉴로 (교체 화면에서 돌아옴)
+                    goTo(1013);   // 행동 선택 메뉴로 (교체 화면에서 돌아옴)
                 }
                 if [choice == 1]{
                     // 싸운다: 메뉴 상자 자리에 기술 4 개 (4 × 1) — selectUi 로 고름 (위아래 · Z) · X 로 메뉴로 돌아감
@@ -6345,7 +6358,7 @@ run{
                         mu.removeMoveButton("mbtn%j%");
                         j = j + 1;
                     }
-                    goTo(1000);   // 행동 선택 메뉴로 (위의 dis.enableObj("battlemenu"); 줄) — 기술을 골랐으면 거기서 한 턴 진행
+                    goTo(1013);   // 행동 선택 메뉴로 (위의 dis.enableObj("battlemenu"); 줄) — 기술을 골랐으면 거기서 한 턴 진행
                 }
             }
             dis.waitF(1);
@@ -6448,6 +6461,7 @@ run{
                 bc.waitZ();
             }
             dis.setObject([0, 0], "blackout", [dis.displayX * 2, dis.displayY * 2], "#000000");
+            can.setUi("blackout");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
             dis.setObjLayer("blackout", 60);
             dis.setObjAlpha("blackout", 0);
             dis.setObjAlpha("blackout", 255) for 1000;

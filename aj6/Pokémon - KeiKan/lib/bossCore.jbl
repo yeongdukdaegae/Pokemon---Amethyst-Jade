@@ -1,6 +1,7 @@
 Lib id bossCore;
 Use jawbreaker call jaw;
 Use DisPlayer call dis;
+Use Canvas call can;   // can.setUi: 배틀 UI 를 화면에 고정
 Use Magellan call mag;
 Use soundMaster call sou;
 Use battleCore call bc;
@@ -72,10 +73,12 @@ func pips(float cx, float top, float w, float h, int n){
     var float call pw = (w - gap * (n - 1)) / n;
     var float call y = top - gap - ph / 2;
     dis.setObject([cx, y], "bossPipBg", [w + gap * 2, ph + gap * 2], "#203050");
+    can.setUi("bossPipBg");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("bossPipBg", 3);
     var int call k = 1;
     loop [k <= n]{
         dis.setObject([cx - w / 2 + pw / 2 + (k - 1) * (pw + gap), y], "bossPip%k%", [pw, ph], "#ffd23a");
+        can.setUi("bossPip%k%");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjLayer("bossPip%k%", 4);
         k = k + 1;
     }

@@ -38,15 +38,23 @@ func makeMoveButton(string id, float x, float y, float w, float h, int moveId, i
     var float call bt = max(2, h * 0.05);   // 테두리 두께
     if [moveId == 0]{   // 기술 없음: 어두운 빈 막대
         dis.setObject([x, y], "%id%bd", [w + bt * 2, h + bt * 2], "#2f3131");
+        can.setUi("%id%bd");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjLayer("%id%bd", 8);
         dis.setObject([x, y], "%id%", [w, h], "#4c4e4e");
+        can.setUi("%id%");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjLayer("%id%", 9);
         dis.setObject([x, y], "%id%icon", [1, 1], "#ffffff");   // 빈 자리 (removeMoveButton 이 같은 이름을 지우므로)
+        can.setUi("%id%icon");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObject([x, y], "%id%name", [1, 1], "#ffffff");
+        can.setUi("%id%name");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObject([x, y], "%id%ppbg", [1, 1], "#ffffff");
+        can.setUi("%id%ppbg");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObject([x, y], "%id%pa", [1, 1], "#ffffff");
+        can.setUi("%id%pa");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObject([x, y], "%id%pb", [1, 1], "#ffffff");
+        can.setUi("%id%pb");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObject([x, y], "%id%pp", [1, 1], "#ffffff");
+        can.setUi("%id%pp");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjAlpha("%id%icon", 0);
         dis.setObjAlpha("%id%name", 0);
         dis.setObjAlpha("%id%ppbg", 0);
@@ -59,11 +67,14 @@ func makeMoveButton(string id, float x, float y, float w, float h, int moveId, i
         var int call t = mv[6];
         var int call maxpp = floor(mv[7] * (5 + ppUp) / 5);   // 포인트업 1 번마다 기본 PP 의 1/5 씩
         dis.setObject([x, y], "%id%bd", [w + bt * 2, h + bt * 2], typeDark[t + 1]);
+        can.setUi("%id%bd");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjLayer("%id%bd", 8);
         dis.setObject([x, y], "%id%", [w, h], typeColor[t + 1]);
+        can.setUi("%id%");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjLayer("%id%", 9);
         // 아이콘
         dis.setObject([left + h * 0.55, y], "%id%icon", [h * 0.78, h * 0.78], "#ffffff");
+        can.setUi("%id%icon");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         mag.setObjTexture("%id%icon", "type_%t%", [0, 0], [96, 96]);
         dis.setObjLayer("%id%icon", 10);
         // PP 칸: 흰 사각형 (위아래 조금 안쪽) + 사선 (자속 두 줄 · 비자속 한 줄)
@@ -72,6 +83,7 @@ func makeMoveButton(string id, float x, float y, float w, float h, int moveId, i
         var float call top = y + h / 2;
         var float call bot = y - h / 2;
         dis.setObject([(b1 + b2) / 2, y], "%id%ppbg", [b2 - b1, h * 0.74], "#ffffff");
+        can.setUi("%id%ppbg");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjLayer("%id%ppbg", 10);
         if [stab == 1]{
             dis.setObjPlg([left + w * 0.700, top], [left + w * 0.749, top], [left + w * 0.705, bot], [left + w * 0.651, bot], "%id%pa", "#ffffff");
@@ -88,11 +100,13 @@ func makeMoveButton(string id, float x, float y, float w, float h, int moveId, i
         var float call ps = h * 0.42;
         var float call ty = y - ps * 0.085;   // 숫자는 아래로 처지는 획이 없어 글자 상자 가운데보다 조금 내려야 눈으로 가운데
         dis.setText([(b1 + b2) / 2, ty], "%pp% / %maxpp%", "%id%pp", ps, false, "#000000");
+        can.setUi("%id%pp");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         var float call pw = 0;
         dis.getVar("%id%pp", "scale[1, 1]") as pw;
         if [pw > (b2 - b1) * 0.8]{   // PP 칸에 안 들어가면 글자를 줄임 (양옆 여유)
             ps = ps * (b2 - b1) * 0.8 / pw;
             dis.setText([(b1 + b2) / 2, y - ps * 0.085], "%pp% / %maxpp%", "%id%pp", ps, false, "#000000");
+            can.setUi("%id%pp");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         }
         dis.setObjLayer("%id%pp", 11);
         // 기술 이름 (PP 칸 앞까지 안 들어가면 글자를 줄임)
@@ -100,12 +114,14 @@ func makeMoveButton(string id, float x, float y, float w, float h, int moveId, i
         var string call nm = lang[300 + moveId];
         var float call nx = left + h * 1.05;
         dis.setText([nx, y - ns * 0.085], nm, "%id%name", ns, false, "#ffffff");
+        can.setUi("%id%name");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setTextNudge("%id%name", "left");
         var float call room = left + w * 0.62 - nx;
         var float call nw = 0;
         dis.getVar("%id%name", "scale[1, 1]") as nw;
         if [nw > room]{
             dis.setText([nx, y - ns * room / nw * 0.085], nm, "%id%name", ns * room / nw, false, "#ffffff");
+            can.setUi("%id%name");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         }
         dis.setObjLayer("%id%name", 11);
     }
@@ -185,6 +201,7 @@ func showMoveInfo(int moveId, float x, float y, float w, float h){
     var float call top = y + h / 2;
     // 이름
     dis.setText([x - w / 2 + pad, top - h * 0.2], lang[300 + moveId], "minfo1", h / 6, false, "#ffffff");
+    can.setUi("minfo1");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setTextNudge("minfo1", "left");
     dis.setObjLayer("minfo1", 6);
     // 위력 · 명중 · 유형 (위력 없음 · 반드시 맞음 = -)
@@ -197,6 +214,7 @@ func showMoveInfo(int moveId, float x, float y, float w, float h){
         ac = "" + mv[4];
     }
     dis.setText([x, top - h * 0.42], lang[20] + " " + pw + "  |  " + lang[21] + " " + ac + "  |  " + lang[22 + mv[2]], "minfo2", h / 9, false, "#ffffff");
+    can.setUi("minfo2");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("minfo2", 6);
     // 설명: 남은 높이 안에 들어갈 때까지 글자를 줄여 가며 줄바꿈
     var float call ds = h / 9.5;
@@ -212,6 +230,7 @@ func showMoveInfo(int moveId, float x, float y, float w, float h){
         tries = tries + 1;
     }
     dis.setText([x, (areaTop + areaBot) / 2], desc, "minfo3", ds, false, "#e8ecff");   // 남은 자리의 가운데
+    can.setUi("minfo3");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("minfo3", 6);
 }
 

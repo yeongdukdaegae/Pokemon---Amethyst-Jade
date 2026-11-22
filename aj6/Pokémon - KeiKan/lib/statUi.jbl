@@ -1,6 +1,7 @@
 Lib id statUi;
 Use jawbreaker call jaw;
 Use DisPlayer call dis;
+Use Canvas call can;   // can.setUi: 배틀 UI 를 화면에 고정
 Use Magellan call mag;
 Use moveUi call mu;
 
@@ -23,8 +24,10 @@ func makeStatBox(string id, float x, float y, float w, float h, string name, int
     var float call top = y + h / 2;
     var float call bot = y - h / 2;
     dis.setObject([x, y], "%id%bd", [w, h], "#9fbfff");
+    can.setUi("%id%bd");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("%id%bd", 3);
     dis.setObject([x, y], "%id%", [w - bt * 2, h - bt * 2], "#2f5f9f");
+    can.setUi("%id%");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("%id%", 4);
 
     // 1 줄: 이름 (왼쪽) · 성별 (오른쪽) — 0 수컷 ♂ · 1 암컷 ♀ · 2 무성 (안 보임)
@@ -43,17 +46,20 @@ func makeStatBox(string id, float x, float y, float w, float h, string name, int
     // 레벨 (오른쪽 끝 · 이름보다 조금 작게 · 아랫줄을 이름에 맞춤) — 성별은 그 왼쪽
     var float call lvs = ns * 0.8;
     dis.setText([right - bt - p, ny - ns / 2 + lvs / 2 - lvs * 0.085], "Lv.%level%", "%id%lv", lvs, false, "#ffffff");
+    can.setUi("%id%lv");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setTextNudge("%id%lv", "right");
     dis.setObjLayer("%id%lv", 5);
     var float call lvw = 0;
     dis.getVar("%id%lv", "scale[1, 1]") as lvw;
     dis.setText([right - bt - p - lvw - p * 0.6, ny - ns * 0.085], g, "%id%gen", ns, false, gc);
+    can.setUi("%id%gen");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setTextNudge("%id%gen", "right");
     dis.setObjLayer("%id%gen", 5);
     var float call gw = 0;
     dis.getVar("%id%gen", "scale[1, 1]") as gw;
     var float call nx = left + bt + p;
     dis.setText([nx, ny - ns * 0.085], name, "%id%name", ns, false, "#ffffff");
+    can.setUi("%id%name");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setTextNudge("%id%name", "left");
     dis.setObjLayer("%id%name", 5);
     var float call room = right - bt - p - lvw - p * 0.6 - gw - p * 0.6 - nx;   // 성별 앞까지
@@ -61,6 +67,7 @@ func makeStatBox(string id, float x, float y, float w, float h, string name, int
     dis.getVar("%id%name", "scale[1, 1]") as nw;
     if [nw > room]{   // 안 들어가면 글자를 줄임
         dis.setText([nx, ny - ns * room / nw * 0.085], name, "%id%name", ns * room / nw, false, "#ffffff");
+        can.setUi("%id%name");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     }
 
     // 2 줄: HP 글자 + 체력바 (바깥 흰 테두리 · 안쪽 어두운 칸 · 그 안에 색 막대)
@@ -68,6 +75,7 @@ func makeStatBox(string id, float x, float y, float w, float h, string name, int
     var float call ls = h * 0.267;   // HP 글자 크기
     var float call by = bot + bt + p + ls / 2;
     dis.setText([nx, by - ls * 0.085], "HP", "%id%hpl", ls, false, "#f8c040");
+    can.setUi("%id%hpl");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setTextNudge("%id%hpl", "left");
     dis.setObjLayer("%id%hpl", 5);
     var float call lw = 0;
@@ -76,17 +84,22 @@ func makeStatBox(string id, float x, float y, float w, float h, string name, int
     var float call tr = right - bt - p;       // 막대 오른쪽 끝
     var float call ib = max(1.5, bh * 0.15);  // 테두리 두께
     dis.setObject([(tl + tr) / 2, by], "%id%trk", [tr - tl, bh], "#e8f0f8");
+    can.setUi("%id%trk");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("%id%trk", 5);
     dis.setObject([(tl + tr) / 2, by], "%id%tin", [tr - tl - ib * 2, bh - ib * 2], "#384450");
+    can.setUi("%id%tin");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("%id%tin", 6);
     dis.setObject([tl + ib, by], "%id%bar", [tr - tl - ib * 2, bh - ib * 2], "#58d878");
+    can.setUi("%id%bar");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjNudge("%id%bar", "left");   // 위치 = 왼쪽 끝 → 폭만 바꾸면 왼쪽에 붙은 채 줄어듦
     dis.setObjLayer("%id%bar", 7);
     // 상태 이상 표시 자리 (처음엔 안 보임 · setStatus 로 켬)
     dis.setObject([x, y], "%id%stb", [1, 1], "#ffffff");
+    can.setUi("%id%stb");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("%id%stb", 5);
     dis.setObjAlpha("%id%stb", 0);
     dis.setText([x, y], "-", "%id%stt", ns * 0.5, false, "#ffffff");
+    can.setUi("%id%stt");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("%id%stt", 6);
     dis.setObjAlpha("%id%stt", 0);
     setHp(id, hp, maxHp);
@@ -129,14 +142,17 @@ func setStatus(string id, int code){
         dis.getVar("%id%name", "scale[1, 2]") as ns;
         var float call ts = ns * 0.5;
         dis.setText([0, 0], lang[1340 + code], "%id%stt", ts, false, tc);
+        can.setUi("%id%stt");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         var float call tw = 0;
         dis.getVar("%id%stt", "scale[1, 1]") as tw;
         var float call bw = tw + ts * 0.7;
         var float call cx = nx + nw + ns * 0.2 + bw / 2;
         dis.setObject([cx, ny + ns * 0.085], "%id%stb", [bw, ts * 1.5], col);
+        can.setUi("%id%stb");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjLayer("%id%stb", 5);
         dis.setObjAlpha("%id%stb", 255);
         dis.setText([cx, ny + ns * 0.085 - ts * 0.085], lang[1340 + code], "%id%stt", ts, false, tc);
+        can.setUi("%id%stt");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjLayer("%id%stt", 6);
         dis.setObjAlpha("%id%stt", 255);
     }
@@ -210,10 +226,13 @@ func makeExpBar(string id, float x, float y, float w, float h, float r){
     var float call eh = h * 0.13;
     var float call ey = y - h / 2 - eh / 2 + bt;   // 상자 아래 테두리와 겹치게
     dis.setObject([x, ey], "%id%xbd", [w, eh], "#9fbfff");
+    can.setUi("%id%xbd");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("%id%xbd", 3);
     dis.setObject([x, ey], "%id%xtin", [w - bt * 2, eh - bt * 2], "#384450");
+    can.setUi("%id%xtin");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjLayer("%id%xtin", 4);
     dis.setObject([x - w / 2 + bt, ey], "%id%xbar", [w - bt * 2, eh - bt * 2], "#48c8f8");
+    can.setUi("%id%xbar");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
     dis.setObjNudge("%id%xbar", "left");
     dis.setObjLayer("%id%xbar", 5);
     setExp(id, r);
@@ -264,10 +283,13 @@ func makeTypes(string id, float x, float y, float w, float h, int side, int t1, 
             tx = x - w / 2 - g - s / 2 - (k - 1) * (s + g);
         }
         dis.setObject([tx, y], "%id%ty%k%", [s, s], "#ffffff");
+        can.setUi("%id%ty%k%");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjLayer("%id%ty%k%", 4);
         dis.setObject([tx, y], "%id%ty%k%in", [s - wb * 2, s - wb * 2], mu.typeCol(t));
+        can.setUi("%id%ty%k%in");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         dis.setObjLayer("%id%ty%k%in", 5);
         dis.setObject([tx, y], "%id%ty%k%ic", [s * 0.72, s * 0.72], "#ffffff");
+        can.setUi("%id%ty%k%ic");   // 배틀 UI: 화면에 고정 (카메라가 흔들려도 그대로)
         mag.setObjTexture("%id%ty%k%ic", "type_%t%", [0, 0], [96, 96]);
         dis.setObjLayer("%id%ty%k%ic", 6);
         if [t == 0]{   // 두 번째 타입 없음
