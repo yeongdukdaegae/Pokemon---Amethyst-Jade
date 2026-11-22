@@ -735,7 +735,7 @@ function satHit(A,B,touch){
 const BUILTINS={
   log:{params:['any']},print:{params:['any']},
   wait:{params:['int']},terminate:{params:[]},sendto:{params:['string']},
-  break:{params:[]},return:{params:[]},goTo:{params:['int']},setup:{params:['string']},
+  break:{params:[]},return:{params:[]},goTo:{params:['int']},label:{params:['string']},setup:{params:['string']},
   keyClick:{params:['string']},keyPush:{params:['string']},keyRlse:{params:['string']},   // 키를 누른 것처럼 (isKeyInput 에 보임)
   setJson:{params:['string','json']},genJson:{params:['string','string']},loadJson:{params:['string','string']},   // JSON 으로 담아 두고 · 파일로 저장 · 파일에서 compound 로
   exportFile:{params:['string','string']},openFile:{params:['string']}   // 파일을 난독화해서 내려받기 · 기기의 파일을 골라 그 경로로 (난독화된 것도 풀어서 · 고를 때까지 기다림)
@@ -1039,9 +1039,10 @@ function check(mod,prog){
           if(intish(e.l,a)&&intish(e.r,b))e.anyInt=true;
           return e.ty=(a==='float'||b==='float')?'float':'int';
         }
-        if(op==='%'){
-          if(a==='string'||b==='string'||a==='float'||b==='float')throw E(`'%' 는 int 끼리만 쓸 수 있습니다`,e);
-          return e.ty='int';
+        if(op==='%'){   // 나머지: int 끼리면 int · float 이 섞이면 float (C 의 % · fmod 처럼 부호는 나뉘는 수를 따름)
+          if(a==='string'||b==='string')throw E(`문자열에는 '%' 를 쓸 수 없습니다`,e);
+          if(intish(e.l,a)&&intish(e.r,b))e.anyInt=true;
+          return e.ty=(a==='float'||b==='float')?'float':'int';
         }
         if(op==='=='||op==='!='){
           if((a==='string')!==(b==='string'))throw E(`문자열과 숫자는 비교할 수 없습니다 (${a} ${op} ${b})`,e);
@@ -1160,6 +1161,30 @@ function check(mod,prog){
     if(target.mod===SND_ID&&c.name==='break'&&c.args.length>2)throw E(`sou.break 는 ("스피커") 또는 ("스피커", 페이드 무시 bit) 입니다 (받은 값: ${c.args.length}개)`,c);
     if(target.mod===DIS_ID&&c.name==='setObjPlg'&&c.args.length===5)params=['mat12','mat12','mat12','string','color'];   // 꼭짓점 3개
     if(target.mod===DIS_ID&&c.name==='setObjPlg'&&c.args.length!==5&&c.args.length!==6)throw E(`setObjPlg 는 꼭짓점 3개 또는 4개 다음에 "id" · 색을 씁니다 (예: dis.setObjPlg([0, 0], [100, 0], [50, 80], "tri", "#ffffff");)`,c);
+    // label("이름"); — 줄 라벨 (아무것도 하지 않는 문장) · goTo("이름"); — 그 라벨이 있는 줄로 (같은 파일 · 줄 번호 goTo 와 같은 규칙)
+    if(target.mod==='jawbreaker'&&c.name==='label'&&c.args.length===1){
+      const a=c.args[0];
+      if(a.k!=='str')throw E(`label 이름은 따옴표 안의 문자열 상수여야 합니다 (예: label("메뉴");)`,a);
+      if(!/^[^\s"]+$/.test(a.v))throw E(`label 이름은 빈칸 없이 한 단어로 씁니다 (받은 값: "${a.v}")`,a);
+      if(!mod.labelSeen)mod.labelSeen=new Map();
+      if(mod.labelSeen.has(a.v)&&mod.labelSeen.get(a.v)!==c.line)throw E(`label("${a.v}") 이(가) 두 번 있습니다 (${mod.labelSeen.get(a.v)}번째 줄 · ${c.line}번째 줄) — 한 파일 안에서 라벨 이름은 하나씩`,a);
+      mod.labelSeen.set(a.v,c.line);
+    }
+    if(target.mod==='jawbreaker'&&c.name==='goTo'&&c.args.length===1&&c.args[0].k==='str'){
+      if(!mod.gotoLabels){   // 이 파일의 label("이름") → 줄 (같은 이름이 둘이면 오류)
+        const m=new Map();
+        const walk=l=>{for(const x of l){
+          if(x.k==='call'&&x.name==='label'&&x.args&&x.args.length===1&&x.args[0].k==='str'&&(x.lib==null||hget(mod.uses,x.lib)==='jawbreaker')){
+            if(m.has(x.args[0].v))throw E(`label("${x.args[0].v}") 이(가) 두 번 있습니다 (${m.get(x.args[0].v)}번째 줄 · ${x.line}번째 줄) — 한 파일 안에서 라벨 이름은 하나씩`,x);
+            m.set(x.args[0].v,x.line);
+          }
+          if(x.body)walk(x.body);if(x.then)walk(x.then);if(x.else)walk(x.else);}};
+        walk(mod.ast);mod.gotoLabels=m;
+      }
+      const a=c.args[0],ln=mod.gotoLabels.get(a.v);
+      if(ln===undefined)throw E(`goTo("${a.v}"): 이 파일에 label("${a.v}"); 이(가) 없습니다`,a);
+      c.gotoLabel=a.v;c.args[0]={k:'num',v:ln,raw:String(ln),line:a.line,file:a.file};   // 줄 번호 goTo 로 바꿈 (아래 검사 · 실행 · C 변환은 그대로)
+    }
     if(c.args.length!==params.length)throw E(`'${c.name}' 은(는) 값 ${params.length}개가 필요합니다 (받은 값: ${c.args.length}개)`,c);
     const isObjSet=(target.mod===DIS_ID||target.mod===COL_ID)&&OBJ_SET.has(c.name);
     c.args.forEach((a,i)=>{
@@ -1305,7 +1330,7 @@ function check(mod,prog){
       if(!mod.stmtLines.has(ln))throw E(`goTo(${ln}): ${ln}번째 줄에 문장이 없습니다 (그 줄에서 시작하는 문장으로만 갈 수 있음)`,c.args[0]);
       {const st=mod.gotoReach.get(c);
        if(st&&!st.some(l=>l.some(x=>x.line===ln)))
-         throw E(`goTo(${ln}): ${ln}번째 줄은 지금 있는 블록이나 그 바깥 블록의 문장이 아닙니다 (안쪽 블록 · 다른 함수 · 다른 run 으로는 못 감)`,c.args[0]);}
+         throw E(`goTo(${c.gotoLabel!=null?'"'+c.gotoLabel+'" → '+ln:ln}): ${ln}번째 줄은 지금 있는 블록이나 그 바깥 블록의 문장이 아닙니다 (안쪽 블록 · 다른 함수 · 다른 run 으로는 못 감)`,c.args[0]);}
     }
     if(target.mod==='jawbreaker'&&(target.name==='break'||target.name==='return')){
       let tg=null;
@@ -2935,6 +2960,7 @@ async function execProgram(prog,io,ctl){
           io.sys&&io.sys('→ sendto '+c.taskPath);
           throw new JBSend(c.taskPath);
         case 'goTo':throw new JBGoto(ev(c.args[0],env)|0,c);   // 그 줄의 문장으로 — seq 가 받아서 넘어감
+        case 'label':return;   // 줄 라벨: 아무것도 하지 않음 (goTo("이름") 이 이 줄로)
         case 'break':case 'return':
           if(c.ret)throw new JBRet(co(ev(c.args[0],env),c.retTy));   // return(값);
           throw new JBJump(t.name,c.jump);
@@ -3805,6 +3831,7 @@ function genC(prog){
         if((e.op==='=='||e.op==='!=')&&(e.l.ty==='any'||e.r.ty==='any'))return `(${e.op==='!='?'!':''}jb_ieq(${toIt(e.l)}, ${toIt(e.r)}))`;
         if((e.op==='=='||e.op==='!=')&&e.l.ty==='string')return `(strcmp(${cx(e.l)}, ${cx(e.r)}) ${e.op} 0)`;
         if(e.ty==='int'&&(e.op==='/'||e.op==='%')){used.idiv=true;return `${e.op==='/'?'jb_idiv':'jb_imod'}(${cx(e.l)}, ${cx(e.r)}, ${e.line})`;}   // 0 으로 나누면 오류 · 32비트로 감쌈
+        if(e.op==='%'){used.math=true;return `fmod((double)(${cx(e.l)}), (double)(${cx(e.r)}))`;}   // float 나머지
         return `(${cx(e.l)} ${e.op} ${cx(e.r)})`;
     }
   }
@@ -4071,7 +4098,8 @@ function genC(prog){
           else if(t.name==='terminate'){used.exit=true;L('exit(0);');}
           else if(t.name==='sendto'){used.sendto=true;sendHere=true;L(`{ jb_next_ = ${tname(s.taskPath)}; goto jb_send_end_; }   /* sendto: 이 run 은 끝 → 그 파일로 */`);}
           else if(t.name==='setup')L(`jb_setup(${tidx.get(s.taskPath)});`);
-          else if(t.name==='goTo')L(`goto jb_go_${cid(s.file)}_${s.args[0].v};`);
+          else if(t.name==='goTo')L(`goto jb_go_${cid(s.file)}_${s.args[0].v};${s.gotoLabel?`   /* goTo("${s.gotoLabel.replace(/\*\//g,'')}") */`:''}`);
+          else if(t.name==='label')L(`/* label("${String(s.args[0].v).replace(/\*\//g,'')}") */`);
           else if(t.name==='break')L(s.jump.k==='loop'?'break;':`goto jb_ifend_${s.jump.lbl};`);
           else if(t.name==='return'&&s.ret){
             if(s.retTy==='string'){used.set=true;L(`{ jb_set(jb_o_, ${cx(s.args[0])}); return jb_o_; }`);}

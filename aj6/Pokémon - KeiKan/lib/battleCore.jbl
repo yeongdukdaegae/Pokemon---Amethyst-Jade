@@ -1264,30 +1264,12 @@ func int wxTex(){
     }
     return(0);
 }
-// 쏘는 포켓몬 그림의 맨 위 (화면 y): 그림 (96 x 96) 을 위에서부터 2 줄씩 · 줄마다 4 칸 간격으로 훑어 처음 투명하지 않은 픽셀 (dis.isPixelExists) 을 찾음
-//   (cx, cy) = 그림 가운데 · 못 찾거나 그림을 모르면 cy + s * 0.3
+// 쏘는 포켓몬 그림의 맨 위 (화면 y) — 지금은 그림 크기로 어림 (가운데 + 크기 × 0.4 · 그림을 모르면 cy + s * 0.3)
+//   픽셀 검사 (dis.isPixelExists) 가 에디터에 들어오면 그림을 훑어 처음 투명하지 않은 픽셀로 바꿀 것 · 지금은 쓰는 기술 없음 (폭탄은 모두 몸 앞에서 모음)
 func float sprTop(float cx, float cy, float s){
     var float call top = cy + s * 0.3;
-    if [fxSrcTex == ""] or [fxSrcSz <= 0]{
-        return(top);
-    }
-    var int call found = 0;
-    var int call py = 0;
-    loop [py < 96] and [found == 0]{
-        var int call px = 4;
-        loop [px < 96] and [found == 0]{
-            var bit call pe = dis.isPixelExists(fxSrcTex, px, py);   // 투명하지 않은 픽셀이면 1
-            if [pe == 1]{
-                found = 1;
-            }
-            px = px + 4;
-        }
-        if [found == 0]{
-            py = py + 2;
-        }
-    }
-    if [found == 1]{
-        top = cy + (48 - py) / 96.0 * fxSrcSz;
+    if [fxSrcSz > 0]{
+        top = cy + fxSrcSz * 0.4;
     }
     return(top);
 }
