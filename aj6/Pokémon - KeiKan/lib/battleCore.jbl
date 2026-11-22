@@ -1260,7 +1260,7 @@ func spBoom(float x, float y, float s, string inCol, string outCol, float size, 
     spClear(n);
     dis.removeObj("sfxb");
 }
-// 폭탄 공 하나 (sfx1 · 크기는 부른 쪽이 정함): btex 0 = 빛 덩어리 (가운데 inCol · 둘레 outCol 빛 번짐) · 1 ~ 4 = fx_ball.png 의 물건 같은 공 (1 알 · 2 씨앗 · 3 진흙 덩이 · 4 쇠 공 — 빛 번짐은 약하게)
+// 폭탄 공 하나 (sfx1 · 크기는 부른 쪽이 정함): btex 0 = 빛 덩어리 (가운데 inCol · 둘레 outCol 빛 번짐) · 1 ~ 6 = fx_ball.png 의 물건 같은 공 (1 알 · 2 씨앗 · 3 진흙 덩이 · 4 쇠 공 · 5 오물 덩이 · 6 시럽 방울 — 빛 번짐은 약하게)
 func bombBall(float x, float y, float s, string inCol, string outCol, float r, int btex){
     if [btex == 0]{
         pxCirc(x, y, "sfx1", 1, inCol);
@@ -1342,8 +1342,8 @@ func spBomb(float ax, float ay, float tx, float ty, float s, string inCol, strin
                 var float call bp = max(0, bf / (fr * 1.0) - bl);
                 var float call bp2 = bp * bp;
                 dis.setObjPos("sfx%bi%", [hx + (tx - hx) * bp2, hy + (ty - hy) * bp2]);
-                if [bi == 1] and [btex > 0]{
-                    dis.rotateObj("sfx1", 0 - 14, 0);   // 물건 같은 공은 날면서 굴러감
+                if [bi == 1] and [btex > 0] and [btex < 5]{
+                    dis.rotateObj("sfx1", 0 - 14, 0);   // 단단한 공은 날면서 굴러감 (오물 · 시럽 방울은 안 굴러감)
                 }
             }
             bi = bi + 1;
@@ -1922,7 +1922,7 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spBomb(ax, ay, tx, ty, s, "#fffef0", "#ffd870", 0.09, 22, 12, 0.3, 10, 0, 1);
     }
     if [mv == 188]{   // 오물폭탄: 보랏빛 공 → 독 방울이 사방으로
-        spBomb(ax, ay, tx, ty, s, "#f0d8ff", "#9b3cff", 0.09, 22, 12, 0.3, 10, 7, 0);
+        spBomb(ax, ay, tx, ty, s, "#f0d8ff", "#9b3cff", 0.09, 22, 12, 0.3, 10, 7, 5);
     }
     if [mv == 402]{   // 씨폭탄: 초록빛 공 → 나뭇잎이 사방으로
         spBomb(ax, ay, tx, ty, s, "#f0ffd8", "#5ac83a", 0.0825, 20, 12, 0.28, 10, 3, 2);
@@ -1937,7 +1937,7 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spBomb(ax, ay, tx, ty, s, "#f4e4ff", "#c060ff", 0.075, 20, 12, 0.26, 8, 7, 0);
     }
     if [mv == 903]{   // 시럽봄: 호박빛 공 → 끈끈한 방울
-        spBomb(ax, ay, tx, ty, s, "#fff0d0", "#ff8a2a", 0.09, 22, 13, 0.28, 10, 0, 0);
+        spBomb(ax, ay, tx, ty, s, "#fff0d0", "#ff8a2a", 0.09, 22, 13, 0.28, 10, 0, 6);
     }
     if [mv == 585]{   // 문포스: 큰 분홍 달빛 공을 오래 모음 → 반짝임이 크게 퍼짐
         spBomb(ax, ay, tx, ty, s, "#fff4ff", "#ff7ad8", 0.12, 34, 12, 0.4, 14, 8, 0);
