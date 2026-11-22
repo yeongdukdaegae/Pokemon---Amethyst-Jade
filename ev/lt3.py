@@ -10,52 +10,74 @@ if os.environ.get('PCOFF'): d.append(0); d.append(2)
 if os.environ.get('GYS'):
     while len(d)<19: d.append(1 if len(d)==17 else 2)
     d.append(json.loads(os.environ['GYS']))
-dst="tt/we/Pokémon - KeiKan"
-if os.path.isdir("tt/we"): shutil.rmtree("tt/we")
+TT=os.environ.get("TT","tt/we")   # 시험용 사본 폴더 (여러 개를 동시에 돌릴 때 TT=tt/we2 처럼 나눔)
+dst=TT+"/Pokémon - KeiKan"
+if os.path.isdir(TT): shutil.rmtree(TT)
 shutil.copytree("aj6/Pokémon - KeiKan",dst); os.makedirs(dst+"/data/save",exist_ok=True)
 json.dump(d,open(dst+"/data/save/save.json","w"),ensure_ascii=False)
 p=dst+"/assets/codes/places/prtgRoom.jb"; s=open(p,encoding="utf-8").read()
 for a,b in json.loads(os.environ.get('PATCH','[]')):
     assert a in s, a; s=s.replace(a,b,1)
 open(p,"w",encoding="utf-8").write(s)
-os.system("python3 mkzip.py tt/we tt/we.zip >/dev/null")
+os.system(f'python3 mkzip.py "{TT}" "{TT}.zip" >/dev/null')
+# ── 배속 (게임 속도): 페이지의 시계 (performance.now · Date.now · setTimeout · setInterval · requestAnimationFrame) 를 가상 시계로 바꿔 끼움
+#   SPEED=8 → 처음부터 8 배속 · SEQ 안의 xN → 그때부터 N 배속 (예: x8 로 타이틀 · 조우를 빨리 넘기고 x1 로 이펙트를 찍음 · x0.5 = 느린 화면)
+#   게임 · 에디터 파일은 고치지 않음 (시험할 때만) · 스크립트의 기다림 (wN · 처음 타이틀 대기 · 키 누르는 시간) 도 같은 배속으로 줄어듦
+#   1 배속보다 빠르면 화면 프레임 (requestAnimationFrame) 도 그만큼 자주 돎 — 그리기가 못 따라가면 그 이상은 빨라지지 않음
+CLOCK='''(()=>{const rp=performance.now.bind(performance),rd=Date.now,st=window.setTimeout.bind(window),si=window.setInterval.bind(window),
+raf=window.requestAnimationFrame.bind(window),caf=window.cancelAnimationFrame.bind(window),off=rd()-rp();
+let base=rp(),vb=base,k=__SPEED__;const vn=()=>vb+(rp()-base)*k;
+window.__setSpeed=n=>{vb=vn();base=rp();k=n;};window.__speed=()=>k;
+performance.now=vn;Date.now=()=>Math.floor(off+vn());
+window.setTimeout=(f,ms,...a)=>st(f,(+ms||0)/k,...a);window.setInterval=(f,ms,...a)=>si(f,(+ms||0)/k,...a);
+const fake=new Set();
+window.requestAnimationFrame=f=>{if(k>1){const id=st(()=>{fake.delete(id);f(vn());},16.7/k);fake.add(id);return id;}return raf(()=>f(vn()));};
+window.cancelAnimationFrame=id=>{if(fake.has(id)){fake.delete(id);clearTimeout(id);}else caf(id);};})();'''
+SPD=[float(os.environ.get('SPEED','1'))]
 async def main():
   async with async_playwright() as p:
-    b=await p.chromium.launch(args=['--no-sandbox','--headless=new'])
+    exe=os.environ.get('CHROME') or next((q for q in ['/opt/pw-browsers/chromium/chrome-linux64/chrome','/opt/pw-browsers/chromium'] if os.path.isfile(q)),None)
+    b=await p.chromium.launch(executable_path=exe,args=['--no-sandbox','--headless=new']) if exe else await p.chromium.launch(args=['--no-sandbox','--headless=new'])
     pg=await b.new_page(viewport={'width':int(os.environ.get('VW','1280')),'height':int(os.environ.get('VH','800'))}); errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
+    await pg.add_init_script(CLOCK.replace('__SPEED__',str(SPD[0])))
     await pg.add_init_script("delete window.showOpenFilePicker;delete window.showSaveFilePicker;window.__lt=[];try{new PerformanceObserver(l=>{for(const e of l.getEntries())window.__lt.push([Math.round(e.startTime),Math.round(e.duration)])}).observe({type:'longtask',buffered:true})}catch(e){}")
     await pg.goto('file://'+os.path.abspath(os.environ.get('JB','JawBreaker.html'))+''); await pg.wait_for_timeout(300)
-    await pg.set_input_files('#filein','tt/we.zip')
+    await pg.set_input_files('#filein',TT+'.zip')
     for q in range(100):
       await pg.wait_for_timeout(100)
       if 'Opened' in await pg.evaluate("document.getElementById('log').innerText"): break
     await pg.wait_for_timeout(800)
     await pg.evaluate("document.getElementById('run').click()")
+    async def w(ms): await pg.wait_for_timeout(ms/SPD[0])
     async def key(k,ms=120):
-      await pg.keyboard.down(k); await pg.wait_for_timeout(ms); await pg.keyboard.up(k)
+      await pg.keyboard.down(k); await pg.wait_for_timeout(max(40,ms/SPD[0])); await pg.keyboard.up(k)
     async def log(): return await pg.evaluate("document.getElementById('log').innerText")
-    async def shot(n): await pg.screenshot(path=f'ev/s_{n}.png')
+    SH=os.environ.get('SHOTS','ev'); os.makedirs(SH,exist_ok=True)   # 스크린샷 폴더 (동시에 돌릴 때 나눔)
+    async def shot(n): await pg.screenshot(path=f'{SH}/s_{n}.png')
     for i in range(12):
-      await pg.wait_for_timeout(1500)
+      await w(1500)
       if i in (3,4,5): await key('z')
-    await pg.wait_for_timeout(1000); await shot('0'); await pg.evaluate('window.__lt=[]')
+    await w(1000); await shot('0'); await pg.evaluate('window.__lt=[]')
     K={'L':'ArrowLeft','R':'ArrowRight','U':'ArrowUp','D':'ArrowDown','Z':'z','X':'x'}
     for i,k in enumerate([q for q in os.environ.get('SEQ','').split(',') if q]):
-      if k.startswith('w'): await pg.wait_for_timeout(int(k[1:])); continue
+      if k.startswith('w'): await w(int(k[1:])); continue
+      if k.startswith('x'):
+        SPD[0]=float(k[1:]); await pg.evaluate(f'window.__setSpeed({SPD[0]})'); continue
       if k.startswith('s'): await shot(k[1:]); continue
       if k.startswith('W'):
         for q in range(150):
           if k[1:] in await log(): break
           await pg.wait_for_timeout(200)
         continue
-      if k.startswith('Q'):
-        for q in range(60):
+      if k.startswith('Q'):   # 그 글자가 로그에 나올 때까지 Z (게임 시간 약 0.7 초마다) · 나오면 바로 다음으로
+        for q in range(600):
           if k[1:] in await log(): break
-          await key('z'); await pg.wait_for_timeout(700)
+          if q % 12 == 0: await key('z',90)
+          else: await pg.wait_for_timeout(60/SPD[0])
         continue
       ms=130
       if ':' in k: k,ms=k.split(':'); ms=int(ms)
-      await key(K[k],ms); await pg.wait_for_timeout(350)
-    await pg.wait_for_timeout(800); await shot('end'); print('LONGTASKS',await pg.evaluate('window.__lt'))
+      await key(K[k],ms); await w(350)
+    await w(800); await shot('end'); print('LONGTASKS',await pg.evaluate('window.__lt'))
     L=await log(); print([l for l in L.split('\n') if any(x in l for x in os.environ.get('GREP','✖|맵|단차|야생|트레이너|보스').split('|'))][-14:]); print('ERR',[l for l in L.split('\n') if '✖' in l][:3], errs[:2])
 asyncio.run(main())

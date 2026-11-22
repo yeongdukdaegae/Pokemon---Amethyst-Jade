@@ -9,6 +9,13 @@
 - `mkzip.py` — 게임 zip 만들기: `python3 mkzip.py aj6 out.zip`
 - `ev/lt3.py` + `ns2save.json` — 브라우저 실행 테스트 (Python playwright 필요 · `pip install playwright` · `playwright install chromium`)
   - 시험용 사본 `tt/we/` 에 리포트를 만들어 넣고 zip → JawBreaker.html 로 실행 → 키 입력 → 로그 · 스크린샷 (`ev/s_이름.png`)
+  - 배속 (게임 속도): `SPEED=8` = 처음부터 8 배속 · `SEQ` 안의 `xN` = 그때부터 N 배속 (`x1` 로 되돌림 · `x0.5` 느린 화면)
+    - 페이지의 시계 (performance.now · Date.now · setTimeout · setInterval · requestAnimationFrame) 를 가상 시계로 바꿔 끼움 — 게임 · 에디터 파일은 그대로
+    - 스크립트의 기다림 (`wN` · 타이틀 대기 · 키 누르는 시간) 도 같은 배속으로 줄어듦 · 그리기가 못 따라가면 그 이상은 빨라지지 않음
+    - 예: `SPEED=8 … SEQ="L:500,R:500,w9000,Z,w900,Z,w900,x1,Q이펙트: 52 (,w60,sq1,w170,sq2"` → 조우까지 8 배속 · 기술을 고르기 직전부터 1 배속 (한 판 약 15 초 · 예전 약 60 초)
+  - 동시에 여러 개: `TT=tt/we2` (시험용 사본 폴더) · `SHOTS=tt/s2` (스크린샷 폴더 · 기본 `ev`) 를 줄마다 다르게
+  - 브라우저: `CHROME` = Chromium 경로 (없으면 `/opt/pw-browsers/chromium` 이 있으면 그것 · 아니면 playwright 기본)
+  - `Q글자`: 그 글자가 로그에 나올 때까지 Z (게임 시간 약 0.7 초마다) — 나오면 바로 다음 (기술 이펙트를 찍을 때 `Q이펙트: 번호 (`)
   - 환경 변수: `PL` 장소 · `WX` `WY` 위치 · `PARTY` 지닌 포켓몬 (JSON) · `BAG` 가방 · `PATCH` prtgRoom.jb 바꿔치기 · `SEQ` 키 (L/R/U/D/Z/X[:ms] · wN 기다림 · s이름 스크린샷 · W글자 로그에 나올 때까지 · Q글자 Z 를 누르며 기다림) · `GREP` 로그 거르기 · `VW` `VH` 화면 크기 · `JB` 에디터 경로
   - 예: 1번도로 서쪽 덤불에서 잉어킹 Lv.30 을 강제로 만나 첫 기술 쓰기
     ```
