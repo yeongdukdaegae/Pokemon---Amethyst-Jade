@@ -707,8 +707,11 @@ func spFly(string id, float ax, float ay, float tx, float ty, float s, int fr, f
 //   몸통 = 픽셀 원 14 개 (sfx1 ~ sfx14 · 가운데 inCol · 둘레 outCol 빛 번짐) · sfx15 = 쏘는 곳 빛 · sfx16 = 줄기 끝 빛
 //   w = 굵기 (반지름 = s * w) · hold = 유지 프레임 · 뻗기 10 프레임 → 유지 (굵기가 떨림) → 12 프레임 동안 가늘어지며 사라짐 → spBurst
 //   mode: 0 보통 · 1 무지개 (색이 흘러감) · 2 은빛 (반짝임) · 3 물결 (줄기가 굽이침) · 4 두 줄 · 5 전기 (줄기가 지직거림) · 6 빨강 · 초록 번갈아
-func spBeam(float ax, float ay, float tx, float ty, float s, string inCol, string outCol, float w, int hold, int mode){
+func spBeam(float ax0, float ay0, float tx, float ty, float s, string inCol, string outCol, float w, int hold, int mode){
     var list call rb = ["#ff5a5a", "#ffb04a", "#fff06a", "#7cff8a", "#6ad8ff", "#7a8cff", "#d07aff"];
+    var float call bl0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
+    var float call ax = ax0 + (tx - ax0) / bl0 * s * 0.2;   // 쏘는 곳: 공격하는 포켓몬의 조금 앞 (상대 쪽)
+    var float call ay = ay0 + (ty - ay0) / bl0 * s * 0.2;
     var float call bdx = tx - ax;
     var float call bdy = ty - ay;
     var float call bln = max(1, sqrt(bdx * bdx + bdy * bdy));
@@ -797,8 +800,11 @@ func spBeam(float ax, float ay, float tx, float ty, float s, string inCol, strin
     spClear(16);
     spBurst(tx, ty, s, br * 1.2, s * (0.2 + w * 2), inCol, outCol, 12);
 }
-// 빛 모으기 (솔라빔 · 메테오빔 · 일렉트로빔): 둘레의 작은 빛 8 개가 (x, y) 로 빨려 들고 가운데 빛이 커짐 · sfx1 ~ sfx9 (끝나면 지움)
-func spGather(float x, float y, float s, string inCol, string outCol, int fr){
+// 빛 모으기 (솔라빔 · 메테오빔 · 일렉트로빔): 둘레의 작은 빛 8 개가 쏘는 곳 (spBeam 과 같은 곳 · 공격하는 쪽의 조금 앞) 으로 빨려 들고 가운데 빛이 커짐 · sfx1 ~ sfx9 (끝나면 지움)
+func spGather(float ax, float ay, float tx, float ty, float s, string inCol, string outCol, int fr){
+    var float call gl0 = max(1, sqrt((tx - ax) * (tx - ax) + (ty - ay) * (ty - ay)));
+    var float call x = ax + (tx - ax) / gl0 * s * 0.2;
+    var float call y = ay + (ty - ay) / gl0 * s * 0.2;
     var int call gi = 1;
     loop [gi <= 8]{
         pxCirc(x, y, "sfx%gi%", s * 0.02, inCol);
@@ -829,7 +835,10 @@ func spGather(float x, float y, float s, string inCol, string outCol, int fr){
     spClear(9);
 }
 // 거품 알갱이 줄기 (거품광선): 크기가 제각각인 거품 14 개가 흔들리며 흘러감 → 맞는 곳에서 톡톡 터짐 · sfx1 ~ sfx14
-func spBubbles(float ax, float ay, float tx, float ty, float s, string inCol, string outCol, int fr){
+func spBubbles(float ax0, float ay0, float tx, float ty, float s, string inCol, string outCol, int fr){
+    var float call ul0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
+    var float call ax = ax0 + (tx - ax0) / ul0 * s * 0.2;   // 쏘는 곳: spBeam 과 같음
+    var float call ay = ay0 + (ty - ay0) / ul0 * s * 0.2;
     var int call ui = 1;
     loop [ui <= 14]{
         pxCirc(ax, ay, "sfx%ui%", s * (0.025 + 0.02 * jaw.random(0, 1)), inCol);
@@ -1196,11 +1205,11 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spBeam(ax, ay, tx, ty, s, "#fff6e0", "#ffa83a", 0.09, 34, 0);
     }
     if [mv == 416]{   // 기가임팩트: 파괴광선만큼 굵고 긴 보랏빛 줄기 (쏘기 전 짧게 번쩍)
-        spGather(ax, ay, s, "#ffffff", "#c07aff", 8);
+        spGather(ax, ay, tx, ty, s, "#ffffff", "#c07aff", 8);
         spBeam(ax, ay, tx, ty, s, "#fff0ff", "#b05aff", 0.095, 34, 0);
     }
     if [mv == 76]{   // 솔라빔: 공격하는 쪽에 햇빛이 모임 → 금빛 줄기
-        spGather(ax, ay, s, "#ffffe0", "#ffe04a", 30);
+        spGather(ax, ay, tx, ty, s, "#ffffe0", "#ffe04a", 30);
         spBeam(ax, ay, tx, ty, s, "#ffffe8", "#ffd84a", 0.07, 26, 0);
     }
     if [mv == 451]{   // 차지빔: 지직거리는 노란 전기 줄기
@@ -1231,7 +1240,7 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spBeam(ax, ay, tx, ty, s, "#ffffff", "#a8b8c8", 0.085, 30, 2);
     }
     if [mv == 800]{   // 메테오빔: 우주의 빛이 모임 → 모랫빛 줄기
-        spGather(ax, ay, s, "#fff4d8", "#d8a860", 26);
+        spGather(ax, ay, tx, ty, s, "#fff4d8", "#d8a860", 26);
         spBeam(ax, ay, tx, ty, s, "#fff8e8", "#d8a860", 0.075, 26, 0);
     }
     if [mv == 711]{   // 프리즘레이저: 굵은 무지개 줄기
@@ -1247,7 +1256,7 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spBeam(ax, ay, tx, ty, s, "#e8f0ff", "#6a5cff", 0.05, 24, 4);
     }
     if [mv == 905]{   // 일렉트로빔: 전기가 모임 → 지직거리는 굵은 줄기
-        spGather(ax, ay, s, "#fffbd0", "#ffd23a", 22);
+        spGather(ax, ay, tx, ty, s, "#fffbd0", "#ffd23a", 22);
         spBeam(ax, ay, tx, ty, s, "#fffbd0", "#ffd23a", 0.07, 26, 5);
     }
     if [mv == 744]{   // 다이맥스포: 굵은 붉은 줄기
