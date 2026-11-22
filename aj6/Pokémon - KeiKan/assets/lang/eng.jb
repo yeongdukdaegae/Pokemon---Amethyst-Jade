@@ -599,6 +599,14 @@ run{
     engLang[7504] = "← Left";
     engLang[7505] = "↖ Up-left";
     engLang[7506] = "Send to Box";
+    engLang[7507] = "An electric current ran across the battlefield!";
+    engLang[7508] = "Grass grew to cover the battlefield!";
+    engLang[7509] = "Mist swirled around the battlefield!";
+    engLang[7510] = "The battlefield got weird!";
+    engLang[7511] = "The electricity disappeared from the battlefield.";
+    engLang[7512] = "The grass disappeared from the battlefield.";
+    engLang[7513] = "The mist disappeared from the battlefield.";
+    engLang[7514] = "The weirdness disappeared from the battlefield!";
     engLang[7238] = "Here, take these too.\nThey're Poké Balls, for catching Pokémon.";
     engLang[7239] = "You received {n} {item}s!";
     engLang[7240] = "Hillet Town Shop";

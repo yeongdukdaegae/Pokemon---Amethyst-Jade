@@ -132,6 +132,8 @@ var int call myFlash;        // 타오르는불꽃: 불꽃 기술을 받아 불�
 var int call oppFlash;
 var int call weather;        // 0 없음 · 1 쾌청 · 2 비 · 3 모래바람 · 4 눈
 var int call weatherT;       // 날씨가 남은 턴
+var int call terrain;        // 필드: 0 없음 · 1 일렉트릭필드 · 2 그래스필드 · 3 미스트필드 · 4 사이코필드 (지금은 상태 · 메시지 · 이펙트 색만 — 위력 · 회복 등 효과는 아직)
+var int call terrainT;       // 필드가 남은 턴
 var int call entryFor;       // 나올 때 발동하는 특성을 처리할 쪽: 0 없음 · 1 내 포켓몬 · 2 상대 · 3 둘 다
 // 상태 이상: 0 없음 · 1 화상 · 2 마비 · 3 독 · 4 맹독 · 5 잠듦 · 6 얼음 (내 포켓몬은 데이터 [27] 에 남음)
 var int call myStatus;
@@ -789,6 +791,8 @@ run{
         oppFlash = 0;
         weather = 0;
         weatherT = 0;
+        terrain = 0;
+        terrainT = 0;
         entryFor = 3;
         var string call myTex = "backNone";   // 내 포켓몬 뒷모습: 그림이 있으면 도감 번호 · 없으면 예비 그림
         if [backIds.find(myPoke[1]) != 0]{
@@ -1305,7 +1309,7 @@ run{
                 bc.setMsg("wildappeared", lang[3895], msgS, msgW);
                 bc.waitMsg(1200);
                 battleOver = 3;
-                goTo(6319);   // 배틀 끝 (도주)
+                goTo(6354);   // 배틀 끝 (도주)
             }
             bc.setMsg("wildappeared", lang[3896], msgS, msgW);
             bc.waitMsg(1200);
@@ -1682,7 +1686,7 @@ run{
         }
         if [pendingMove != 0]{
             if [caughtNow == 1]{   // 잡음: 행동 없이 턴 끝의 경험치 처리로
-                goTo(5314);   // 포획 경험치
+                goTo(5349);   // 포획 경험치
             }
             // ── 한 턴: 메뉴 상자는 그대로 · 메뉴 글자와 커서는 숨김 (턴이 끝나면 다시) · 왼쪽 상자에 메시지 ──
             dis.disableObj("bselect");
@@ -2815,11 +2819,11 @@ run{
                                 }
                                 if [hN == 1] and [disgHit == 0]{   // 첫 타: 기술 이펙트 (원 + 빛 번짐 · lib/battleCore.jbl 의 moveFx · 정해 둔 기술만)
                                     if [side == 1]{
-                                        bc.fxFrom(myTexNow, mySz, weather);
+                                        bc.fxFrom(myTexNow, mySz, weather, terrain);
                                         bc.moveFx(um[1], obj.mypoke.Xpos, obj.mypoke.Ypos, obj.opppoke.Xpos, obj.opppoke.Ypos, pfS, mu.typeCol(um[6]));
                                     }
                                     else{
-                                        bc.fxFrom(oppTex, oppSz, weather);
+                                        bc.fxFrom(oppTex, oppSz, weather, terrain);
                                         bc.moveFx(um[1], obj.opppoke.Xpos, obj.opppoke.Ypos, obj.mypoke.Xpos, obj.mypoke.Ypos, pfS, mu.typeCol(um[6]));
                                     }
                                 }
@@ -3453,11 +3457,11 @@ run{
                         }
                         if [um[2] == 2] and [bc.hasSp(uMove) == 1]{   // 변화 기술 중 따로 만든 이펙트가 있는 것 (손톱갈기 등 · lib/battleCore.jbl 의 spFx)
                             if [side == 1]{
-                                bc.fxFrom(myTexNow, mySz, weather);
+                                bc.fxFrom(myTexNow, mySz, weather, terrain);
                                 bc.moveFx(uMove, obj.mypoke.Xpos, obj.mypoke.Ypos, obj.opppoke.Xpos, obj.opppoke.Ypos, pfS, mu.typeCol(um[6]));
                             }
                             else{
-                                bc.fxFrom(oppTex, oppSz, weather);
+                                bc.fxFrom(oppTex, oppSz, weather, terrain);
                                 bc.moveFx(uMove, obj.opppoke.Xpos, obj.opppoke.Ypos, obj.mypoke.Xpos, obj.mypoke.Ypos, pfS, mu.typeCol(um[6]));
                             }
                         }
@@ -3506,6 +3510,29 @@ run{
                                     weatherT = 8;
                                 }
                                 bc.setMsg("wildappeared", lang[1409 + wMv], msgS, msgW);
+                            }
+                        }
+                        var int call tMv = 0;   // 필드 기술: 일렉트릭필드 604 · 그래스필드 580 · 미스트필드 581 · 사이코필드 678 → 5 턴
+                        if [uMove == 604]{
+                            tMv = 1;
+                        }
+                        if [uMove == 580]{
+                            tMv = 2;
+                        }
+                        if [uMove == 581]{
+                            tMv = 3;
+                        }
+                        if [uMove == 678]{
+                            tMv = 4;
+                        }
+                        if [tMv > 0]{
+                            if [terrain == tMv]{
+                                bc.setMsg("wildappeared", lang[1471], msgS, msgW);
+                            }
+                            else{
+                                terrain = tMv;
+                                terrainT = 5;
+                                bc.setMsg("wildappeared", lang[7506 + tMv], msgS, msgW);
                             }
                         }
                         if [uMove == 675] and [tgAlive > 0]{
@@ -3872,7 +3899,7 @@ run{
                         if [uMove == 269] and [tgAlive > 0]{   // 도발
                             bc.setMsg("wildappeared", replaceStr(lang[1494], "{poke}", tgName), msgS, msgW);
                         }
-                        var list call noFx = [180, 270, 469, 501, 511, 214, 118, 383, 102, 50, 286, 278, 226, 415, 604, 581];   // 아직 효과가 없는 변화 기술: 실패 메시지
+                        var list call noFx = [180, 270, 469, 501, 511, 214, 118, 383, 102, 50, 286, 278, 226, 415];   // 아직 효과가 없는 변화 기술: 실패 메시지
                         if [noFx.find(uMove) != 0]{
                             bc.setMsg("wildappeared", lang[1307], msgS, msgW);
                         }
@@ -4525,7 +4552,7 @@ run{
                 k = k + 1;
             }
             if [battleOver == 3]{   // 날려버리기 · 울부짖기 · 순간이동: 배틀이 그대로 끝남
-                goTo(6319);   // 배틀 끝 (도망)
+                goTo(6354);   // 배틀 끝 (도망)
             }
             // 턴 끝: 방어 · 버티기는 그 턴만 · 이번 턴에 안 썼으면 연속 횟수는 0
             var int call zs = 1;
@@ -4544,6 +4571,14 @@ run{
                 if [weatherT <= 0]{
                     bc.setMsg("wildappeared", lang[1413 + weather], msgS, msgW);
                     weather = 0;
+                    bc.waitMsg(1000);
+                }
+            }
+            if [terrain > 0] and [myHp > 0] and [oppHp > 0]{   // 턴 끝: 필드 (5 턴)
+                terrainT = terrainT - 1;
+                if [terrainT <= 0]{
+                    bc.setMsg("wildappeared", lang[7510 + terrain], msgS, msgW);
+                    terrain = 0;
                     bc.waitMsg(1000);
                 }
             }
@@ -5885,7 +5920,7 @@ run{
             }
             forceSw = 0;
             if [battleOver != 0]{
-                goTo(6319);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
+                goTo(6354);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
             }
             if ([myChg != 0] or [myRech == 1]) and [myHp > 0]{   // 모으는 중 · 반동으로 쉬는 턴: 메뉴 없이 다음 턴
                 var compound call cgM = myPoke[22];
@@ -5897,7 +5932,7 @@ run{
                     pendingMove = cgM[1];   // 쉬는 턴: 기술은 나가지 않음 (턴을 넘기려고 넣어 둠)
                     pendingSlot = 1;
                 }
-                goTo(996);   // 행동 선택 메뉴로 (모으는 기술의 2 턴째)
+                goTo(1000);   // 행동 선택 메뉴로 (모으는 기술의 2 턴째)
             }
             dis.setTxtContent("wildappearedc1", replaceStr(lang[14], "{poke}", myName));   // 다시 "무엇을 할까?"
             dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
@@ -6024,13 +6059,13 @@ run{
             var compound call swM = myPoke[22];
             pendingMove = swM[1];   // 턴을 진행하려고 넣어 둠 (나가지 않음)
             pendingSlot = 1;
-            goTo(996);   // 행동 선택 메뉴로 (교체한 턴 진행)
+            goTo(1000);   // 행동 선택 메뉴로 (교체한 턴 진행)
         }
         if [oppSwTurn == 1]{   // 상대가 교체한 턴: 맡아 둔 내 기술로 턴을 진행
             oppSwTurn = 0;
             pendingMove = heldMove;
             pendingSlot = heldSlot;
-            goTo(996);   // 행동 선택 메뉴로 (상대가 교체한 턴 진행)
+            goTo(1000);   // 행동 선택 메뉴로 (상대가 교체한 턴 진행)
         }
         isUi = 1;
         setup("assets/codes/ui/menuSelection.jb");   // 방향키로 selectedBox 를 옮김 (isUi 가 1 인 동안)
@@ -6096,7 +6131,7 @@ run{
                         pendBall = blIds[luResult];
                         bg.take(pendBall, 1);   // 던진 볼은 가방에서 하나 줄어듦
                     }
-                    goTo(996);   // 행동 선택 메뉴로 (볼 메뉴에서 돌아옴)
+                    goTo(1000);   // 행동 선택 메뉴로 (볼 메뉴에서 돌아옴)
                 }
                 if [choice == 2] and [battleForm == 2]{
                     isUi = 0;
@@ -6107,7 +6142,7 @@ run{
                     dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                     dis.setTxtContent("wildappearedc3", "");
                     dis.setTxtContent("wildappearedc4", "");
-                    goTo(996);   // 행동 선택 메뉴로 (트레이너의 포켓몬은 잡을 수 없음)
+                    goTo(1000);   // 행동 선택 메뉴로 (트레이너의 포켓몬은 잡을 수 없음)
                 }
                 if [choice == 4]{
                     // 도주: 야생이면 다음 줄 (메뉴 줄) 에서 도망칠지 판정 · 트레이너 배틀은 도망칠 수 없음
@@ -6159,11 +6194,11 @@ run{
                         dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                         dis.setTxtContent("wildappearedc3", "");
                         dis.setTxtContent("wildappearedc4", "");
-                        goTo(996);   // 행동 선택 메뉴로 (갇혀서 도주 불가)
+                        goTo(1000);   // 행동 선택 메뉴로 (갇혀서 도주 불가)
                     }
                     if [battleForm == 1]{
                         pendRun = 1;
-                        goTo(996);   // 행동 선택 메뉴로 (도주 판정)
+                        goTo(1000);   // 행동 선택 메뉴로 (도주 판정)
                     }
                     bc.setMsg("wildappeared", lang[3897], msgS, msgW);
                     bc.waitMsg(1300);
@@ -6171,7 +6206,7 @@ run{
                     dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                     dis.setTxtContent("wildappearedc3", "");
                     dis.setTxtContent("wildappearedc4", "");
-                    goTo(996);   // 행동 선택 메뉴로 (트레이너 배틀은 도주 불가)
+                    goTo(1000);   // 행동 선택 메뉴로 (트레이너 배틀은 도주 불가)
                 }
                 if [choice == 3]{
                     // 포켓몬: 교체 화면 (배틀 화면 + 대화 상자 자리를 덮음) — 고르면 교체 · X 로 메뉴로
@@ -6184,7 +6219,7 @@ run{
                         pendSwitch = swTo;
                     }
                     selectedBox = [1, 1];
-                    goTo(996);   // 행동 선택 메뉴로 (교체 화면에서 돌아옴)
+                    goTo(1000);   // 행동 선택 메뉴로 (교체 화면에서 돌아옴)
                 }
                 if [choice == 1]{
                     // 싸운다: 메뉴 상자 자리에 기술 4 개 (4 × 1) — selectUi 로 고름 (위아래 · Z) · X 로 메뉴로 돌아감
@@ -6310,7 +6345,7 @@ run{
                         mu.removeMoveButton("mbtn%j%");
                         j = j + 1;
                     }
-                    goTo(996);   // 행동 선택 메뉴로 (위의 dis.enableObj("battlemenu"); 줄) — 기술을 골랐으면 거기서 한 턴 진행
+                    goTo(1000);   // 행동 선택 메뉴로 (위의 dis.enableObj("battlemenu"); 줄) — 기술을 골랐으면 거기서 한 턴 진행
                 }
             }
             dis.waitF(1);
