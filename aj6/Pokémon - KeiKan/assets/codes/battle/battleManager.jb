@@ -1305,7 +1305,7 @@ run{
                 bc.setMsg("wildappeared", lang[3895], msgS, msgW);
                 bc.waitMsg(1200);
                 battleOver = 3;
-                goTo(6283);   // 배틀 끝 (도주)
+                goTo(6319);   // 배틀 끝 (도주)
             }
             bc.setMsg("wildappeared", lang[3896], msgS, msgW);
             bc.waitMsg(1200);
@@ -1682,7 +1682,7 @@ run{
         }
         if [pendingMove != 0]{
             if [caughtNow == 1]{   // 잡음: 행동 없이 턴 끝의 경험치 처리로
-                goTo(5278);   // 포획 경험치
+                goTo(5314);   // 포획 경험치
             }
             // ── 한 턴: 메뉴 상자는 그대로 · 메뉴 글자와 커서는 숨김 (턴이 끝나면 다시) · 왼쪽 상자에 메시지 ──
             dis.disableObj("bselect");
@@ -2305,6 +2305,39 @@ run{
                     bc.setMsg("wildappeared", uText, msgS, msgW); log(uText);
                     wait(750);   // 기술 이름을 읽을 유예 시간
                     var list call um = movedex[uMove];
+                    var int call magPw = 0;   // 매그니튜드: 크기 4 ~ 10 (5 · 10 · 20 · 30 · 20 · 10 · 5 %) → 위력 10 · 30 · 50 · 70 · 90 · 110 · 150
+                    if [uMove == 222]{
+                        var float call mgR = jaw.random(0, 100);
+                        var int call mgN = 4;
+                        magPw = 10;
+                        if [mgR >= 5]{
+                            mgN = 5;
+                            magPw = 30;
+                        }
+                        if [mgR >= 15]{
+                            mgN = 6;
+                            magPw = 50;
+                        }
+                        if [mgR >= 35]{
+                            mgN = 7;
+                            magPw = 70;
+                        }
+                        if [mgR >= 65]{
+                            mgN = 8;
+                            magPw = 90;
+                        }
+                        if [mgR >= 85]{
+                            mgN = 9;
+                            magPw = 110;
+                        }
+                        if [mgR >= 95]{
+                            mgN = 10;
+                            magPw = 150;
+                        }
+                        log("매그니튜드 %mgN% (위력 %magPw%)");
+                        bc.setMsg("wildappeared", replaceStr(lang[1499], "{n}", "" + mgN), msgS, msgW);
+                        bc.waitMsg(900);
+                    }
                     var int call ohko = bc.isOhko(uMove);
                     var int call dealt = 0;   // 이번 공격으로 준 데미지
                     // 특성: 쓰는 쪽 aAb · 맞는 쪽 dAb (쓰는 쪽이 틀깨기면 맞는 쪽 특성은 무시 → 0)
@@ -2449,7 +2482,7 @@ run{
                         bc.setMsg("wildappeared", replaceStr(lang[1303], "{poke}", aName), msgS, msgW);
                         log(aName + " 빗나감");
                     }
-                    if [hit == 1] and [um[2] != 2] and ([um[3] > 0] or [ohko == 1] or [uMove == 515]){   // 공격 기술 (변화 기술 · 위력이 없는 기술은 아직 효과 없음)
+                    if [hit == 1] and [um[2] != 2] and ([um[3] > 0] or [ohko == 1] or [uMove == 515] or [uMove == 222]){   // 공격 기술 (변화 기술 · 위력이 없는 기술은 아직 효과 없음)
                         var float call ef = bc.typeEff(um[6], dT1, dT2);
                         if [um[6] == 9] and ([dT1 == 10] or [dT2 == 10]){   // 땅 기술 → 비행 타입: 땅에 떨어진 상대 · 사우전드애로는 비행 타입을 빼고 계산
                             var int call gd = oppGround;
@@ -2603,6 +2636,9 @@ run{
                                     sD = 0;
                                 }
                                 var int call pw = um[3];
+                                if [uMove == 222]{   // 매그니튜드: 위에서 정한 위력
+                                    pw = magPw;
+                                }
                                 if [semiDbl == 1]{   // 숨은 상대에게 닿는 기술: 위력 2 배
                                     pw = pw * 2;
                                 }
@@ -4489,7 +4525,7 @@ run{
                 k = k + 1;
             }
             if [battleOver == 3]{   // 날려버리기 · 울부짖기 · 순간이동: 배틀이 그대로 끝남
-                goTo(6283);   // 배틀 끝 (도망)
+                goTo(6319);   // 배틀 끝 (도망)
             }
             // 턴 끝: 방어 · 버티기는 그 턴만 · 이번 턴에 안 썼으면 연속 횟수는 0
             var int call zs = 1;
@@ -5849,7 +5885,7 @@ run{
             }
             forceSw = 0;
             if [battleOver != 0]{
-                goTo(6283);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
+                goTo(6319);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
             }
             if ([myChg != 0] or [myRech == 1]) and [myHp > 0]{   // 모으는 중 · 반동으로 쉬는 턴: 메뉴 없이 다음 턴
                 var compound call cgM = myPoke[22];

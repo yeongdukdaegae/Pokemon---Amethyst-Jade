@@ -725,6 +725,7 @@ run{
     korLang[3526] = "{poke}(이)가 지닌 포켓몬에 들어왔다!";
     korLang[1497] = "적색근의 모습";
     korLang[1498] = "청색근의 모습";
+    korLang[1499] = "매그니튜드 {n}!";
     korLang[1501] = "악취";
     korLang[1502] = "잔비";
     korLang[1503] = "가속";

@@ -666,7 +666,7 @@ func moveFx(int mv, float ax, float ay, float tx, float ty, float s, string col)
 //   moveFx 가 먼저 여기를 봄 (있으면 이것 · 없으면 종류별 이펙트) · 오브젝트 sfx1 ~ sfx16 (끝나면 모두 지움)
 func int hasSp(int mv){
     var list call sp = [192, 411, 247, 53, 58, 85, 56, 412, 406, 315, 63, 416, 76, 451, 62, 61, 324, 430, 60, 820, 795, 796, 800, 711, 714, 888, 907, 905, 744, 705];   // 63 ~ 705 = 빔 기술 (spBeam)
-    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200];   // 타입 텍스쳐 (fx_type.png) 기술
+    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200, 352, 399, 618, 805, 505, 396];   // 타입 텍스쳐 (fx_type.png) 기술
     if [sp.find(mv) != 0]{
         return(1);
     }
@@ -1350,6 +1350,93 @@ func spQuake(float ax, float ay, float tx, float ty, float s, int pre, int fr, f
     dis.setObjPos("opppoke", [obj.opppoke.Xpos, yop]);
     spClear(3 + nRock);
 }
+// ── 파동 기술 (2026-11-22): 빔처럼 쏘는 곳 → 맞는 곳으로 이어지지만, 원이 아니라 고리 (fx_ring.png) 가 줄지어 날아감
+//   고리 = 옆에서 본 모습 (날아가는 쪽으로 납작한 타원) · 2 프레임마다 하나씩 쏨 (hold 프레임 동안) · 하나가 12 프레임 동안 날며 조금씩 커짐 · sfx1 ~ sfx12 를 돌려 씀
+//   w = 고리 크기 (반지름 = s * w) · mode 0 곧게 · 1 물결 (줄기가 굽이침) · 끝: 맞는 곳에서 둥근 고리 둘 (sfx13 · sfx14) 이 퍼짐 → spBurst
+func ringObj(string id, float x, float y, string col){
+    dis.setObject([x, y], id, [1, 1], "#ffffff");
+    mag.setObjTexture(id, "fxring", [0, 0], [32, 32]);
+    dis.setObjColor(id, col);   // 그림을 입히면 흰색이 됨 → 다시 색을 입힘
+}
+func spPulse(float ax0, float ay0, float tx, float ty, float s, string inCol, string outCol, float w, int hold, int mode){
+    var float call pl0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
+    var float call ax = ax0 + (tx - ax0) / pl0 * s * 0.2;   // 쏘는 곳: 공격하는 포켓몬의 조금 앞 (상대 쪽)
+    var float call ay = ay0 + (ty - ay0) / pl0 * s * 0.2;
+    var float call pnx = 0 - (ty - ay0) / pl0;   // 줄기에 수직
+    var float call pny = (tx - ax0) / pl0;
+    var float call pang = atan2(ty - ay, tx - ax);
+    var int call pj = 1;
+    loop [pj <= 12]{
+        ringObj("sfx%pj%", ax, ay, inCol);
+        dis.setGlow("sfx%pj%", outCol, s * 0.06);
+        dis.setObjLayer("sfx%pj%", 2);
+        dis.setObjAlpha("sfx%pj%", 0);
+        dis.rotateObj("sfx%pj%", pang, 0);   // 납작한 쪽이 날아가는 쪽을 보게
+        pj = pj + 1;
+    }
+    pxCirc(ax, ay, "sfx15", s * w * 0.5, inCol);   // 쏘는 곳 빛
+    dis.setGlow("sfx15", outCol, s * w * 1.2);
+    dis.setObjAlpha("sfx15", 200);
+    dis.setObjLayer("sfx15", 2);
+    var int call pn = floor(hold / 2) + 1;   // 쏘는 고리 수
+    var int call pend = 2 * (pn - 1) + 12;
+    var int call pf = 0;
+    loop [pf <= pend]{
+        var int call pq = floor(pf / 2);
+        pj = 1;
+        loop [pj <= 12]{
+            var int call pm = pq - (pj - 1);
+            var int call pk = pq - (pm - floor(pm / 12.0) * 12);   // 이 고리 (sfx pj) 가 맡은 가장 최근 발사 번호
+            var float call pt = (pf - 2 * pk) / 12.0;
+            if [pk >= 0] and [pk < pn] and [pt <= 1]{
+                var float call po = 0;
+                if [mode == 1]{
+                    po = sin(pt * 540 + pk * 30) * s * 0.05;
+                }
+                var float call pd = s * w * 2 * (0.8 + 0.6 * pt);
+                dis.setObjPos("sfx%pj%", [ax + (tx - ax) * pt + pnx * po, ay + (ty - ay) * pt + pny * po]);
+                dis.setObjScale("sfx%pj%", [pd * 0.42, pd]);
+                dis.setObjAlpha("sfx%pj%", floor(235 * (1 - 0.35 * pt)));
+            }
+            else{
+                dis.setObjAlpha("sfx%pj%", 0);
+            }
+            pj = pj + 1;
+        }
+        var float call pmz = s * w * (0.55 + 0.12 * sin(pf * 60));   // 쏘는 곳 빛은 작게 (얼굴을 가리지 않게)
+        if [pf > 2 * (pn - 1)]{
+            pmz = pmz * max(0, 1 - (pf - 2 * (pn - 1)) / 8.0);
+        }
+        dis.setObjScale("sfx15", [pmz * 2, pmz * 2]);
+        wait(16);
+        pf = pf + 1;
+    }
+    spClear(12);
+    dis.removeObj("sfx15");
+    ringObj("sfx13", tx, ty, inCol);
+    ringObj("sfx14", tx, ty, inCol);
+    dis.setGlow("sfx13", outCol, s * 0.08);
+    dis.setGlow("sfx14", outCol, s * 0.08);
+    dis.setObjLayer("sfx13", 2);
+    dis.setObjLayer("sfx14", 2);
+    dis.setObjAlpha("sfx14", 0);
+    pf = 1;
+    loop [pf <= 16]{   // 맞는 곳: 둥근 고리 둘이 차례로 퍼짐
+        var float call pa = min(1, pf / 12.0);
+        var float call pb = max(0, min(1, (pf - 4) / 12.0));
+        dis.setObjScale("sfx13", [s * w * 2 * (1 + 3 * pa), s * w * 2 * (1 + 3 * pa)]);
+        dis.setObjAlpha("sfx13", floor(255 * (1 - pa)));
+        if [pf > 4]{
+            dis.setObjScale("sfx14", [s * w * 2 * (1 + 3 * pb), s * w * 2 * (1 + 3 * pb)]);
+            dis.setObjAlpha("sfx14", floor(255 * (1 - pb)));
+        }
+        wait(16);
+        pf = pf + 1;
+    }
+    dis.removeObj("sfx13");
+    dis.removeObj("sfx14");
+    spBurst(tx, ty, s, s * w, s * (0.15 + w * 2), inCol, outCol, 10);
+}
 // ── 폭탄 기술 (2026-11-22): 빔처럼 빛나는 공 하나 (가운데 inCol · 둘레 outCol 빛 번짐) 를 머리 위에 모음 → 빠르게 날림 → 닿으면 폭발
 // 폭발: (x, y) 에서 큰 빛 (sfxb) 이 터지고 조각 n 개 (sfx1 ~ sfxn) 가 사방으로 튐 · tex 0 = 픽셀 원 (inCol) · 1 ~ 9 = fx_type.png 알갱이 · size = 폭발 크기 (s 에 곱함)
 func spBoom(float x, float y, float s, string inCol, string outCol, float size, int n, int tex, int fr){
@@ -1812,36 +1899,26 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spClear(4);
         spBurst(tx, ty, s, s * 0.08, s * 0.34, "#c8ffb0", "#5ad23a", 12);
     }
-    if [mv == 406]{   // 용의파동: 커지며 날아가는 고리 다섯 개
-        var int call k9 = 1;
-        loop [k9 <= 5]{
-            pxCirc(ax, ay, "sfx%k9%", s * 0.04, "#6a5cff");
-            dis.setGlow("sfx%k9%", "#b06cff", s * 0.12);
-            dis.setObjLayer("sfx%k9%", 2);
-            dis.setObjAlpha("sfx%k9%", 0);
-            k9 = k9 + 1;
-        }
-        var int call f9 = 0;
-        loop [f9 <= 32]{
-            k9 = 1;
-            loop [k9 <= 5]{
-                var float call t9 = (f9 - (k9 - 1) * 4) / 16.0;
-                if [t9 >= 0] and [t9 <= 1]{
-                    var float call r9 = s * (0.04 + 0.12 * t9);
-                    dis.setObjPos("sfx%k9%", [ax + (tx - ax) * t9, ay + (ty - ay) * t9]);
-                    dis.setObjScale("sfx%k9%", [r9 * 2, r9 * 2]);
-                    dis.setObjAlpha("sfx%k9%", floor(220 * (1 - t9 * 0.5)));
-                }
-                else{
-                    dis.setObjAlpha("sfx%k9%", 0);
-                }
-                k9 = k9 + 1;
-            }
-            wait(16);
-            f9 = f9 + 1;
-        }
-        spClear(5);
-        spBurst(tx, ty, s, s * 0.08, s * 0.36, "#6a5cff", "#b06cff", 12);
+    if [mv == 406]{   // 용의파동: 푸른 보랏빛 고리가 줄지어 날아감
+        spPulse(ax, ay, tx, ty, s, "#d0c8ff", "#5a4aff", 0.085, 24, 0);
+    }
+    if [mv == 352]{   // 물의파동: 물빛 고리가 굽이치며 날아감
+        spPulse(ax, ay, tx, ty, s, "#e4f4ff", "#3a9aff", 0.07, 20, 1);
+    }
+    if [mv == 399]{   // 악의파동: 어두운 보라 고리
+        spPulse(ax, ay, tx, ty, s, "#8a6aa8", "#2a0a4a", 0.085, 22, 0);
+    }
+    if [mv == 618]{   // 근원의파동: 크고 짙푸른 고리가 길게
+        spPulse(ax, ay, tx, ty, s, "#d8f0ff", "#1a5aff", 0.11, 30, 0);
+    }
+    if [mv == 805]{   // 대지의파동: 흙빛이 도는 흰 고리
+        spPulse(ax, ay, tx, ty, s, "#fff6e4", "#c8a060", 0.075, 20, 0);
+    }
+    if [mv == 505]{   // 치유파동: 부드러운 분홍 고리 (변화 기술)
+        spPulse(ax, ay, tx, ty, s, "#fff0f8", "#ff8ac8", 0.065, 16, 0);
+    }
+    if [mv == 396]{   // 파동탄: 조금 덜 밝은 하늘색 기운을 머리 위에 모았다가 쏨 → 폭발 (폭탄 기술과 같은 이펙트)
+        spBomb(ax, ay, tx, ty, s, "#b4d8ec", "#3a88c4", 0.09, 26, 10, 0.32, 10, 0, 0);
     }
     if [mv == 315]{   // 오버히트: 맞는 곳이 큰 불길에 휩싸임 (불꽃이 아래에서 솟구침) → 크게 터짐
         pxCirc(tx, ty, "sfx16", s * 0.2, "#ff6a2a");

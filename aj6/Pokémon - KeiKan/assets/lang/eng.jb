@@ -722,6 +722,7 @@ run{
     engLang[3526] = "{poke} joined your party!";
     engLang[1497] = "Red-Striped Form";
     engLang[1498] = "Blue-Striped Form";
+    engLang[1499] = "Magnitude {n}!";
     engLang[1501] = "Stench";
     engLang[1502] = "Drizzle";
     engLang[1503] = "Speed Boost";
