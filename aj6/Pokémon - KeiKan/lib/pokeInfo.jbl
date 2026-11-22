@@ -1,0 +1,574 @@
+Lib id pokeInfo;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Magellan call mag;
+Use Canvas call can;
+Use soundMaster call sou;
+Use pokeGen call pg;
+Use moveUi call mu;
+Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+
+// 포켓몬 정보 화면 (필드 메뉴의 포켓몬 → 정보 · 배틀에서 새 기술을 배울 때)
+//   왼쪽: 정사각형 액자 (흰 테두리) 안에 앞모습을 크게 · 그 아래 이름 · 레벨 · 타입
+//   오른쪽: 기술 칸 4 개 (배틀의 기술 버튼과 같은 모양) · 그 아래 고른 기술의 설명 (위력 · 명중 · 분류 · 설명)
+//   open(idx, 0): 정보 — 위아래로 고르고 Z 로 하나를 잡은 뒤 다른 칸에서 Z = 두 기술의 순서를 바꿈 (PP · 포인트업도 함께) · X = 잡은 것 놓기 / 나가기
+//     좌우 화살표: 기술 ↔ 능력 (개체) 화면 — 능력: 왼쪽에 실능치 2 x 3 (성격으로 오른 능력 이름은 붉게 · 내린 능력은 파랗게) · 오른쪽에 육각형 그래프 (개체값) · Z = 노력치 그래프로 바꿈
+//   open(idx, 새 기술): 새 기술 배우기 — 기술 칸 아래에 5 번째 칸 (새 기술) · 잊을 기술을 Z 로 고르면 pinResult = 그 칸 (1 ~ 4) · 새 기술 칸에서 Z 또는 X = 0 (배우지 않음)
+//   화면 = 필드 메뉴와 같은 자리 (PC 화면 전체 · 모바일은 조작부 위) · 레이어 100 ~ (필드 메뉴 · 대화 상자 위) · 모두 화면에 고정
+//   만든 오브젝트: pinbg · pint · pinfr · pinfi · pinsp · pinnm · pinlv · pinty1 ~ 2 (+ in · ic) · pinm1 ~ 5 (기술 버튼) · pinnew · pinibg · minfo1 ~ 3 — 끝날 때 모두 지움
+
+var public compound call myParty;
+var public list call lang;
+var public compound call movedex;
+var public int call pinResult;
+var public int call badges;
+var int call stOn;      // 1 = 능력 화면 오브젝트가 있음
+
+// 앞모습 그림 이름 (그림이 없으면 예비 그림)
+func string frontTex(int id){
+    var list call frontIds = [67, 68, 69, 70, 71, 74, 75, 76, 77, 78, 79, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 111, 112, 113, 114, 115, 116, 117, 118, 120, 121, 122, 123, 124, 125, 126, 127, 128, 131, 132, 133, 134, 135, 136, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 175, 176, 80, 177, 178, 10, 12, 179, 180, 181, 182, 183, 184, 185, 186, 187, 81, 82, 83, 84, 85, 86, 72, 73, 151];
+    if [frontIds.find(id) != 0]{
+        return("%id%f");
+    }
+    return("backNone");
+}
+
+// 기술 버튼 레이어를 올리고 화면에 고정
+// 앞모습을 액자 가운데에 크게: 그림마다 보이는 부분 (투명하지 않은 곳) 을 가운데로 한 정사각형 [번호, x1, y1, x2, y2, …] (그림 파일은 그대로 · 보여 줄 때만 잘라 씀)
+func setFront(string oid, int pid){
+    var list call cropT = [67, 24, 24, 72, 72, 68, 16, 16, 81, 81, 69, 5, 4, 93, 92, 70, 7, 7, 90, 90, 71, 19, 19, 77, 77, 74, 15, 13, 82, 80, 75, 6, 8, 86, 88, 76, 6, 12, 84, 90, 77, 24, 24, 72, 72, 78, 19, 16, 81, 78, 79, 9, 6, 86, 83, 88, 10, 10, 88, 88, 89, 10, 8, 83, 81, 90, 11, 13, 81, 83, 91, 5, 4, 93, 92, 92, 0, 0, 96, 96, 93, 10, 13, 83, 86, 94, 26, 26, 74, 74, 95, 16, 10, 83, 77, 96, 6, 0, 96, 90, 97, 24, 24, 72, 72, 98, 11, 10, 81, 80, 99, 0, 0, 96, 96, 100, 5, 7, 93, 95, 101, 22, 22, 70, 70, 102, 13, 14, 83, 84, 103, 0, 0, 95, 95, 104, 24, 25, 74, 75, 105, 17, 14, 89, 86, 106, 0, 0, 96, 96, 107, 24, 24, 72, 72, 108, 15, 15, 83, 83, 109, 6, 9, 85, 88, 111, 9, 8, 89, 88, 112, 20, 22, 73, 75, 113, 7, 4, 89, 86, 114, 0, 0, 96, 96, 115, 22, 23, 74, 75, 116, 14, 15, 80, 81, 117, 14, 13, 82, 81, 118, 0, 0, 96, 96, 120, 26, 24, 79, 77, 121, 13, 6, 86, 79, 122, 0, 0, 96, 96, 123, 28, 21, 78, 71, 124, 13, 13, 84, 84, 125, 6, 5, 91, 90, 126, 22, 24, 70, 72, 127, 12, 12, 82, 82, 128, 5, 4, 93, 92, 131, 13, 13, 83, 83, 132, 8, 10, 86, 88, 133, 19, 19, 78, 78, 134, 24, 24, 72, 72, 135, 8, 0, 87, 79, 136, 2, 3, 94, 95, 139, 24, 24, 72, 72, 140, 12, 14, 78, 80, 141, 2, 2, 93, 93, 142, 0, 0, 95, 95, 143, 16, 16, 76, 76, 144, 0, 6, 79, 85, 145, 17, 15, 78, 76, 146, 8, 10, 86, 88, 147, 0, 2, 91, 93, 148, 24, 26, 72, 74, 149, 16, 18, 81, 83, 150, 0, 0, 96, 96, 153, 14, 13, 84, 83, 154, 11, 9, 87, 85, 155, 2, 1, 94, 93, 156, 22, 24, 75, 77, 157, 20, 23, 72, 75, 158, 2, 2, 94, 94, 159, 14, 13, 82, 81, 160, 19, 18, 73, 72, 161, 15, 12, 85, 82, 162, 0, 0, 96, 96, 163, 24, 22, 72, 70, 164, 15, 16, 80, 81, 165, 9, 9, 85, 85, 166, 0, 0, 96, 96, 167, 20, 19, 86, 85, 168, 4, 3, 94, 93, 175, 15, 16, 79, 80, 176, 0, 0, 94, 94, 80, 11, 14, 84, 87, 177, 21, 20, 75, 74, 178, 9, 6, 91, 88, 10, 12, 12, 84, 84, 12, 12, 12, 84, 84, 179, 20, 16, 76, 72, 180, 16, 16, 80, 80, 181, 22, 17, 81, 76, 182, 16, 16, 82, 82, 183, 14, 16, 78, 80, 184, 18, 17, 79, 78, 185, 18, 18, 79, 79, 186, 8, 8, 90, 90, 187, 14, 13, 84, 83, 81, 22, 24, 70, 72, 82, 22, 26, 70, 74, 83, 18, 17, 80, 79, 84, 22, 20, 70, 68, 85, 23, 20, 78, 75, 86, 4, 8, 80, 84, 72, 19, 22, 73, 76, 73, 10, 13, 80, 83, 151, 12, 16, 76, 80];
+    var int call q = 1;
+    var int call got = 0;
+    loop [q < cropT.length]{
+        if [cropT[q] == pid]{
+            var int call ax = cropT[q + 1];
+            var int call ay = cropT[q + 2];
+            var int call bx = cropT[q + 3];
+            var int call by = cropT[q + 4];
+            mag.setObjTexture(oid, "%pid%f", [ax, ay], [bx, by]);
+            got = 1;
+            break();
+        }
+        q = q + 5;
+    }
+    if [got == 0]{
+        mag.setObjTexture(oid, "backNone", [0, 0], [96, 96]);
+    }
+}
+
+func lift(string id, int base){
+    dis.setObjLayer("%id%bd", base);
+    dis.setObjLayer("%id%", base + 1);
+    dis.setObjLayer("%id%icon", base + 2);
+    dis.setObjLayer("%id%ppbg", base + 2);
+    dis.setObjLayer("%id%pa", base + 2);
+    dis.setObjLayer("%id%pb", base + 2);
+    dis.setObjLayer("%id%name", base + 3);
+    dis.setObjLayer("%id%pp", base + 3);
+    can.setUi("%id%bd");
+    can.setUi("%id%");
+    can.setUi("%id%icon");
+    can.setUi("%id%ppbg");
+    can.setUi("%id%pa");
+    can.setUi("%id%pb");
+    can.setUi("%id%name");
+    can.setUi("%id%pp");
+}
+
+func int stabOf(int pid, int mv){
+    if [mv == 0]{
+        return(0);
+    }
+    var int call t = movedex[mv][6];
+    if [t == pg.speciesType(pid, 1)] or [t == pg.speciesType(pid, 2)]{
+        return(1);
+    }
+    return(0);
+}
+
+func info(int mv, float x, float y, float w, float h){
+    if [mv == 0]{
+        dis.setText([x, y], "", "minfo1", h / 6, false, "#ffffff");
+        dis.setText([x, y], "", "minfo2", h / 9, false, "#ffffff");
+        dis.setText([x, y], "", "minfo3", h / 9, false, "#ffffff");
+    }
+    else{
+        mu.showMoveInfo(mv, x, y, w, h);
+    }
+    var int call q = 1;
+    loop [q <= 3]{
+        can.setUi("minfo%q%");
+        dis.setObjLayer("minfo%q%", 112);
+        q = q + 1;
+    }
+}
+
+// ── 능력 (개체) 화면: x0 ~ x1 · y0 (위) ~ y1 (아래) 칸 안에 그림 · ev = 1 이면 노력치 그래프 ──
+func statShow(int idx, int ev, float x0, float x1, float y0, float y1){
+    var compound call pk = myParty[idx];
+    var int call nat = pk[18];
+    var float call w = x1 - x0;
+    var float call h = y0 - y1;
+    var float call lw = w * 0.42;
+    var float call ts = min(h * 0.075, lw * 0.13);
+    dis.setText([x0 + ts * 0.3, y0 - ts * 0.9], lang[7445] + "  " + lang[7420 + nat], "psnat", ts, false, "#ffffff");
+    dis.setTextNudge("psnat", "left");
+    can.setUi("psnat");
+    dis.setObjLayer("psnat", 106);
+    var list call ord = [1, 2, 3, 4, 5, 6];
+    var float call cw = lw / 2;
+    var float call ch = (h - ts * 2.2) / 3;
+    var int call k = 1;
+    loop [k <= 6]{
+        var int call col = floor((k - 1) / 3);
+        var int call row = k - 1 - col * 3;
+        var float call bx = x0 + cw * col + cw / 2;
+        var float call by = y0 - ts * 2.2 - ch * row - ch / 2;
+        var string call nc = "#cfe0ff";
+        if [pg.natUp(nat) == k]{
+            nc = "#ff6a6a";
+        }
+        if [pg.natDown(nat) == k]{
+            nc = "#6aa8ff";
+        }
+        dis.setObject([bx, by], "psbx%k%", [cw * 0.92, ch * 0.88], "#24406e");
+        dis.setText([bx, by + ch * 0.17], lang[7450 + k], "psnm%k%", ts * 0.95, false, nc);
+        dis.setText([bx, by - ch * 0.2], "" + pg.calcStatN(pg.baseStat(pk[1], k), pk[2 + k], pk[8 + k], pk[2], k, nat), "psvl%k%", ts * 1.3, false, "#ffffff");
+        can.setUi("psbx%k%");
+        can.setUi("psnm%k%");
+        can.setUi("psvl%k%");
+        dis.setObjLayer("psbx%k%", 105);
+        dis.setObjLayer("psnm%k%", 106);
+        dis.setObjLayer("psvl%k%", 106);
+        k = k + 1;
+    }
+    // 육각형: 꼭짓점 순서 HP (위) · 공격 · 방어 · 스피드 (아래) · 특방 · 특공 (본가처럼 시계 방향)
+    var float call hx = x0 + lw + (w - lw) / 2;
+    var float call hy = (y0 + y1) / 2 - ts * 0.6;
+    var float call R = min((w - lw) * 0.36, h * 0.36);
+    var list call vk = [1, 2, 3, 6, 5, 4];
+    var list call ang = [90, 30, -30, -90, -150, 150];
+    var list call vx = [];
+    var list call vy = [];
+    var list call px = [];
+    var list call py = [];
+    var float call mx = 31;
+    var string call vc = "#ffd23a";
+    if [ev == 1]{
+        mx = 252;
+        vc = "#7dd0ff";
+    }
+    var int call i = 1;
+    loop [i <= 6]{
+        var float call a = ang[i];   // sin · cos 는 도 단위
+        vx.add(hx + R * cos(a));
+        vy.add(hy + R * sin(a));
+        var float call v = pk[2 + vk[i]];
+        if [ev == 1]{
+            v = pk[8 + vk[i]];
+        }
+        var float call f = max(0.03, min(1, v / mx));
+        px.add(hx + R * f * cos(a));
+        py.add(hy + R * f * sin(a));
+        i = i + 1;
+    }
+    i = 1;
+    loop [i <= 6]{
+        var int call j = i + 1;
+        if [j > 6]{
+            j = 1;
+        }
+        dis.setObjPlg([hx, hy], [vx[i], vy[i]], [vx[j], vy[j]], "pshx%i%", "#1b3156");
+        dis.setObjPlg([hx, hy], [hx + (vx[i] - hx) * 0.5, hy + (vy[i] - hy) * 0.5], [hx + (vx[j] - hx) * 0.5, hy + (vy[j] - hy) * 0.5], "psmx%i%", "#223c66");
+        dis.setObjPlg([hx, hy], [px[i], py[i]], [px[j], py[j]], "psvx%i%", vc);
+        var float call dx = vx[i] - hx;
+        var float call dy = vy[i] - hy;
+        var float call nl = max(0.001, sqrt(dx * dx + dy * dy));
+        var float call ox = -dy / nl * 0.8;
+        var float call oy = dx / nl * 0.8;
+        dis.setObjPlg([hx + ox, hy + oy], [vx[i] + ox, vy[i] + oy], [vx[i] - ox, vy[i] - oy], [hx - ox, hy - oy], "pssp%i%", "#5f7fb8");
+        var float call v2 = pk[2 + vk[i]];
+        if [ev == 1]{
+            v2 = pk[8 + vk[i]];
+        }
+        dis.setText([hx + dx * 1.22, hy + dy * 1.22 - ts * 0.1], "" + v2, "pslb%i%", ts * 0.95, false, "#ffffff");
+        can.setUi("pshx%i%");
+        can.setUi("psmx%i%");
+        can.setUi("psvx%i%");
+        can.setUi("pssp%i%");
+        can.setUi("pslb%i%");
+        dis.setObjLayer("pshx%i%", 105);
+        dis.setObjLayer("psmx%i%", 106);
+        dis.setObjLayer("psvx%i%", 107);
+        dis.setObjLayer("pssp%i%", 108);
+        dis.setObjLayer("pslb%i%", 109);
+        dis.setObjAlpha("psvx%i%", 210);
+        i = i + 1;
+    }
+    var string call gt = lang[7446];
+    if [ev == 1]{
+        gt = lang[7447];
+    }
+    dis.setText([hx, y1 + ts * 0.7], gt, "psgt", ts, false, vc);
+    can.setUi("psgt");
+    dis.setObjLayer("psgt", 106);
+    stOn = 1;
+}
+
+func statHide(){
+    if [stOn == 1]{
+        dis.removeObj("psnat");
+        dis.removeObj("psgt");
+        var int call k = 1;
+        loop [k <= 6]{
+            dis.removeObj("psbx%k%");
+            dis.removeObj("psnm%k%");
+            dis.removeObj("psvl%k%");
+            dis.removeObj("pshx%k%");
+            dis.removeObj("psmx%k%");
+            dis.removeObj("psvx%k%");
+            dis.removeObj("pssp%k%");
+            dis.removeObj("pslb%k%");
+            k = k + 1;
+        }
+        stOn = 0;
+    }
+}
+
+func open(int idx, int newMove){
+    var compound call pk = myParty[idx];
+    var int call pid = pk[1];
+    var compound call mvs = pk[22];
+    var compound call pps = pk[23];
+    var compound call ups = pk[24];
+    // 화면 자리
+    var float call cx = 0;
+    var float call cy = 0;
+    var float call W = dis.displayX;
+    var float call H = dis.displayY;
+    if [dis.idWidthmode == 0]{
+        cy = dis.displayY / 4;
+        H = dis.displayY / 2;
+    }
+    var float call m = H * 0.04;
+    var float call left = cx - W / 2;
+    var float call top = cy + H / 2;
+    dis.setObject([cx, cy], "pinbg", [W, H], "#2f5f9f");
+    can.setUi("pinbg");
+    dis.setObjLayer("pinbg", 100);
+    var float call tH = H * 0.08;
+    dis.setText([left + m * 1.5, top - m - tH / 2], lang[7448], "pint", tH * 0.7, false, "#ffffff");   // 포켓몬 정보 (기술 순서 바꾸기 설명은 없앰)
+    if [newMove != 0]{
+        dis.setTxtContent("pint", replaceStr(lang[7231], "{move}", lang[300 + newMove]));
+    }
+    dis.setTextNudge("pint", "left");
+    can.setUi("pint");
+    dis.setObjLayer("pint", 101);
+    // 왼쪽: 정사각형 액자 + 앞모습
+    var float call S = H * 0.56;
+    if [S > W * 0.36]{
+        S = W * 0.36;
+    }
+    var float call fx = left + m * 1.5 + S / 2;
+    var float call fy = top - m * 2 - tH - S / 2;
+    var float call fb = max(3, S * 0.03);
+    dis.setObject([fx, fy], "pinfr", [S, S], "#ffffff");
+    dis.setObject([fx, fy], "pinfi", [S - fb * 2, S - fb * 2], "#24406e");
+    dis.setObject([fx, fy], "pinsp", [S * 0.96, S * 0.96], "#ffffff");
+    setFront("pinsp", pid);
+    can.setUi("pinfr");
+    can.setUi("pinfi");
+    can.setUi("pinsp");
+    dis.setObjLayer("pinfr", 101);
+    dis.setObjLayer("pinfi", 102);
+    dis.setObjLayer("pinsp", 103);
+    var float call ns = H * 0.065;
+    var float call ny = fy - S / 2 - m - ns / 2;
+    dis.setText([fx - S / 2, ny], pg.pokeName(pid, pk[17]), "pinnm", ns, false, "#ffffff");
+    dis.setTextNudge("pinnm", "left");
+    var string call lvc = "#ffffff";
+    if [pk[2] >= pg.levelCap(badges)]{   // 레벨캡: 레벨 글자를 빨간색으로
+        lvc = "#ff5a5a";
+    }
+    dis.setText([fx + S / 2, ny], "Lv." + pk[2], "pinlv", ns * 0.85, false, lvc);
+    dis.setTextNudge("pinlv", "right");
+    can.setUi("pinnm");
+    can.setUi("pinlv");
+    dis.setObjLayer("pinnm", 101);
+    dis.setObjLayer("pinlv", 101);
+    var float call ts = ns * 1.15;
+    var int call k = 1;
+    loop [k <= 2]{
+        var int call t = pg.speciesType(pid, k);
+        var float call tx = fx - S / 2 + ts / 2 + (k - 1) * (ts + m * 0.5);
+        var float call ty = ny - ns / 2 - m * 0.6 - ts / 2;
+        dis.setObject([tx, ty], "pinty%k%", [ts, ts], "#ffffff");
+        dis.setObject([tx, ty], "pinty%k%in", [ts - 4, ts - 4], mu.typeCol(t));
+        dis.setObject([tx, ty], "pinty%k%ic", [ts * 0.72, ts * 0.72], "#ffffff");
+        mag.setObjTexture("pinty%k%ic", "type_%t%", [0, 0], [96, 96]);
+        can.setUi("pinty%k%");
+        can.setUi("pinty%k%in");
+        can.setUi("pinty%k%ic");
+        dis.setObjLayer("pinty%k%", 101);
+        dis.setObjLayer("pinty%k%in", 102);
+        dis.setObjLayer("pinty%k%ic", 103);
+        if [t == 0]{
+            dis.setObjAlpha("pinty%k%", 0);
+            dis.setObjAlpha("pinty%k%in", 0);
+            dis.setObjAlpha("pinty%k%ic", 0);
+        }
+        k = k + 1;
+    }
+    // 오른쪽: 기술 칸
+    var float call rl = fx + S / 2 + m * 1.5;
+    var float call rw = cx + W / 2 - m * 1.5 - rl;
+    var float call rx = rl + rw / 2;
+    var float call rh = H * 0.085;
+    if [newMove != 0]{   // 배우기: 5 칸 → 조금 낮게 (설명 칸 자리를 남김)
+        rh = H * 0.07;
+    }
+    var float call gap = rh * 0.25;
+    var float call r1 = top - m * 2 - tH - rh / 2;
+    var int call nRow = 4;
+    if [newMove != 0]{
+        nRow = 5;
+    }
+    var list call rowY = [];
+    var int call r = 1;
+    loop [r <= 5]{
+        var float call yy = r1 - (r - 1) * (rh + gap);
+        if [r == 5]{
+            yy = yy - gap * 2;
+        }
+        rowY.add(yy);
+        r = r + 1;
+    }
+    r = 1;
+    loop [r <= 4]{
+        var int call mv = 0;
+        var int call pp = 0;
+        var int call up = 0;
+        if [r <= mvs.length]{
+            mv = mvs[r];
+            pp = pps[r];
+            up = ups[r];
+        }
+        mu.makeMoveButton("pinm%r%", rx, rowY[r], rw, rh, mv, pp, up, stabOf(pid, mv));
+        lift("pinm%r%", 104);
+        r = r + 1;
+    }
+    if [newMove != 0]{
+        mu.makeMoveButton("pinm5", rx, rowY[5], rw, rh, newMove, movedex[newMove][7], 0, stabOf(pid, newMove));
+        lift("pinm5", 104);
+    }
+    // 설명 칸 (기술 칸 아래)
+    var float call ibTop = rowY[nRow] - rh / 2 - gap * 2;
+    var float call ibBot = cy - H / 2 + m;
+    var float call ih = ibTop - ibBot;
+    var float call iy = (ibTop + ibBot) / 2;
+    dis.setObject([rx, iy], "pinibg", [rw, ih], "#24406e");
+    can.setUi("pinibg");
+    dis.setObjLayer("pinibg", 104);
+    var int call n = mvs.length;   // 고를 수 있는 칸 (기술이 있는 칸)
+    if [newMove != 0]{
+        n = 5;
+    }
+    var int call sel = 1;
+    var int call held = 0;   // 순서 바꾸기: 잡은 칸 (0 = 없음)
+    mu.highlight("pinm1", mvs[1], rw, rh, 1, 1);
+    info(mvs[1], rx, iy, rw, ih);
+    sou.setSpeaker("ui");
+    loop [ky.z()] or [ky.x()]{ dis.waitF(1); }
+    var int call out = -1;
+    var int call smode = 0;   // 0 기술 · 1 능력 (개체값) · 2 능력 (노력치)
+    stOn = 0;
+    loop [out < 0]{
+        if [newMove == 0] and [held == 0] and ([isKeyInput("left")] or [isKeyInput("right")]){   // 기술 ↔ 능력 화면
+            var string call lr = "left";
+            if [isKeyInput("right")]{
+                lr = "right";
+            }
+            sou.playSfx("ui", "choose", 2000);
+            if [smode == 0]{
+                var int call rq = 1;
+                loop [rq <= 4]{
+                    mu.removeMoveButton("pinm%rq%");
+                    rq = rq + 1;
+                }
+                mu.hideMoveInfo();
+                dis.setObjAlpha("pinibg", 0);
+                smode = 1;
+                statShow(idx, 0, rl, rl + rw, r1 + rh / 2, ibBot);
+                dis.setTxtContent("pint", lang[7448] + " · " + lang[7449]);
+            }
+            else{
+                statHide();
+                smode = 0;
+                dis.setObjAlpha("pinibg", 255);
+                var int call rq2 = 1;
+                loop [rq2 <= 4]{
+                    var int call mv2 = 0;
+                    var int call pp2 = 0;
+                    var int call up2 = 0;
+                    if [rq2 <= mvs.length]{
+                        mv2 = mvs[rq2];
+                        pp2 = pps[rq2];
+                        up2 = ups[rq2];
+                    }
+                    mu.makeMoveButton("pinm%rq2%", rx, rowY[rq2], rw, rh, mv2, pp2, up2, stabOf(pid, mv2));
+                    lift("pinm%rq2%", 104);
+                    rq2 = rq2 + 1;
+                }
+                mu.highlight("pinm%sel%", mvs[sel], rw, rh, 1, 1);
+                info(mvs[sel], rx, iy, rw, ih);
+                dis.setTxtContent("pint", lang[7448]);
+            }
+            loop [isKeyInput(lr)] for 300{ dis.waitF(1); }
+        }
+        if [smode >= 1]{   // 능력 화면: Z = 개체값 ↔ 노력치 · X = 나가기 (위아래는 쓰지 않음)
+            if [ky.z()]{
+                loop [ky.z()]{ dis.waitF(1); }
+                sou.playSfx("ui", "choose", 2000);
+                statHide();
+                smode = 3 - smode;
+                statShow(idx, smode - 1, rl, rl + rw, r1 + rh / 2, ibBot);
+            }
+            if [ky.x()]{
+                loop [ky.x()]{ dis.waitF(1); }
+                sou.playSfx("ui", "choose", 2000);
+                out = 0;
+            }
+        }
+        if [smode == 0]{
+        var string call key = "";
+        var int call dst = sel;
+        if [isKeyInput("down")]{
+            key = "down";
+            dst = sel + 1;
+            if [dst > n]{
+                dst = 1;
+            }
+        }
+        if [isKeyInput("up")]{
+            key = "up";
+            dst = sel - 1;
+            if [dst < 1]{
+                dst = n;
+            }
+        }
+        if [key != ""]{
+            if [dst != sel]{
+                var int call om = newMove;
+                if [sel <= mvs.length]{
+                    om = mvs[sel];
+                }
+                if [sel != held]{
+                    mu.highlight("pinm%sel%", om, rw, rh, 0, 1);
+                }
+                sel = dst;
+                var int call nmv = newMove;
+                if [sel <= mvs.length]{
+                    nmv = mvs[sel];
+                }
+                mu.highlight("pinm%sel%", nmv, rw, rh, 1, 1);
+                info(nmv, rx, iy, rw, ih);
+                sou.playSfx("ui", "choose", 2000);
+            }
+            loop [isKeyInput(key)] for 250{ dis.waitF(1); }
+        }
+        if [ky.z()]{
+            loop [ky.z()]{ dis.waitF(1); }
+            sou.playSfx("ui", "choose", 2000);
+            if [newMove != 0]{   // 배우기: 잊을 기술 (1 ~ 4) · 새 기술 칸 = 배우지 않음
+                if [sel == 5]{
+                    out = 0;
+                }
+                else{
+                    out = sel;
+                }
+            }
+            else if [held == 0]{   // 정보: 잡음 (노란 바탕을 덧씌움)
+                held = sel;
+                mu.overlayButton("pinm%held%", "#ffe040", 90);
+            }
+            else{
+                if [held != sel]{   // 두 칸의 기술 · PP · 포인트업을 바꿈 → 버튼을 다시 그림
+                    var int call a1 = mvs[held];
+                    mvs[held] = mvs[sel];
+                    mvs[sel] = a1;
+                    var int call a2 = pps[held];
+                    pps[held] = pps[sel];
+                    pps[sel] = a2;
+                    var int call a3 = ups[held];
+                    ups[held] = ups[sel];
+                    ups[sel] = a3;
+                    var int call rr = 1;
+                    loop [rr <= 4]{
+                        if [rr == held] or [rr == sel]{
+                            mu.removeMoveButton("pinm%rr%");
+                            mu.makeMoveButton("pinm%rr%", rx, rowY[rr], rw, rh, mvs[rr], pps[rr], ups[rr], stabOf(pid, mvs[rr]));
+                            lift("pinm%rr%", 104);
+                        }
+                        rr = rr + 1;
+                    }
+                    mu.highlight("pinm%sel%", mvs[sel], rw, rh, 1, 1);
+                    info(mvs[sel], rx, iy, rw, ih);
+                    log("기술 순서: " + lang[300 + mvs[held]] + " ↔ " + lang[300 + mvs[sel]]);
+                }
+                else{
+                    mu.overlayButton("pinm%held%", "#ffe040", 0);
+                }
+                held = 0;
+            }
+        }
+        if [ky.x()]{
+            loop [ky.x()]{ dis.waitF(1); }
+            sou.playSfx("ui", "choose", 2000);
+            if [held != 0]{
+                mu.overlayButton("pinm%held%", "#ffe040", 0);
+                held = 0;
+            }
+            else{
+                out = 0;
+            }
+        }
+        }
+        dis.waitF(1);
+    }
+    statHide();
+    pk[22] = mvs;
+    pk[23] = pps;
+    pk[24] = ups;
+    myParty[idx] = pk;
+    pinResult = out;
+    // 지우기
+    dis.removeObj("pinbg");
+    dis.removeObj("pint");
+    dis.removeObj("pinfr");
+    dis.removeObj("pinfi");
+    dis.removeObj("pinsp");
+    dis.removeObj("pinnm");
+    dis.removeObj("pinlv");
+    dis.removeObj("pinibg");
+    k = 1;
+    loop [k <= 2]{
+        dis.removeObj("pinty%k%");
+        dis.removeObj("pinty%k%in");
+        dis.removeObj("pinty%k%ic");
+        k = k + 1;
+    }
+    if [smode == 0]{   // 기술 화면에서 나감: 기술 버튼 · 기술 정보
+        r = 1;
+        loop [r <= 4]{
+            mu.removeMoveButton("pinm%r%");
+            r = r + 1;
+        }
+        mu.hideMoveInfo();
+    }
+    else{   // 능력 화면에서 X 로 나감: 기술 버튼은 이미 지웠음 → 능력 화면만 지움
+        statHide();
+    }
+    if [newMove != 0]{
+        mu.removeMoveButton("pinm5");
+    }
+}

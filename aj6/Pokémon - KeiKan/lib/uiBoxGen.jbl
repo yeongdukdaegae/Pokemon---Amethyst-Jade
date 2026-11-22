@@ -1,0 +1,21 @@
+Lib id uiBoxGen;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Canvas call can;
+
+func GenUiBox(float x, float y, float scalex, float scaley, string uuid, string content){
+    dis.setupObject();
+    dis.setObject([x, y], "%uuid%padding", [scalex, scaley], "#9fbfff");
+    dis.setObject([x, y], "%uuid%", [scalex - 10, scaley - 10], "#2f5f9f");
+    dis.setText([x, y], "%content%", "%uuid%content", scaley/3, false, "#ffffff");
+    dis.setObjLayer("%uuid%content", 5);
+    dis.setObjLayer("%uuid%", 4);
+    dis.setObjLayer("%uuid%padding", 3);
+    can.obj.setExistableScene("%can.SceneName%", "%uuid%");
+    can.obj.setExistableScene("%can.SceneName%", "%uuid%padding");
+    can.obj.setExistableScene("%can.SceneName%", "%uuid%content");
+    dis.setParent() ("%uuid%padding") as ("%uuid%");
+    dis.setParent() ("%uuid%content") as ("%uuid%");
+}
+
+

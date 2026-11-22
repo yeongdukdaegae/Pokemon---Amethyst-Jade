@@ -1,0 +1,179 @@
+Lib id listUi;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Magellan call mag;
+Use soundMaster call sou;
+Use Canvas call can;
+Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+
+// 작은 목록 메뉴 (세로 한 줄 · 보이는 줄 수만큼의 작은 상자) — 볼 고르기 · 잡은 포켓몬을 어디로 보낼지 등
+//   쓰기 전에 luLabels (글자) · luIcons (아이콘 그림 이름 · 없으면 "") · luOff (1 = 고를 수 없음: 회색) 를 채우고 open 을 부름
+//   위아래로 고르고 Z 로 결정 · X 로 돌아감 → luResult = 고른 번호 (0 = 돌아감)
+//   항목이 보이는 줄 수보다 많으면 아래로 내릴 때 한 줄씩 넘어감 (스크롤)
+//   만든 오브젝트: lubd · lubg · lusel · lu1 ~ lu(줄 수) + ic · tx (끝날 때 모두 지움)
+
+var public list call luLabels;
+var public list call luIcons;
+var public list call luOff;
+var public list call luCounts;   // 줄 오른쪽 끝의 글자 (개수 등 · 비어 있거나 모자라면 없음) — 쓰지 않으면 [] 로
+var public int call luResult;
+var public int call luBase;     // 레이어에 더할 값 (0 = 배틀 · 필드 메뉴 위에서 쓸 때 70) — 0 이 아니면 화면에 고정 (setUi)
+
+// 지금 보이는 줄들을 다시 그림: top = 맨 윗줄에 보이는 항목 번호 · sel = 고른 항목
+func paint(float x, float top, float w, float rowH, int rows, int first, int sel){
+    var int call r = 1;
+    loop [r <= rows]{
+        var int call it = first + r - 1;
+        var float call y = top - rowH * (r - 0.5);
+        var string call lb = "";
+        var string call ic = "";
+        var int call off = 0;
+        if [it <= luLabels.length]{
+            lb = luLabels[it];
+            ic = luIcons[it];
+            off = luOff[it];
+        }
+        var float call left = x - w / 2;
+        var float call is = rowH * 0.95;
+        var float call tx = left + rowH * 0.25;
+        dis.setObject([left + rowH * 0.15 + is / 2, y], "lu%r%ic", [is, is], "#ffffff");
+        dis.setObjLayer("lu%r%ic", 33 + luBase);
+        if [ic != ""]{
+            mag.setObjTexture("lu%r%ic", ic, [0, 0], [32, 32]);
+            dis.setObjAlpha("lu%r%ic", 255);
+            tx = left + rowH * 0.3 + is;
+        }
+        else{
+            dis.setObjAlpha("lu%r%ic", 0);
+        }
+        var float call ts = rowH * 0.56;
+        dis.setText([tx, y - ts * 0.085], lb, "lu%r%tx", ts, false, "#ffffff");
+        dis.setTextNudge("lu%r%tx", "left");
+        dis.setObjLayer("lu%r%tx", 33 + luBase);
+        var float call tw = 0;
+        dis.getVar("lu%r%tx", "scale[1, 1]") as tw;
+        var float call room = x + w / 2 - rowH * 1.25 - tx;   // 오른쪽 끝의 개수 자리를 남김
+        if [tw > room]{   // 안 들어가면 글자를 줄임
+            dis.setText([tx, y - ts * room / tw * 0.085], lb, "lu%r%tx", ts * room / tw, false, "#ffffff");
+            dis.setTextNudge("lu%r%tx", "left");
+            dis.setObjLayer("lu%r%tx", 33 + luBase);
+        }
+        var string call ct = "";
+        if [it <= luCounts.length]{
+            ct = luCounts[it];
+        }
+        dis.setText([x + w / 2 - rowH * 0.35, y - ts * 0.085], ct, "lu%r%ct", ts * 0.9, false, "#ffffff");
+        dis.setTextNudge("lu%r%ct", "right");
+        dis.setObjLayer("lu%r%ct", 33 + luBase);
+        if [off == 1]{   // 고를 수 없는 항목: 회색을 덧씌움
+            dis.setObjOverlay("lu%r%tx", "#4c4e4e", 150);
+            dis.setObjOverlay("lu%r%ic", "#4c4e4e", 150);
+            dis.setObjOverlay("lu%r%ct", "#4c4e4e", 150);
+        }
+        else{
+            dis.setObjOverlay("lu%r%tx", "#4c4e4e", 0);
+            dis.setObjOverlay("lu%r%ic", "#4c4e4e", 0);
+            dis.setObjOverlay("lu%r%ct", "#4c4e4e", 0);
+        }
+        if [it == sel]{
+            dis.setObjPos("lusel", [x, y]);
+        }
+        r = r + 1;
+    }
+}
+
+// [xRight, yBottom] = 상자의 오른쪽 아래 끝 · w = 폭 · rowH = 한 줄 높이 · rows = 한 번에 보이는 줄 수
+func open(float xRight, float yBottom, float w, float rowH, int rows){
+    var float call bt = max(2, rowH * 0.07);
+    var float call h = rowH * rows + bt * 4;
+    var float call x = xRight - w / 2;
+    var float call y = yBottom + h / 2;
+    var float call top = y + h / 2 - bt * 2;
+    dis.setObject([x, y], "lubd", [w, h], "#9fbfff");
+    dis.setObjLayer("lubd", 30 + luBase);
+    dis.setObject([x, y], "lubg", [w - bt * 2, h - bt * 2], "#2f5f9f");
+    dis.setObjLayer("lubg", 31 + luBase);
+    dis.setObject([x, y], "lusel", [w - bt * 4, rowH - bt], "#4f83c8");   // 고른 줄의 밝은 바탕
+    dis.setObjLayer("lusel", 32 + luBase);
+    var int call first = 1;
+    var int call sel = 1;
+    var int call n = luLabels.length;
+    paint(x, top, w, rowH, rows, first, sel);
+    if [luBase != 0]{   // 화면에 고정 (필드에서는 카메라가 플레이어를 따라감)
+        can.setUi("lubd");
+        can.setUi("lubg");
+        can.setUi("lusel");
+        var int call ur = 1;
+        loop [ur <= rows]{
+            can.setUi("lu%ur%ic");
+            can.setUi("lu%ur%tx");
+            can.setUi("lu%ur%ct");
+            ur = ur + 1;
+        }
+    }
+    sou.setSpeaker("ui");
+    loop [ky.z()] for 500{
+        dis.waitF(1);
+    }
+    var int call out = -1;
+    loop [out < 0]{
+        var int call dst = sel;
+        var string call held = "";
+        if [isKeyInput("down")]{
+            held = "down";
+            dst = sel + 1;
+            if [dst > n]{
+                dst = 1;
+            }
+        }
+        if [isKeyInput("up")]{
+            held = "up";
+            dst = sel - 1;
+            if [dst < 1]{
+                dst = n;
+            }
+        }
+        if [held != ""]{
+            if [dst != sel]{
+                sel = dst;
+                if [sel < first]{   // 보이는 범위를 벗어나면 한 줄씩 넘김
+                    first = sel;
+                }
+                if [sel > first + rows - 1]{
+                    first = sel - rows + 1;
+                }
+                paint(x, top, w, rowH, rows, first, sel);
+                sou.playSfx("ui", "choose", 2000);
+            }
+            loop [isKeyInput(held)] for 300{
+                dis.waitF(1);
+            }
+        }
+        if [ky.z()]{
+            loop [ky.z()]{
+                dis.waitF(1);
+            }
+            if [luOff[sel] == 0]{
+                out = sel;
+            }
+        }
+        if [ky.x()]{
+            loop [ky.x()]{
+                dis.waitF(1);
+            }
+            out = 0;
+        }
+        dis.waitF(1);
+    }
+    dis.removeObj("lubd");
+    dis.removeObj("lubg");
+    dis.removeObj("lusel");
+    var int call r = 1;
+    loop [r <= rows]{
+        dis.removeObj("lu%r%ic");
+        dis.removeObj("lu%r%tx");
+        dis.removeObj("lu%r%ct");
+        r = r + 1;
+    }
+    luResult = out;
+}

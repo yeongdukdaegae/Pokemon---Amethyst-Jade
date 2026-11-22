@@ -1,0 +1,93 @@
+Use jawbreaker call jaw;
+Use Canvas call can;
+Use DisPlayer call dis;
+Use timeCore call tmc;
+
+// 시간 · 날짜: 실제 1 초 = 게임 1 분 (하루 = 24 분) — 새 게임은 3 월 1 일 (일) 09:00 부터 · 리포트에 함께 적힘 (10 번째 칸)
+//   시간대 timeBand (1 아침 · 2 낮 · 3 저녁 · 4 밤) → 야생 포켓몬이 달라짐 (battleManager.jb)
+//   실외 (outdoor = 1) 에서는 맵 위에 시각에 맞는 빛을 덧씌움 (daylight · 대사 상자와 메뉴보다는 아래) · 실내는 그대로
+//   메뉴가 열려 있으면 (fmClock = 1) 맨 위의 날짜 · 시각 글자 (fmhdrt) 도 1 분마다 고침
+
+var public int call gMonth;
+var public int call gDay;
+var public int call gWeek;
+var public int call gHour;
+var public int call gMin;
+var public int call timeBand;
+var public float call lightR;
+var public float call lightG;
+var public float call lightB;
+var public float call lightA;
+var public int call outdoor;
+var public int call fmClock;
+var public int call quitTitle;   // 1 = 리포트 작성 뒤 타이틀 화면으로 나감 (fieldMenu.jb) → 필드 코드들이 멈춤 · prtgRoom.jb 가 필드를 지우고 타이틀로
+
+var public float call lightX;   // 빛을 덮을 곳 (실외 맵의 가운데 · 크기)
+var public float call lightY;
+var public float call lightW;
+var public float call lightH;
+
+run{
+    if [gMonth == 0]{   // 리포트에 시간이 없음 (새 게임 · 예전 리포트)
+        gMonth = 3;
+        gDay = 1;
+        gWeek = 1;
+        gHour = 9;
+        gMin = 0;
+    }
+    timeBand = tmc.bandOf(gHour);
+    dis.setObject([0, 0], "daylight", [16, 16], "#ffffff");   // 맵 위에만 덮음 (맵 밖의 검은 곳은 그대로) — 자리 · 크기는 방 스크립트가 lightX · Y · W · H 로 알려 줌
+    dis.setObjLayer("daylight", 20);   // 타일 · 플레이어 위 · 메뉴와 대사 상자 아래
+    dis.setObjAlpha("daylight", 0);
+    var int call lastOut = -1;
+    var int call tick = 0;
+    loop{
+        if [quitTitle == 1]{
+            break();
+        }
+        if [tick >= 60] or [outdoor != lastOut]{   // 1 초 (60 프레임) 마다 1 분 · 실내외가 바뀌면 바로 빛을 고침
+            if [tick >= 60]{
+                tick = 0;
+                gMin = gMin + 1;
+                if [gMin >= 60]{
+                    gMin = 0;
+                    gHour = gHour + 1;
+                    if [gHour >= 24]{
+                        gHour = 0;
+                        gDay = gDay + 1;
+                        gWeek = gWeek + 1;
+                        if [gWeek > 7]{
+                            gWeek = 1;
+                        }
+                        if [gDay > tmc.monthDays(gMonth)]{
+                            gDay = 1;
+                            gMonth = gMonth + 1;
+                            if [gMonth > 12]{
+                                gMonth = 1;
+                            }
+                        }
+                    }
+                    timeBand = tmc.bandOf(gHour);
+                    log("시각: " + tmc.text());
+                }
+                if [fmClock == 1]{
+                    dis.setTxtContent("fmhdrt", tmc.text());
+                }
+            }
+            lastOut = outdoor;
+            if [outdoor == 1]{
+                dis.setObjPos("daylight", [lightX, lightY]);
+                dis.setObjScale("daylight", [lightW, lightH]);
+                tmc.light(gHour + gMin / 60.0);
+                dis.setObjColor("daylight", tmc.lightHex());
+                dis.setObjAlpha("daylight", floor(lightA));
+            }
+            else{
+                dis.setObjAlpha("daylight", 0);
+            }
+        }
+        tick = tick + 1;
+        dis.waitF(1);
+    }
+    dis.removeObj("daylight");
+}

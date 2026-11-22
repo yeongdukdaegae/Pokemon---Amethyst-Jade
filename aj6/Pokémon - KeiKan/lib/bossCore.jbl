@@ -1,0 +1,143 @@
+Lib id bossCore;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Magellan call mag;
+Use soundMaster call sou;
+Use battleCore call bc;
+Use statUi call su;
+Use pokeGen call pg;
+
+// 레이드 보스 (심볼 인카운터 · 길을 막는 강한 야생 포켓몬)
+//   make(n): 보스 n 번의 포켓몬 데이터 — 1 = 보라매숲 이상해꽃 (Lv.35 · 두꺼운지방 · 뜨거운바위 · 노력치 HP · 공격 · 특수공격 252 · 개체값 무작위 3V · 파워휩 · 오물폭탄 · 쾌청 · 솔라빔)
+//   체력 줄 (bossBars · 처음 4): 체력이 0 이 되면 한 줄이 깎이고 체력이 다시 가득 → 마지막 줄까지 깎아야 쓰러짐 · 마지막 줄에서만 잡을 수 있음 (포획 가중치 2/3)
+//     줄이 깎일 때마다 방어 → 특수방어 → 특수공격 순서로 1 랭크씩 (1 줄 남으면 셋 다 +1)
+//   보스는 랭크 변화를 받지 않음 (abilityCore.jbl 의 changeStage 가 막고 · lockStage 가 bossStg 로 되돌림) · 공격 · 특수공격 실능치는 3/4 (battleManager.jb)
+//   pips(...): 상대 스탯 상자 바로 아래에 줄 수만큼 작은 막대 ("bossPip<k>") · pipSet: 남은 줄은 노랑 · 깎인 줄은 회색 · clearPips: 지움
+
+var public list call lang;
+var public int call oppHp;
+var public list call oppStats;
+var public list call oppStage;
+var public int call bossBars;   // 남은 체력 줄 (지금 줄 포함)
+var public list call bossStg;   // 보스의 랭크 (줄이 깎여서 오른 것만)
+var public string call nowPokeName;
+var public string call oppPreT;
+var public float call msgS;
+var public float call msgW;
+var int call pipN;     // 처음 줄 수 (막대 수)
+var int call pipOn;    // 1 = 막대가 있음
+
+func compound make(int n){
+    var compound call p = pg.newStarter(103, 35, 1);   // 개체값: 무작위 3 개가 31 (3V)
+    p[9] = 252;    // 노력치 HP
+    p[10] = 252;   // 공격
+    p[11] = 0;
+    p[12] = 252;   // 특수공격
+    p[13] = 0;
+    p[14] = 0;
+    p[16] = 47;    // 두꺼운지방
+    p[18] = 0;     // 성격 보정 없음
+    p[21] = 284;   // 뜨거운바위 (쾌청 8 턴)
+    var compound call mv = [438, 188, 241, 76];   // 파워휩 · 오물폭탄 · 쾌청 · 솔라빔
+    var compound call pp = [];
+    var compound call ppu = [];
+    var int call k = 1;
+    loop [k <= mv.length]{
+        pp.add(pg.maxPP(mv[k], 0));
+        ppu.add(0);
+        k = k + 1;
+    }
+    p[22] = mv;
+    p[23] = pp;
+    p[24] = ppu;
+    p[25] = pg.calcStat(pg.baseStat(103, 1), p[3], p[9], 35, 1);
+    return(p);
+}
+
+// 보스의 랭크를 bossStg 로 (다른 랭크 변화는 모두 없던 것으로)
+func lockStage(){
+    var list call s = [];
+    var int call i = 1;
+    loop [i <= 8]{
+        s.add(bossStg[i]);
+        i = i + 1;
+    }
+    oppStage = s;
+}
+
+func pips(float cx, float top, float w, float h, int n){
+    pipN = n;
+    var float call ph = max(4, h * 0.09);
+    var float call gap = max(2, w * 0.015);
+    var float call pw = (w - gap * (n - 1)) / n;
+    var float call y = top - gap - ph / 2;
+    dis.setObject([cx, y], "bossPipBg", [w + gap * 2, ph + gap * 2], "#203050");
+    dis.setObjLayer("bossPipBg", 3);
+    var int call k = 1;
+    loop [k <= n]{
+        dis.setObject([cx - w / 2 + pw / 2 + (k - 1) * (pw + gap), y], "bossPip%k%", [pw, ph], "#ffd23a");
+        dis.setObjLayer("bossPip%k%", 4);
+        k = k + 1;
+    }
+    pipOn = 1;
+    pipSet();
+}
+
+func pipSet(){
+    if [pipOn == 1]{
+        var int call k = 1;
+        loop [k <= pipN]{
+            if [k <= bossBars]{
+                dis.setObjColor("bossPip%k%", "#ffd23a");
+            }
+            else{
+                dis.setObjColor("bossPip%k%", "#5a6070");
+            }
+            k = k + 1;
+        }
+    }
+}
+
+func clearPips(){
+    if [pipOn == 1]{
+        var int call k = 1;
+        loop [k <= pipN]{
+            dis.removeObj("bossPip%k%");
+            k = k + 1;
+        }
+        dis.removeObj("bossPipBg");
+        pipOn = 0;
+    }
+}
+
+// 체력이 0 이 됨 (남은 줄이 2 이상): 한 줄 깎고 체력을 다시 채움 → 방어 · 특수방어 · 특수공격 중 하나 +1
+func breakBar(){
+    bossBars = bossBars - 1;
+    var int call b = 1;
+    loop [b <= 3]{   // 깜박임
+        dis.setObjAlpha("opppoke", 60);
+        wait(70);
+        dis.setObjAlpha("opppoke", 255);
+        wait(70);
+        b = b + 1;
+    }
+    pipSet();
+    bc.setMsg("wildappeared", replaceStr(lang[7289], "{poke}", nowPokeName), msgS, msgW);
+    bc.waitMsg(1000);
+    su.drainHpMs("oppstat", 0, oppStats[1], oppStats[1], 700);
+    oppHp = oppStats[1];
+    var int call si = 3;   // 4 → 3 줄: 방어
+    if [bossBars == 2]{
+        si = 5;            // 3 → 2 줄: 특수방어
+    }
+    if [bossBars <= 1]{
+        si = 4;            // 2 → 1 줄: 특수공격
+    }
+    bossStg[si] = bossStg[si] + 1;
+    lockStage();
+    sou.setSpeaker("battlesfx");
+    sou.playSfx("battlesfx", "statRise", 3000);
+    bc.setMsg("wildappeared", replaceStr(replaceStr(lang[1330], "{poke}", replaceStr(oppPreT, "{poke}", nowPokeName)), "{stat}", lang[1320 + si]), msgS, msgW);
+    log("보스 체력 줄 깎임 → 남은 줄 %bossBars% · 랭크 %bossStg%");
+    bc.waitMsg(1000);
+}

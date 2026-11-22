@@ -1,0 +1,190 @@
+Lib id bagCore;
+Use jawbreaker call jaw;
+
+var public compound call bag;
+
+// 가방: 도구의 분류 · 버릴 수 있는지
+//   가방 (bag) = [[도구 번호, 개수], …] — 리포트에 함께 적힘 (11 번째 칸)
+//   분류 (가방 화면 맨 윗줄의 칸 순서): 1 볼 · 2 회복 · 3 배틀 · 4 열매 · 5 기술머신 · 6 진화 · 7 귀중품 · 8 중요
+//   값 (price): 포켓몬센터에서 살 때 — 본가 (스칼렛 · 바이올렛) 값의 1.2 배 · 0 = 팔지 않음
+//   도구 903 · 904 = 체육관 상처약 · 체육관 기력의조각 (유풍체육관에 들어올 때 받고 나가면 거둠 · 회복 칸 · 버리거나 지니게 할 수 없음)
+//   도구 902 = 유풍체육관 도전장 (체육관 로비의 단말기에서 발급 · 중요한 물건)
+//   도구 901 = 계정 메모 (박사가 줌 · 포켓몬센터 PC 계정 활성화 · 중요한 물건)
+//   도구 900 = 스티커가 붙은 몬스터볼 (볼 칸에 들어가지만 중요한 물건이라 버릴 수 없음)
+//   이름 lang[3000 + 번호] · 설명 lang[5000 + 번호] · 덧붙이는 말 lang[noteOf(번호)] (설명 맨 아래 흐린 글씨) · 아이콘 item_번호
+
+func int cat(int id){
+    if [id == 901] or [id == 902]{   // 계정 메모 · 유풍체육관 도전장 (중요한 물건)
+        return(8);
+    }
+    if [id <= 16] or [id == 900]{
+        return(1);
+    }
+    if [id >= 17] and [id <= 54]{
+        return(2);
+    }
+    if [id == 903] or [id == 904]{   // 체육관 상처약 · 체육관 기력의조각 (유풍체육관 안에서만 · lib/gymFly.jbl)
+        return(2);
+    }
+    if [id >= 149] and [id <= 212]{
+        return(4);
+    }
+    if [id >= 328] and [id <= 427]{
+        return(5);
+    }
+    if [id >= 80] and [id <= 85]{   // 진화의 돌 (불꽃 · 천둥 · 물 · 리프 · 태양 · 달)
+        return(6);
+    }
+    if [id == 849] or [id == 252] or [id == 324]{   // 얼음의돌 · 업그레이드 · 괴상한패치
+        return(6);
+    }
+    return(3);
+}
+
+func int isKey(int id){
+    if [id == 900] or [id == 901] or [id == 902] or [id == 903] or [id == 904]{
+        return(1);
+    }
+    return(0);
+}
+
+// 설명 맨 아래에 흐린 글씨로 덧붙이는 말의 lang 번호 (없으면 0)
+func int noteOf(int id){
+    if [id == 900]{
+        return(6900);
+    }
+    return(0);
+}
+
+// 포켓몬센터에서 살 때의 값 (본가 값 × 1.2) — 0 = 팔지 않음
+//   본가: 상처약 200 · 좋은상처약 700 · 고급상처약 1500 · 풀회복약 2500 · 회복약 3000 · 해독제 · 마비 · 잠깨는약 · 화상 · 얼음 200 · 만병통치제 400 · 기력의조각 2000
+func int price(int id){
+    if [id == 4]{   // 몬스터볼 · 슈퍼볼 (본가 값)
+        return(200);
+    }
+    if [id == 3]{
+        return(600);
+    }
+    if [id == 79]{   // 벌레회피스프레이 · 실버스프레이 · 골드스프레이 (본가 값)
+        return(400);
+    }
+    if [id == 76]{
+        return(700);
+    }
+    if [id == 77]{
+        return(900);
+    }
+    if [id == 158]{   // 자뭉열매 · 리샘열매
+        return(400);
+    }
+    if [id == 157]{
+        return(500);
+    }
+    if [id >= 17] and [id <= 22]{   // 상처약 · 해독제 · 화상치료제 · 얼음상태치료제 · 잠깨는약 · 마비치료제
+        return(240);
+    }
+    if [id == 23]{
+        return(3600);
+    }
+    if [id == 24]{
+        return(3000);
+    }
+    if [id == 25]{
+        return(1800);
+    }
+    if [id == 26]{
+        return(840);
+    }
+    if [id == 27]{
+        return(480);
+    }
+    if [id == 28]{
+        return(2400);
+    }
+    return(0);
+}
+
+// 상점에 팔 때의 값 (본가: 살 수 있는 도구는 본가 값의 절반 · 그 밖은 본가 판매 값) — 0 = 팔 수 없음 (중요한 물건)
+func int sellPrice(int id){
+    if [isKey(id) == 1] or [id == 1]{   // 중요한 물건 · 마스터볼
+        return(0);
+    }
+    var list call ids = [4, 3, 2, 17, 26, 25, 24, 23, 27, 28, 79, 76, 77, 252, 324, 236, 277, 229, 238, 239, 235, 233, 288, 234, 265, 217, 326];
+    var list call ps = [100, 300, 400, 100, 350, 750, 1250, 1500, 200, 1000, 200, 350, 450, 1000, 1000, 500, 500, 1500, 500, 500, 1000, 1000, 2000, 2000, 2000, 2000, 2000];
+    var int call i = 1;
+    loop [i <= ids.length]{
+        if [ids[i] == id]{
+            return(ps[i]);
+        }
+        i = i + 1;
+    }
+    if [id >= 18] and [id <= 22]{   // 해독제 · 화상 · 얼음 · 잠깨는약 · 마비
+        return(100);
+    }
+    if ([id >= 82] and [id <= 85]) or [id == 849]{   // 진화의 돌
+        return(1500);
+    }
+    if [id >= 282] and [id <= 285]{   // 날씨 바위
+        return(2000);
+    }
+    if [cat(id) == 4]{   // 나무열매
+        return(10);
+    }
+    if [id == 222] or ([id >= 237] and [id <= 251]){   // 타입 강화 도구
+        return(500);
+    }
+    return(1000);
+}
+
+// 가방에 있는 그 도구의 개수 (없으면 0)
+func int countOf(int id){
+    var int call i = 1;
+    loop [i <= bag.length]{
+        var compound call it = bag[i];
+        if [it[1] == id]{
+            return(it[2]);
+        }
+        i = i + 1;
+    }
+    return(0);
+}
+
+// 그 도구를 n 개 씀 (0 개가 되면 가방에서 뺌)
+func take(int id, int n){
+    var int call i = 1;
+    var int call at = 0;
+    loop [i <= bag.length]{
+        var compound call it = bag[i];
+        if [it[1] == id]{
+            at = i;
+        }
+        i = i + 1;
+    }
+    if [at != 0]{
+        var compound call t = bag[at];
+        if [t[2] > n]{
+            t[2] = t[2] - n;
+            bag[at] = t;
+        }
+        else{
+            bag.remove(at);
+        }
+    }
+}
+
+// 세 자리마다 쉼표 (3000 → "3,000")
+func string comma(int v){
+    var string call s = "" + v;
+    var int call L = strLen(s);
+    var string call out = "";
+    var int call i = 1;
+    loop [i <= L]{
+        out = out + charAt(s, i);
+        var int call rest = L - i;
+        if [rest > 0] and [rest - floor(rest / 3) * 3 == 0]{
+            out = out + ",";
+        }
+        i = i + 1;
+    }
+    return(out);
+}

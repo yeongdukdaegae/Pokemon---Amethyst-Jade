@@ -1,0 +1,1384 @@
+Lib id fieldMenu;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Canvas call can;
+Use Magellan call mag;
+Use soundMaster call sou;
+Use moveUi call mu;
+Use pokeGen call pg;
+Use healCore call hc;
+Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+
+// 필드 메뉴 화면 (포켓몬 교체 화면과 같은 모양: 대화 상자 안쪽 색 바탕 위에 대화 상자 모양의 칸 6 개 · 2 x 3) — 화면에 고정 (can.setUi)
+//   grid: 칸마다 글자 (fmLabels · 칸 수 = 글자 수 · 2 열 — 6 개면 2 x 3 · 8 개면 2 x 4) · 잠김 (fmOff = 1: 어둡게 · 고를 수 없음) → 방향키로 고르고 Z 로 결정 · X 로 닫음 → fmResult = 고른 칸 (0 = 닫음)
+//         칸 순서: 1 2 / 3 4 / 5 6 (왼쪽 위부터) · 글자가 모두 비어 있으면 빈 칸만 보여 줌 (X 로만 닫힘)
+//   panel: 큰 칸 하나에 제목과 내용 한 줄 → X (또는 Z) 로 닫음
+//   rows: 제목 아래에 줄 목록 (줄마다 fmLabels = 보낸 사람 · fmSubs = 내용 한 줄) → 위아래로 고르고 Z 로 결정 · X 로 닫음 → fmResult (0 = 닫음)
+//   bagDraw · bagFill · bagCursor · bagClose: 가방 화면 — 맨 위 가운데에 분류 이름 한 칸 (fmLabels[fmCat] · 양옆 ◀ ▶) · 아래 가운데에 정사각형 도구 칸 8 x 6 (아이콘 · 개수) · 커서는 selectUi 의 [세로, 가로] (1 번째 줄 = 분류)
+//   choice: 화면 가운데의 작은 선택 상자 (fmLabels · fmOff = 1 은 흐리게) → fmResult · info: 제목 + 여러 줄 설명 (X · Z 로 닫음)
+//   만든 오브젝트: fmbg · fm1 ~ fm6 + bd · tx / fmpbd · fmp · fmpt · fmpc / fmr1 ~ + bd · a · b (끝날 때 모두 지움)
+
+var public list call fmLabels;
+var public list call fmOff;
+var public int call fmResult;
+var public list call fmPages;   // 여러 쪽 글 (pages) — 한 쪽 = 글 하나
+var public int call fmKeep;    // 1 = grid 가 끝나도 메뉴 칸을 남겨 둠
+var public int call fmGridN;   // 남겨 둔 메뉴 칸 수
+var public list call fmSubs;
+var public list call fmIcons;    // 가방 화면: 칸 48 개 (8 x 6) 의 아이콘 그림 이름 ("" = 빈 칸) · 개수 글자
+var public list call fmCounts;
+var public int call fmCat;       // 고른 분류 (1 ~ 8)
+var public int call fmCurR;      // 커서가 있던 칸 (bagCursor)
+var public int call fmCurC;
+var public compound call myParty;
+var public list call lang;
+var public list call fmTx;       // 지도: 마을 자리 (그림 픽셀 · 왼쪽 위가 [0, 0]) · 이름의 lang 번호
+var public list call fmTy;
+var public list call fmTn;
+
+func paint(int sel){
+    var int call i = 1;
+    loop [i <= fmLabels.length]{
+        if [i == sel]{
+            dis.setObjColor("fm%i%bd", "#ffe040");   // 고른 칸: 노란 테두리
+        }
+        else{
+            dis.setObjColor("fm%i%bd", "#9fbfff");
+        }
+        i = i + 1;
+    }
+}
+
+func grid(float cx, float cy, float w, float h, int start){
+    dis.setObject([cx, cy], "fmbg", [w, h], "#2f5f9f");
+    can.setUi("fmbg");
+    dis.setObjLayer("fmbg", 60);
+    var float call m = h * 0.035;
+    var int call n = fmLabels.length;      // 칸 수 (짝수)
+    var int call nr = floor((n + 1) / 2);   // 줄 수
+    var float call cw = (w - m * 3) / 2;
+    var float call ch = (h - m * (nr + 1)) / nr;
+    var float call bt = max(2, ch * 0.03);
+    var int call any = 0;     // 고를 수 있는 칸이 하나라도 있는지
+    var int call i = 1;
+    loop [i <= n]{
+        var int call c = i - 1 - floor((i - 1) / 2) * 2;
+        var int call r = floor((i - 1) / 2);
+        var float call x = cx - w / 2 + m + cw / 2 + c * (cw + m);
+        var float call y = cy + h / 2 - m - ch / 2 - r * (ch + m);
+        var string call inner = "#2f5f9f";
+        var string call tc = "#ffffff";
+        if [fmOff[i] == 1]{   // 잠긴 칸 · 빈 칸: 어두운 안쪽
+            inner = "#263f6b";
+            tc = "#7f93b8";
+        }
+        else{
+            any = 1;
+        }
+        dis.setObject([x, y], "fm%i%bd", [cw, ch], "#9fbfff");
+        dis.setObject([x, y], "fm%i%", [cw - bt * 2, ch - bt * 2], inner);
+        var float call ts = ch * 0.3;
+        dis.setText([x, y - ts * 0.085], fmLabels[i], "fm%i%tx", ts, false, tc);
+        can.setUi("fm%i%bd");
+        can.setUi("fm%i%");
+        can.setUi("fm%i%tx");
+        dis.setObjLayer("fm%i%bd", 61);
+        dis.setObjLayer("fm%i%", 62);
+        dis.setObjLayer("fm%i%tx", 63);
+        i = i + 1;
+    }
+    var int call sel = start;
+    if [sel < 1] or [sel > n]{
+        sel = 1;
+    }
+    if [any == 1]{
+        paint(sel);
+    }
+    sou.setSpeaker("ui");
+    loop [ky.z()] for 500{
+        dis.waitF(1);
+    }
+    loop [ky.x()] for 500{
+        dis.waitF(1);
+    }
+    var int call out = -1;
+    loop [out < 0]{
+        var int call dst = sel;
+        var string call held = "";
+        if [isKeyInput("right")] or [isKeyInput("left")]{   // 좌우: 같은 줄의 옆 칸
+            held = "right";
+            if [isKeyInput("left")]{
+                held = "left";
+            }
+            if [sel - floor(sel / 2) * 2 == 1]{
+                dst = sel + 1;
+            }
+            else{
+                dst = sel - 1;
+            }
+        }
+        if [isKeyInput("down")]{   // 같은 열의 아래 칸 (끝이면 맨 위로) · 잠긴 칸은 건너뜀
+            held = "down";
+            var int call tries = 0;
+            loop [tries < nr]{
+                dst = dst + 2;
+                if [dst > n]{
+                    dst = dst - n;
+                }
+                tries = tries + 1;
+                if [any == 0]{
+                    tries = nr;
+                }
+                else if [fmOff[dst] == 0]{
+                    tries = nr;
+                }
+            }
+        }
+        if [isKeyInput("up")]{   // 같은 열의 위 칸 (맨 위면 맨 아래로) · 잠긴 칸은 건너뜀
+            held = "up";
+            var int call tries2 = 0;
+            loop [tries2 < nr]{
+                dst = dst - 2;
+                if [dst < 1]{
+                    dst = dst + n;
+                }
+                tries2 = tries2 + 1;
+                if [any == 0]{
+                    tries2 = nr;
+                }
+                else if [fmOff[dst] == 0]{
+                    tries2 = nr;
+                }
+            }
+        }
+        if [held != ""]{
+            if [any == 1] and [dst != sel]{
+                if [fmOff[dst] == 0]{   // 잠긴 칸으로는 못 감
+                    sel = dst;
+                    paint(sel);
+                    sou.playSfx("ui", "choose", 2000);
+                }
+            }
+            loop [isKeyInput(held)] for 300{
+                dis.waitF(1);
+            }
+        }
+        if [ky.z()]{
+            loop [ky.z()]{
+                dis.waitF(1);
+            }
+            if [any == 1]{
+                if [fmOff[sel] == 0]{
+                    sou.playSfx("ui", "choose", 2000);
+                    out = sel;
+                }
+            }
+        }
+        if [ky.x()]{
+            loop [ky.x()]{
+                dis.waitF(1);
+            }
+            out = 0;
+        }
+        dis.waitF(1);
+    }
+    fmGridN = n;
+    if [fmKeep == 0]{   // fmKeep = 1 이면 메뉴 칸을 남겨 둠 (그 위에 작은 선택 상자 · 설명이 뜸 → 끝나면 gridClose)
+        gridClose();
+    }
+    fmResult = out;
+}
+
+// 남겨 둔 메뉴 칸 지우기
+func gridClose(){
+    dis.removeObj("fmbg");
+    var int call i = 1;
+    loop [i <= fmGridN]{
+        dis.removeObj("fm%i%bd");
+        dis.removeObj("fm%i%");
+        dis.removeObj("fm%i%tx");
+        i = i + 1;
+    }
+}
+
+func panel(float cx, float cy, float w, float h, string title, string content){
+    dis.setObject([cx, cy], "fmbg", [w, h], "#2f5f9f");
+    var float call m = h * 0.035;
+    var float call bt = max(2, h * 0.01);
+    dis.setObject([cx, cy], "fmpbd", [w - m * 2, h - m * 2], "#9fbfff");
+    dis.setObject([cx, cy], "fmp", [w - m * 2 - bt * 2, h - m * 2 - bt * 2], "#2f5f9f");
+    var float call ts = h * 0.07;
+    dis.setText([cx - w / 2 + m * 2.5, cy + h / 2 - m * 2.5 - ts / 2], title, "fmpt", ts, false, "#ffffff");
+    dis.setTextNudge("fmpt", "left");
+    dis.setText([cx, cy], content, "fmpc", ts * 0.8, false, "#cfe0ff");
+    can.setUi("fmbg");
+    can.setUi("fmpbd");
+    can.setUi("fmp");
+    can.setUi("fmpt");
+    can.setUi("fmpc");
+    dis.setObjLayer("fmbg", 60);
+    dis.setObjLayer("fmpbd", 61);
+    dis.setObjLayer("fmp", 62);
+    dis.setObjLayer("fmpt", 63);
+    dis.setObjLayer("fmpc", 63);
+    loop [ky.z()] for 500{
+        dis.waitF(1);
+    }
+    loop [ky.x()] for 500{
+        dis.waitF(1);
+    }
+    loop [ky.x() == 0] and [ky.z() == 0]{
+        dis.waitF(1);
+    }
+    loop [ky.x()]{
+        dis.waitF(1);
+    }
+    loop [ky.z()]{
+        dis.waitF(1);
+    }
+    dis.removeObj("fmbg");
+    dis.removeObj("fmpbd");
+    dis.removeObj("fmp");
+    dis.removeObj("fmpt");
+    dis.removeObj("fmpc");
+}
+
+// 큰 칸 하나에 제목과 내용 (상자 폭에 맞춰 줄바꿈 · 많아야 3 줄) 을 띄우기만 함 (기다리지 않음) — panelHide 로 지움
+//   만든 오브젝트: fmbg · fmpbd · fmp · fmpt · fmpc1 ~ fmpc3
+func panelShow(float cx, float cy, float w, float h, string title, string content){
+    dis.setObject([cx, cy], "fmbg", [w, h], "#2f5f9f");
+    var float call m = h * 0.035;
+    var float call bt = max(2, h * 0.01);
+    dis.setObject([cx, cy], "fmpbd", [w - m * 2, h - m * 2], "#9fbfff");
+    dis.setObject([cx, cy], "fmp", [w - m * 2 - bt * 2, h - m * 2 - bt * 2], "#2f5f9f");
+    var float call ts = h * 0.07;
+    dis.setText([cx - w / 2 + m * 2.5, cy + h / 2 - m * 2.5 - ts / 2], title, "fmpt", ts, false, "#ffffff");
+    dis.setTextNudge("fmpt", "left");
+    var float call cs = ts * 0.8;
+    var list call cl = splitStr(mu.wrapText(content, cs, w * 0.82), "\n");
+    var int call q = 1;
+    loop [q <= 3]{
+        var string call lt = "";
+        if [q <= cl.length]{
+            lt = cl[q];
+        }
+        dis.setText([cx, cy + h * 0.14 - (q - 1) * cs * 1.45], lt, "fmpc%q%", cs, false, "#cfe0ff");
+        can.setUi("fmpc%q%");
+        dis.setObjLayer("fmpc%q%", 63);
+        q = q + 1;
+    }
+    can.setUi("fmbg");
+    can.setUi("fmpbd");
+    can.setUi("fmp");
+    can.setUi("fmpt");
+    dis.setObjLayer("fmbg", 60);
+    dis.setObjLayer("fmpbd", 61);
+    dis.setObjLayer("fmp", 62);
+    dis.setObjLayer("fmpt", 63);
+}
+
+func panelHide(){
+    dis.removeObj("fmbg");
+    dis.removeObj("fmpbd");
+    dis.removeObj("fmp");
+    dis.removeObj("fmpt");
+    var int call q = 1;
+    loop [q <= 3]{
+        dis.removeObj("fmpc%q%");
+        q = q + 1;
+    }
+}
+
+// 묻는 화면: 제목 + 물음 (panelShow) 아래에 예 / 아니오 선택 상자 (choice) → fmResult (1 예 · 2 아니오 · 0 X 로 닫음)
+func ask(float cx, float cy, float w, float h, string title, string question, string yes, string no){
+    panelShow(cx, cy, w, h, title, question);
+    fmLabels = [];
+    fmLabels.add(yes);
+    fmLabels.add(no);
+    fmOff = [0, 0];
+    choice(cx, cy - h * 0.17, w, h);
+    panelHide();
+}
+
+func rows(float cx, float cy, float w, float h, string title){
+    dis.setObject([cx, cy], "fmbg", [w, h], "#2f5f9f");
+    var float call m = h * 0.035;
+    var float call bt = max(2, h * 0.01);
+    dis.setObject([cx, cy], "fmpbd", [w - m * 2, h - m * 2], "#9fbfff");
+    dis.setObject([cx, cy], "fmp", [w - m * 2 - bt * 2, h - m * 2 - bt * 2], "#2f5f9f");
+    var float call ts = h * 0.07;
+    dis.setText([cx - w / 2 + m * 2.5, cy + h / 2 - m * 2.5 - ts / 2], title, "fmpt", ts, false, "#ffffff");
+    dis.setTextNudge("fmpt", "left");
+    can.setUi("fmbg");
+    can.setUi("fmpbd");
+    can.setUi("fmp");
+    can.setUi("fmpt");
+    dis.setObjLayer("fmbg", 60);
+    dis.setObjLayer("fmpbd", 61);
+    dis.setObjLayer("fmp", 62);
+    dis.setObjLayer("fmpt", 63);
+    var int call n = fmLabels.length;
+    var float call rh = h * 0.17;                     // 한 줄 높이
+    var float call rw = w - m * 5;
+    var float call top = cy + h / 2 - m * 3.5 - ts;   // 첫 줄의 위 끝
+    var int call i = 1;
+    loop [i <= n]{
+        var float call y = top - rh * (i - 0.5) - m * 0.6 * (i - 1);
+        dis.setObject([cx, y], "fmr%i%bd", [rw, rh], "#9fbfff");
+        dis.setObject([cx, y], "fmr%i%", [rw - bt * 2, rh - bt * 2], "#2f5f9f");
+        var float call aS1 = rh * 0.3;
+        var float call bS1 = rh * 0.26;
+        var float call lx = cx - rw / 2 + rh * 0.25;
+        dis.setText([lx, y + rh * 0.2], fmLabels[i], "fmr%i%a", aS1, false, "#ffffff");
+        dis.setTextNudge("fmr%i%a", "left");
+        dis.setText([lx, y - rh * 0.2], fmSubs[i], "fmr%i%b", bS1, false, "#cfe0ff");
+        dis.setTextNudge("fmr%i%b", "left");
+        var float call bw = 0;
+        dis.getVar("fmr%i%b", "scale[1, 1]") as bw;
+        var float call room = rw - rh * 0.5;
+        if [bw > room]{   // 안 들어가면 글자를 줄임
+            dis.setText([lx, y - rh * 0.2], fmSubs[i], "fmr%i%b", bS1 * room / bw, false, "#cfe0ff");
+            dis.setTextNudge("fmr%i%b", "left");
+        }
+        can.setUi("fmr%i%bd");
+        can.setUi("fmr%i%");
+        can.setUi("fmr%i%a");
+        can.setUi("fmr%i%b");
+        dis.setObjLayer("fmr%i%bd", 63);
+        dis.setObjLayer("fmr%i%", 64);
+        dis.setObjLayer("fmr%i%a", 65);
+        dis.setObjLayer("fmr%i%b", 65);
+        i = i + 1;
+    }
+    var int call sel = 1;
+    if [n >= 1]{
+        dis.setObjColor("fmr1bd", "#ffe040");
+    }
+    sou.setSpeaker("ui");
+    loop [ky.z()] for 500{
+        dis.waitF(1);
+    }
+    loop [ky.x()] for 500{
+        dis.waitF(1);
+    }
+    var int call out = -1;
+    loop [out < 0]{
+        var int call dst = sel;
+        var string call held = "";
+        if [isKeyInput("down")]{
+            held = "down";
+            dst = sel + 1;
+            if [dst > n]{
+                dst = 1;
+            }
+        }
+        if [isKeyInput("up")]{
+            held = "up";
+            dst = sel - 1;
+            if [dst < 1]{
+                dst = n;
+            }
+        }
+        if [held != ""]{
+            if [n >= 1] and [dst != sel]{
+                dis.setObjColor("fmr%sel%bd", "#9fbfff");
+                sel = dst;
+                dis.setObjColor("fmr%sel%bd", "#ffe040");
+                sou.playSfx("ui", "choose", 2000);
+            }
+            loop [isKeyInput(held)] for 300{
+                dis.waitF(1);
+            }
+        }
+        if [ky.z()]{
+            loop [ky.z()]{
+                dis.waitF(1);
+            }
+            if [n >= 1]{
+                sou.playSfx("ui", "choose", 2000);
+                out = sel;
+            }
+        }
+        if [ky.x()]{
+            loop [ky.x()]{
+                dis.waitF(1);
+            }
+            out = 0;
+        }
+        dis.waitF(1);
+    }
+    dis.removeObj("fmbg");
+    dis.removeObj("fmpbd");
+    dis.removeObj("fmp");
+    dis.removeObj("fmpt");
+    i = 1;
+    loop [i <= n]{
+        dis.removeObj("fmr%i%bd");
+        dis.removeObj("fmr%i%");
+        dis.removeObj("fmr%i%a");
+        dis.removeObj("fmr%i%b");
+        i = i + 1;
+    }
+    fmResult = out;
+}
+
+// ── 가방 화면 ──
+//   맨 위 가운데: 분류 이름 한 칸 (양옆에 ◀ ▶) — 커서를 올려 두고 좌우로 분류를 바꿈
+//   그 아래 가운데: 정사각형 도구 칸 8 x 6
+func bagDraw(float cx, float cy, float w, float h){
+    dis.setObject([cx, cy], "fmbg", [w, h], "#2f5f9f");
+    can.setUi("fmbg");
+    dis.setObjLayer("fmbg", 60);
+    var float call m = h * 0.02;
+    var float call catH = h * 0.11;
+    var float call side = floor(min((w - m * 9) / 8, (h - catH - m * 9) / 6));   // 칸 한 변 (가로 · 세로 중 작은 쪽에 맞춤)
+    var float call bt = max(1.5, side * 0.04);
+    var float call gw = side * 8 + m * 7;
+    var float call ghAll = side * 6 + m * 5;
+    var float call catY = cy + h / 2 - m - catH / 2;
+    var float call catW = max(gw * 0.5, catH * 4);
+    dis.setObject([cx, catY], "fmcbd", [catW, catH], "#9fbfff");
+    dis.setObject([cx, catY], "fmc", [catW - bt * 2, catH - bt * 2], "#3f77c4");
+    var float call ts = catH * 0.48;
+    dis.setText([cx, catY - ts * 0.085], "", "fmct", ts, false, "#ffffff");
+    dis.setText([cx - catW / 2 + catH * 0.5, catY - ts * 0.085], "◀", "fmcl", ts * 0.8, false, "#cfe0ff");
+    dis.setText([cx + catW / 2 - catH * 0.5, catY - ts * 0.085], "▶", "fmcr", ts * 0.8, false, "#cfe0ff");
+    can.setUi("fmcbd");
+    can.setUi("fmc");
+    can.setUi("fmct");
+    can.setUi("fmcl");
+    can.setUi("fmcr");
+    dis.setObjLayer("fmcbd", 61);
+    dis.setObjLayer("fmc", 62);
+    dis.setObjLayer("fmct", 63);
+    dis.setObjLayer("fmcl", 63);
+    dis.setObjLayer("fmcr", 63);
+    var float call top = catY - catH / 2 - m - ((h - catH - m * 3) - ghAll) / 2;   // 도구 칸 묶음을 남는 자리의 가운데에
+    var int call n = 1;
+    loop [n <= 48]{
+        var int call c = n - 1 - floor((n - 1) / 8) * 8;
+        var int call r = floor((n - 1) / 8);
+        var float call gx = cx - gw / 2 + side / 2 + c * (side + m);
+        var float call gy = top - side / 2 - r * (side + m);
+        var float call ic = floor(side * 0.8);
+        dis.setObject([gx, gy], "fmi%n%bd", [side, side], "#9fbfff");
+        dis.setObject([gx, gy], "fmi%n%", [side - bt * 2, side - bt * 2], "#263f6b");
+        dis.setObject([gx, gy], "fmi%n%ic", [ic, ic], "#ffffff");
+        dis.setObjAlpha("fmi%n%ic", 0);
+        var float call cs = side * 0.26;
+        dis.setText([gx + side / 2 - bt * 2.5, gy - side / 2 + bt * 2 + cs * 0.5], "", "fmi%n%ct", cs, false, "#ffffff");
+        dis.setTextNudge("fmi%n%ct", "right");
+        can.setUi("fmi%n%bd");
+        can.setUi("fmi%n%");
+        can.setUi("fmi%n%ic");
+        can.setUi("fmi%n%ct");
+        dis.setObjLayer("fmi%n%bd", 61);
+        dis.setObjLayer("fmi%n%", 62);
+        dis.setObjLayer("fmi%n%ic", 63);
+        dis.setObjLayer("fmi%n%ct", 64);
+        n = n + 1;
+    }
+    fmCurR = 0;
+    fmCurC = 0;
+}
+
+// 분류 이름 (fmLabels[fmCat]) · 칸마다 아이콘 (fmIcons) 과 개수 (fmCounts) 를 다시 넣음
+func bagFill(){
+    dis.setTxtContent("fmct", fmLabels[fmCat]);
+    var int call n = 1;
+    loop [n <= 48]{
+        if [fmIcons[n] != ""]{
+            mag.setObjTexture("fmi%n%ic", fmIcons[n], [0, 0], [32, 32]);
+            dis.setObjAlpha("fmi%n%ic", 255);
+            dis.setObjColor("fmi%n%", "#2f5f9f");
+        }
+        else{
+            dis.setObjAlpha("fmi%n%ic", 0);
+            dis.setObjColor("fmi%n%", "#263f6b");
+        }
+        dis.setTxtContent("fmi%n%ct", fmCounts[n]);
+        n = n + 1;
+    }
+}
+
+// 커서: row 1 = 분류 칸 · row 2 ~ 7 = 도구 칸 (col 번째) — 노란 테두리
+func bagCursor(int row, int col){
+    if [fmCurR == 1]{
+        dis.setObjColor("fmcbd", "#9fbfff");
+        dis.setObjColor("fmcl", "#cfe0ff");
+        dis.setObjColor("fmcr", "#cfe0ff");
+    }
+    if [fmCurR >= 2]{
+        var int call po = (fmCurR - 2) * 8 + fmCurC;
+        dis.setObjColor("fmi%po%bd", "#9fbfff");
+    }
+    if [row == 1]{
+        dis.setObjColor("fmcbd", "#ffe040");
+        dis.setObjColor("fmcl", "#ffe040");
+        dis.setObjColor("fmcr", "#ffe040");
+    }
+    else{
+        var int call pn = (row - 2) * 8 + col;
+        dis.setObjColor("fmi%pn%bd", "#ffe040");
+    }
+    fmCurR = row;
+    fmCurC = col;
+}
+
+func bagClose(){
+    dis.removeObj("fmbg");
+    dis.removeObj("fmcbd");
+    dis.removeObj("fmc");
+    dis.removeObj("fmct");
+    dis.removeObj("fmcl");
+    dis.removeObj("fmcr");
+    var int call n = 1;
+    loop [n <= 48]{
+        dis.removeObj("fmi%n%bd");
+        dis.removeObj("fmi%n%");
+        dis.removeObj("fmi%n%ic");
+        dis.removeObj("fmi%n%ct");
+        n = n + 1;
+    }
+}
+
+// 화면 가운데의 작은 선택 상자: fmLabels 의 줄들 (fmOff = 1 은 흐린 글자 — 고를 수는 있음) → fmResult (0 = X)
+func choice(float cx, float cy, float w, float h){
+    var int call n = fmLabels.length;
+    var float call rh = h * 0.11;
+    var float call bw = max(w * 0.26, rh * 3.2);
+    var float call bt = max(2, rh * 0.06);
+    var float call bh = rh * n + bt * 4;
+    dis.setObject([cx, cy], "fmqbd", [bw, bh], "#9fbfff");
+    dis.setObject([cx, cy], "fmq", [bw - bt * 2, bh - bt * 2], "#2f5f9f");
+    dis.setObject([cx, cy], "fmqsel", [bw - bt * 4, rh - bt], "#4f83c8");
+    can.setUi("fmqbd");
+    can.setUi("fmq");
+    can.setUi("fmqsel");
+    dis.setObjLayer("fmqbd", 70);
+    dis.setObjLayer("fmq", 71);
+    dis.setObjLayer("fmqsel", 72);
+    var int call i = 1;
+    loop [i <= n]{
+        var float call y = cy + bh / 2 - bt * 2 - rh * (i - 0.5);
+        var string call tc = "#ffffff";
+        if [fmOff[i] == 1]{
+            tc = "#8fa3c4";
+        }
+        var float call ts = rh * 0.5;
+        dis.setText([cx, y - ts * 0.085], fmLabels[i], "fmq%i%t", ts, false, tc);
+        can.setUi("fmq%i%t");
+        dis.setObjLayer("fmq%i%t", 73);
+        i = i + 1;
+    }
+    var int call sel = 1;
+    dis.setObjPos("fmqsel", [cx, cy + bh / 2 - bt * 2 - rh * 0.5]);
+    sou.setSpeaker("ui");
+    loop [ky.z()] for 500{
+        dis.waitF(1);
+    }
+    var int call out = -1;
+    loop [out < 0]{
+        var int call dst = sel;
+        var string call held = "";
+        if [isKeyInput("down")]{
+            held = "down";
+            dst = sel + 1;
+            if [dst > n]{
+                dst = 1;
+            }
+        }
+        if [isKeyInput("up")]{
+            held = "up";
+            dst = sel - 1;
+            if [dst < 1]{
+                dst = n;
+            }
+        }
+        if [held != ""]{
+            if [dst != sel]{
+                sel = dst;
+                dis.setObjPos("fmqsel", [cx, cy + bh / 2 - bt * 2 - rh * (sel - 0.5)]);
+                sou.playSfx("ui", "choose", 2000);
+            }
+            loop [isKeyInput(held)] for 300{
+                dis.waitF(1);
+            }
+        }
+        if [ky.z()]{
+            loop [ky.z()]{
+                dis.waitF(1);
+            }
+            sou.playSfx("ui", "choose", 2000);
+            out = sel;
+        }
+        if [ky.x()]{
+            loop [ky.x()]{
+                dis.waitF(1);
+            }
+            out = 0;
+        }
+        dis.waitF(1);
+    }
+    dis.removeObj("fmqbd");
+    dis.removeObj("fmq");
+    dis.removeObj("fmqsel");
+    i = 1;
+    loop [i <= n]{
+        dis.removeObj("fmq%i%t");
+        i = i + 1;
+    }
+    fmResult = out;
+}
+
+// 설명 화면: 제목 (+ 아이콘) 과 여러 줄 내용 (폭에 맞춰 줄바꿈 · 많아야 8 줄) + 맨 아래의 흐린 덧붙이는 말 (note · 없으면 "") — X 나 Z 로 닫음 · 다른 화면 위에 겹쳐 뜸
+func info(float cx, float cy, float w, float h, string title, string icon, string content, string note){
+    var float call m = h * 0.035;
+    var float call bt = max(2, h * 0.01);
+    var float call bw = w * 0.8;
+    var float call bh = h * 0.62;
+    dis.setObject([cx, cy], "fmnbd", [bw, bh], "#9fbfff");
+    dis.setObject([cx, cy], "fmn", [bw - bt * 2, bh - bt * 2], "#2f5f9f");
+    var float call ts = h * 0.07;
+    var float call tx = cx - bw / 2 + m * 1.5;
+    var float call ty = cy + bh / 2 - m * 1.5 - ts / 2;
+    var float call is = ts * 1.5;
+    dis.setObject([tx + is / 2, ty], "fmnic", [is, is], "#ffffff");
+    if [icon != ""]{
+        mag.setObjTexture("fmnic", icon, [0, 0], [32, 32]);
+        tx = tx + is + m * 0.5;
+    }
+    else{
+        dis.setObjAlpha("fmnic", 0);
+    }
+    dis.setText([tx, ty], title, "fmnt", ts, false, "#ffffff");
+    var float call ttw = 0;
+    dis.getVar("fmnt", "scale[1, 1]") as ttw;
+    var float call troom = cx + bw / 2 - m * 1.5 - tx;
+    if [ttw > troom]{   // 제목이 길면 글자를 줄임
+        dis.setText([tx, ty], title, "fmnt", ts * troom / ttw, false, "#ffffff");
+    }
+    dis.setTextNudge("fmnt", "left");
+    can.setUi("fmnbd");
+    can.setUi("fmn");
+    can.setUi("fmnic");
+    can.setUi("fmnt");
+    dis.setObjLayer("fmnbd", 75);
+    dis.setObjLayer("fmn", 76);
+    dis.setObjLayer("fmnic", 77);
+    dis.setObjLayer("fmnt", 77);
+    var float call ls = ts * 0.72;
+    var list call ln = splitStr(mu.wrapText(content, ls, bw - m * 3), "\n");
+    var int call q = 1;
+    loop [q <= 8]{
+        var string call lt = "";
+        if [q <= ln.length]{
+            lt = ln[q];
+        }
+        dis.setText([cx - bw / 2 + m * 1.5, ty - ts * 0.9 - ls * 1.35 * q], lt, "fmnl%q%", ls, false, "#cfe0ff");
+        dis.setTextNudge("fmnl%q%", "left");
+        can.setUi("fmnl%q%");
+        dis.setObjLayer("fmnl%q%", 77);
+        q = q + 1;
+    }
+    // 덧붙이는 말 (note): 상자 맨 아래에 흐린 글씨로 (많아야 2 줄 · 아래에서부터 채움)
+    var list call nl = [];
+    if [note != ""]{
+        nl = splitStr(mu.wrapText(note, ls, bw - m * 3), "\n");
+    }
+    q = 1;
+    loop [q <= 2]{
+        var string call nt = "";
+        var int call nAt = nl.length - 2 + q;
+        if [nl.length == 1]{
+            nAt = q - 1;
+        }
+        if [nAt >= 1] and [nAt <= nl.length]{
+            nt = nl[nAt];
+        }
+        dis.setText([cx - bw / 2 + m * 1.5, cy - bh / 2 + m * 1.5 + ls * 0.5 + ls * 1.35 * (2 - q)], nt, "fmnn%q%", ls, false, "#7f97c4");
+        dis.setTextNudge("fmnn%q%", "left");
+        can.setUi("fmnn%q%");
+        dis.setObjLayer("fmnn%q%", 77);
+        q = q + 1;
+    }
+    loop [ky.z()] for 500{
+        dis.waitF(1);
+    }
+    loop [ky.x()] for 500{
+        dis.waitF(1);
+    }
+    loop [ky.x() == 0] and [ky.z() == 0]{
+        dis.waitF(1);
+    }
+    sou.setSpeaker("ui");
+    sou.playSfx("ui", "choose", 2000);
+    loop [ky.x()]{
+        dis.waitF(1);
+    }
+    loop [ky.z()]{
+        dis.waitF(1);
+    }
+    dis.removeObj("fmnbd");
+    dis.removeObj("fmn");
+    dis.removeObj("fmnic");
+    dis.removeObj("fmnt");
+    q = 1;
+    loop [q <= 8]{
+        dis.removeObj("fmnl%q%");
+        q = q + 1;
+    }
+    dis.removeObj("fmnn1");
+    dis.removeObj("fmnn2");
+}
+
+// 내 포켓몬 고르기 (가방에서 도구를 쓸 때 등): 맨 위에 물음 (title) · 그 아래 2 x 3 칸 — 칸마다 이름 · 레벨 · HP · 상태 이상
+//   방향키로 고르고 Z 로 결정 · X 로 취소 → fmResult (고른 포켓몬 번호 · 0 = 취소) — 포켓몬이 없는 칸은 비어 있고 못 고름
+//   다른 화면 위에 겹쳐 뜸 (레이어 80 ~ 84) · 만든 오브젝트: fmybg · fmyt · fmy1 ~ fmy6 + bd · a · b (끝날 때 모두 지움)
+func party(float cx, float cy, float w, float h, string title){
+    var int call n = myParty.length;
+    if [n > 6]{
+        n = 6;
+    }
+    dis.setObject([cx, cy], "fmybg", [w, h], "#2f5f9f");
+    can.setUi("fmybg");
+    dis.setObjLayer("fmybg", 80);
+    var float call m = h * 0.035;
+    var float call tH = h * 0.11;
+    dis.setText([cx - w / 2 + m * 2, cy + h / 2 - m - tH / 2], title, "fmyt", tH * 0.5, false, "#ffffff");
+    dis.setTextNudge("fmyt", "left");
+    can.setUi("fmyt");
+    dis.setObjLayer("fmyt", 81);
+    var float call gh = h - tH - m;          // 칸들이 들어갈 높이
+    var float call gy = cy - h / 2 + gh / 2;
+    var float call cw = (w - m * 3) / 2;
+    var float call ch = (gh - m * 4) / 3;
+    var float call bt = max(2, ch * 0.03);
+    var int call i = 1;
+    loop [i <= 6]{
+        var int call c = i - 1 - floor((i - 1) / 2) * 2;
+        var int call r = floor((i - 1) / 2);
+        var float call x = cx - w / 2 + m + cw / 2 + c * (cw + m);
+        var float call y = gy + gh / 2 - m - ch / 2 - r * (ch + m);
+        var string call inner = "#263f6b";
+        var string call nm = "";
+        var string call sb = "";
+        var string call sc = "#cfe0ff";
+        if [i <= n]{
+            inner = "#2f5f9f";
+            var compound call pk = myParty[i];
+            nm = pg.pokeName(pk[1], pk[17]);
+            sb = "Lv." + pk[2] + "   HP " + pk[25] + " / " + hc.maxHp(i);
+            if [pk[25] <= 0]{
+                sb = sb + "   " + lang[3853];
+                sc = "#ff9a9a";
+            }
+            else if [pk[27] != 0]{
+                sb = sb + "   " + lang[1340 + pk[27]];
+                sc = "#ffd27a";
+            }
+        }
+        dis.setObject([x, y], "fmy%i%bd", [cw, ch], "#9fbfff");
+        dis.setObject([x, y], "fmy%i%", [cw - bt * 2, ch - bt * 2], inner);
+        var float call ts = ch * 0.26;
+        dis.setText([x, y + ch * 0.16], nm, "fmy%i%a", ts, false, "#ffffff");
+        dis.setText([x, y - ch * 0.2], sb, "fmy%i%b", ts * 0.62, false, sc);
+        can.setUi("fmy%i%bd");
+        can.setUi("fmy%i%");
+        can.setUi("fmy%i%a");
+        can.setUi("fmy%i%b");
+        dis.setObjLayer("fmy%i%bd", 82);
+        dis.setObjLayer("fmy%i%", 83);
+        dis.setObjLayer("fmy%i%a", 84);
+        dis.setObjLayer("fmy%i%b", 84);
+        i = i + 1;
+    }
+    var int call sel = 1;
+    if [n >= 1]{
+        dis.setObjColor("fmy1bd", "#ffe040");
+    }
+    sou.setSpeaker("ui");
+    loop [ky.z()] for 500{
+        dis.waitF(1);
+    }
+    var int call out = -1;
+    loop [out < 0]{
+        var int call dst = sel;
+        var string call held = "";
+        if [isKeyInput("right")]{
+            held = "right";
+            dst = sel + 1;
+        }
+        if [isKeyInput("left")]{
+            held = "left";
+            dst = sel - 1;
+        }
+        if [isKeyInput("down")]{
+            held = "down";
+            dst = sel + 2;
+        }
+        if [isKeyInput("up")]{
+            held = "up";
+            dst = sel - 2;
+        }
+        if [held != ""]{
+            if [dst >= 1] and [dst <= n] and [dst != sel]{
+                dis.setObjColor("fmy%sel%bd", "#9fbfff");
+                sel = dst;
+                dis.setObjColor("fmy%sel%bd", "#ffe040");
+                sou.playSfx("ui", "choose", 2000);
+            }
+            loop [isKeyInput(held)] for 300{
+                dis.waitF(1);
+            }
+        }
+        if [ky.z()]{
+            loop [ky.z()]{
+                dis.waitF(1);
+            }
+            if [n >= 1]{
+                sou.playSfx("ui", "choose", 2000);
+                out = sel;
+            }
+        }
+        if [ky.x()]{
+            loop [ky.x()]{
+                dis.waitF(1);
+            }
+            out = 0;
+        }
+        dis.waitF(1);
+    }
+    dis.removeObj("fmybg");
+    dis.removeObj("fmyt");
+    i = 1;
+    loop [i <= 6]{
+        dis.removeObj("fmy%i%bd");
+        dis.removeObj("fmy%i%");
+        dis.removeObj("fmy%i%a");
+        dis.removeObj("fmy%i%b");
+        i = i + 1;
+    }
+    fmResult = out;
+}
+
+// 지도: 지역 지도 그림 (mag 이미지 "regionMap" · mw x mh 픽셀) 을 화면에 맞춰 크게 · 마을마다 자리 (fmTx · fmTy = 그림 픽셀 · fmTn = 이름의 lang 번호)
+//   cur = 지금 있는 마을 (그 마을 네모가 노랗게 1 초마다 깜빡임) · 방향키로 그 쪽에서 가장 가까운 마을로 흰 틀이 옮겨 가고 맨 위에 이름 (지금 있는 곳이면 "현재 위치" 를 덧붙임: lang[7112])
+//   Z · X 로 닫음 · 만든 오브젝트: fmgbg · fmgt · fmgbd · fmgmap · fmgme · fmgc1 ~ fmgc4 (끝날 때 모두 지움)
+// road = 지금 있는 도로 (0 = 마을 · 1 = 1번도로): 도로에 있으면 그 도로를 노랗게 깜빡이고, 처음 제목은 "도로 이름 (현재 위치)" (마을 네모는 깜빡이지 않음)
+func townMap(float cx, float cy, float w, float h, int cur, int mw, int mh, int road){
+    var float call m = h * 0.03;
+    var float call tH = h * 0.11;
+    dis.setObject([cx, cy], "fmgbg", [w, h], "#2f5f9f");
+    dis.setText([cx - w / 2 + m * 2, cy + h / 2 - tH / 2 - tH * 0.05], "", "fmgt", tH * 0.5, false, "#ffffff");
+    dis.setTextNudge("fmgt", "left");
+    var float call aw = w - m * 2;
+    var float call ah = h - tH - m * 2;
+    var float call s = aw / mw;
+    if [ah / mh < s]{
+        s = ah / mh;
+    }
+    var float call dw = mw * s;
+    var float call dh = mh * s;
+    var float call mcx = cx;
+    var float call mcy = cy - tH / 2 + m * 0.2;
+    dis.setObject([mcx, mcy], "fmgbd", [dw + 6, dh + 6], "#9fbfff");
+    dis.setObject([mcx, mcy], "fmgmap", [dw, dh], "#ffffff");
+    mag.setObjTexture("fmgmap", "regionMap", [0, 0], [mw, mh]);
+    var float call left = mcx - dw / 2;
+    var float call top = mcy + dh / 2;
+    var float call ms = s * 9;   // 지금 있는 곳: 마을 네모 (9 x 9 픽셀) 를 노랗게 덮음
+    dis.setObject([left + (fmTx[cur] + 0.5) * s, top - (fmTy[cur] + 0.5) * s], "fmgme", [ms, ms], "#ffe040");
+    // 1번도로: 지도 그림의 길 (서쪽 끝 [0, 112] → 유풍시티 → [88, 112] → [100, 124] → 관산마을 [108, 124] · 길 폭 3 픽셀) 을 노란 조각으로 덮음
+    //   마을 네모 (9 x 9 · 유풍시티 x 44 ~ 52 · 관산마을 x 104 ~ 112) 위는 덮지 않음
+    var int call rn = 0;   // 도로 조각 수 (fmgr1 ~)
+    if [road == 1]{
+        dis.setObjAlpha("fmgme", 0);
+        dis.setObject([left + 22 * s, top - 112.5 * s], "fmgr1", [s * 44, s * 3], "#ffe040");   // [0 ~ 43, 112] (유풍시티 서쪽)
+        dis.setObject([left + 71 * s, top - 112.5 * s], "fmgr2", [s * 36, s * 3], "#ffe040");   // [53 ~ 88, 112] (유풍시티 동쪽)
+        dis.setObject([left + 102 * s, top - 124.5 * s], "fmgr3", [s * 4, s * 3], "#ffe040");   // [100 ~ 103, 124] (관산마을 앞까지)
+        rn = 3;
+        var int call rk = 1;
+        loop [rk <= 11]{   // [88, 112] → [100, 124]: 45 도 · 1 픽셀마다
+            rn = rn + 1;
+            dis.setObject([left + (88.5 + rk) * s, top - (112.5 + rk) * s], "fmgr%rn%", [s * 3, s * 3], "#ffe040");
+            rk = rk + 1;
+        }
+    }
+    // 보라매숲 (던전 · 지도 그림의 x 61 ~ 96 · y 105 ~ 143 사각형 안): 사각형 안의 길을 도로별로 나눠 둠 (노란 사각형 [x0, x1, y0, y1, …])
+    //   road 2 = 보라매숲 안: 숲을 지나는 1번도로 구간만 · road 3 = 숲 안의 11번도로 (세로) · road 4 = 숲 안의 11-1번도로 (대각선) — 1번도로에 있을 때 (road 1) 는 숲을 함께 깜박이지 않음
+    if [road >= 2] and [road <= 4]{
+        dis.setObjAlpha("fmgme", 0);
+        var list call frR = [61, 66, 111, 111, 70, 89, 111, 111, 61, 66, 112, 112, 70, 90, 112, 112, 61, 66, 113, 113, 70, 91, 113, 113, 88, 92, 114, 114, 89, 93, 115, 115, 90, 94, 116, 116, 91, 95, 117, 117, 92, 96, 118, 118, 93, 96, 119, 119, 94, 96, 120, 120, 95, 96, 121, 121, 96, 96, 122, 122, 67, 69, 111, 113];   // 1번도로 (숲 구간 · 11번도로와 엇갈리는 칸 포함)
+        if [road == 3]{
+            frR = [67, 69, 105, 143];   // 11번도로 (숲 구간)
+        }
+        if [road == 4]{
+            frR = [89, 90, 117, 117, 88, 91, 118, 118, 87, 91, 119, 119, 86, 90, 120, 120, 85, 89, 121, 121, 84, 88, 122, 122, 83, 87, 123, 123, 82, 86, 124, 124, 81, 85, 125, 125, 80, 84, 126, 126, 79, 83, 127, 127, 78, 82, 128, 128, 77, 81, 129, 129, 76, 80, 130, 130, 75, 79, 131, 131, 74, 78, 132, 132, 73, 77, 133, 133, 72, 76, 134, 134, 71, 75, 135, 135, 70, 74, 136, 136, 70, 73, 137, 137, 70, 72, 138, 138, 70, 71, 139, 139, 70, 70, 140, 140];   // 11-1번도로 (숲 구간)
+        }
+        var int call fk = 1;
+        loop [fk < frR.length]{
+            rn = rn + 1;
+            var float call fw = frR[fk + 1] - frR[fk] + 1;
+            var float call fh = frR[fk + 3] - frR[fk + 2] + 1;
+            dis.setObject([left + (frR[fk] + fw / 2) * s, top - (frR[fk + 2] + fh / 2) * s], "fmgr%rn%", [s * fw, s * fh], "#ffe040");
+            fk = fk + 4;
+        }
+    }
+    var int call rq = 1;
+    loop [rq <= rn]{
+        can.setUi("fmgr%rq%");
+        dis.setObjLayer("fmgr%rq%", 64);
+        rq = rq + 1;
+    }
+    var float call cs = s * 15;   // 고른 마을 틀 (한 변)
+    var float call cb = max(2, s * 1.2);
+    dis.setObject([0, 0], "fmgc1", [cs, cb], "#ffffff");   // 고른 마을 틀: 흰색 (노랑은 지금 있는 곳)
+    dis.setObject([0, 0], "fmgc2", [cs, cb], "#ffffff");
+    dis.setObject([0, 0], "fmgc3", [cb, cs], "#ffffff");
+    dis.setObject([0, 0], "fmgc4", [cb, cs], "#ffffff");
+    can.setUi("fmgbg");
+    can.setUi("fmgt");
+    can.setUi("fmgbd");
+    can.setUi("fmgmap");
+    can.setUi("fmgme");
+    dis.setObjLayer("fmgbg", 60);
+    dis.setObjLayer("fmgt", 61);
+    dis.setObjLayer("fmgbd", 61);
+    dis.setObjLayer("fmgmap", 62);
+    dis.setObjLayer("fmgme", 64);
+    var int call q = 1;
+    loop [q <= 4]{
+        can.setUi("fmgc%q%");
+        dis.setObjLayer("fmgc%q%", 63);
+        q = q + 1;
+    }
+    var int call sel = cur;
+    var int call moved = 1;
+    var int call blink = 0;
+    var int call roadT = 1;
+    sou.setSpeaker("ui");
+    loop [ky.z()] for 500{ dis.waitF(1); }
+    loop [ky.x()] for 500{ dis.waitF(1); }
+    var int call out = 0;
+    loop [out == 0]{
+        if [moved == 1]{
+            moved = 0;
+            var float call px = left + (fmTx[sel] + 0.5) * s;
+            var float call py = top - (fmTy[sel] + 0.5) * s;
+            dis.setObjPos("fmgc1", [px, py + cs / 2]);
+            dis.setObjPos("fmgc2", [px, py - cs / 2]);
+            dis.setObjPos("fmgc3", [px - cs / 2, py]);
+            dis.setObjPos("fmgc4", [px + cs / 2, py]);
+            var string call nm = lang[fmTn[sel]];
+            if [sel == cur] and [road == 0]{
+                nm = nm + "   " + lang[7112];
+            }
+            if [road == 1] and [roadT == 1]{   // 도로에 있음: 처음에는 도로 이름 (커서를 옮기면 마을 이름)
+                nm = lang[3827] + "   " + lang[7112];
+                roadT = 0;
+            }
+            if [road == 2] and [roadT == 1]{   // 보라매숲 (던전) 에 있음
+                nm = lang[7256] + "   " + lang[7112];
+                roadT = 0;
+            }
+            dis.setTxtContent("fmgt", nm);
+        }
+        // 지금 있는 곳 (마을 네모 · 도로): 0.5 초 켜짐 · 0.5 초 꺼짐
+        blink = blink + 1;
+        if [blink == 30]{
+            if [road == 0]{
+                dis.setObjAlpha("fmgme", 0);
+            }
+            var int call bq = 1;
+            loop [bq <= rn]{
+                dis.setObjAlpha("fmgr%bq%", 0);
+                bq = bq + 1;
+            }
+        }
+        if [blink >= 60]{
+            if [road == 0]{
+                dis.setObjAlpha("fmgme", 255);
+            }
+            var int call bq2 = 1;
+            loop [bq2 <= rn]{
+                dis.setObjAlpha("fmgr%bq2%", 255);
+                bq2 = bq2 + 1;
+            }
+            blink = 0;
+        }
+        var int call dir = 0;   // 1 오른쪽 · 2 왼쪽 · 3 아래 · 4 위
+        var string call held = "";
+        if [isKeyInput("right")]{
+            dir = 1;
+            held = "right";
+        }
+        if [isKeyInput("left")]{
+            dir = 2;
+            held = "left";
+        }
+        if [isKeyInput("down")]{
+            dir = 3;
+            held = "down";
+        }
+        if [isKeyInput("up")]{
+            dir = 4;
+            held = "up";
+        }
+        if [dir != 0]{
+            // 그 쪽으로 가장 가까운 마을 (옆으로 벗어난 만큼은 두 배로 침 · 옆으로 너무 벗어나면 빼냄)
+            var int call best = 0;
+            var float call bd = 999999;
+            var int call i = 1;
+            loop [i <= fmTx.length]{
+                if [i != sel]{
+                    var float call dx = fmTx[i] - fmTx[sel];
+                    var float call dy = fmTy[i] - fmTy[sel];
+                    var float call a = dx;
+                    var float call c = dy;
+                    if [dir == 2]{
+                        a = 0 - dx;
+                    }
+                    if [dir == 3]{
+                        a = dy;
+                        c = dx;
+                    }
+                    if [dir == 4]{
+                        a = 0 - dy;
+                        c = dx;
+                    }
+                    if [c < 0]{
+                        c = 0 - c;
+                    }
+                    if [a > 0] and [c <= a * 2]{
+                        var float call sc = a + c * 2;
+                        if [sc < bd]{
+                            bd = sc;
+                            best = i;
+                        }
+                    }
+                }
+                i = i + 1;
+            }
+            if [best != 0]{
+                sel = best;
+                moved = 1;
+                sou.playSfx("ui", "choose", 2000);
+            }
+            loop [isKeyInput(held)] for 300{ dis.waitF(1); }
+        }
+        if [ky.z()] or [ky.x()]{
+            loop [ky.z()] or [ky.x()]{ dis.waitF(1); }
+            out = 1;
+        }
+        dis.waitF(1);
+    }
+    dis.removeObj("fmgbg");
+    dis.removeObj("fmgt");
+    dis.removeObj("fmgbd");
+    dis.removeObj("fmgmap");
+    var int call rr = 1;
+    loop [rr <= rn]{
+        dis.removeObj("fmgr%rr%");
+        rr = rr + 1;
+    }
+    dis.removeObj("fmgme");
+    q = 1;
+    loop [q <= 4]{
+        dis.removeObj("fmgc%q%");
+        q = q + 1;
+    }
+}
+
+// 판 (panelShow) 아래쪽에 메뉴 칸과 같은 모양의 버튼을 한 줄로 (fmLabels · fmOff) — 좌우로 고르고 Z 로 결정 · X 로 닫음 → fmResult (0 = 닫음)
+//   오브젝트 fmb<i>bd · fmb<i> · fmb<i>tx (레이어 64 ~ 66) — 끝나면 지움
+func buttons(float cx, float cy, float w, float h){
+    var int call n = fmLabels.length;
+    var float call m = h * 0.035;
+    var float call ch = (h - m * 5) / 4;    // 메뉴 칸과 같은 높이
+    var float call cw = (w - m * 4 - m * (n - 1)) / n;
+    var float call bt = max(2, ch * 0.03);
+    var float call y = cy - h / 2 + m * 2 + ch / 2;
+    var int call i = 1;
+    loop [i <= n]{
+        var float call x = cx - w / 2 + m * 2 + cw / 2 + (i - 1) * (cw + m);
+        var string call inner = "#2f5f9f";
+        var string call tc = "#ffffff";
+        if [fmOff[i] == 1]{
+            inner = "#263f6b";
+            tc = "#7f93b8";
+        }
+        dis.setObject([x, y], "fmb%i%bd", [cw, ch], "#9fbfff");
+        dis.setObject([x, y], "fmb%i%", [cw - bt * 2, ch - bt * 2], inner);
+        var float call ts = ch * 0.3;
+        dis.setText([x, y - ts * 0.085], fmLabels[i], "fmb%i%tx", ts, false, tc);
+        can.setUi("fmb%i%bd");
+        can.setUi("fmb%i%");
+        can.setUi("fmb%i%tx");
+        dis.setObjLayer("fmb%i%bd", 64);
+        dis.setObjLayer("fmb%i%", 65);
+        dis.setObjLayer("fmb%i%tx", 66);
+        i = i + 1;
+    }
+    var int call sel = 1;
+    dis.setObjColor("fmb1bd", "#ffe040");
+    sou.setSpeaker("ui");
+    loop [ky.z()] or [ky.x()]{ dis.waitF(1); }
+    var int call out = -1;
+    loop [out < 0]{
+        var int call dst = sel;
+        var string call held = "";
+        if [isKeyInput("right")]{
+            held = "right";
+            dst = sel + 1;
+            if [dst > n]{
+                dst = 1;
+            }
+        }
+        if [isKeyInput("left")]{
+            held = "left";
+            dst = sel - 1;
+            if [dst < 1]{
+                dst = n;
+            }
+        }
+        if [held != ""]{
+            if [dst != sel] and [fmOff[dst] == 0]{
+                dis.setObjColor("fmb%sel%bd", "#9fbfff");
+                sel = dst;
+                dis.setObjColor("fmb%sel%bd", "#ffe040");
+                sou.playSfx("ui", "choose", 2000);
+            }
+            loop [isKeyInput(held)] for 300{ dis.waitF(1); }
+        }
+        if [ky.z()]{
+            loop [ky.z()]{ dis.waitF(1); }
+            if [fmOff[sel] == 0]{
+                sou.playSfx("ui", "choose", 2000);
+                out = sel;
+            }
+        }
+        if [ky.x()]{
+            loop [ky.x()]{ dis.waitF(1); }
+            out = 0;
+        }
+        dis.waitF(1);
+    }
+    i = 1;
+    loop [i <= n]{
+        dis.removeObj("fmb%i%bd");
+        dis.removeObj("fmb%i%");
+        dis.removeObj("fmb%i%tx");
+        i = i + 1;
+    }
+    fmResult = out;
+}
+
+// 판 (panelShow) 아래쪽에 메뉴 칸 같은 버튼을 cols 열로 (fmLabels · fmOff · "" = 빈 자리) — 위에서부터 줄 · 맨 아래 줄이 판 아래쪽
+//   방향키로 고르고 (빈 자리 · 고를 수 없는 칸은 건너뜀) Z 로 결정 · X 로 닫음 → fmResult (고른 칸 번호 · 0 = 닫음) · 오브젝트 fmg<i>… (끝나면 지움)
+func buttonGrid(float cx, float cy, float w, float h, int cols){
+    var int call n = fmLabels.length;
+    var int call nr = floor((n + cols - 1) / cols);
+    var float call m = h * 0.035;
+    var float call ch = (h - m * 5) / 4;
+    var float call cw = (w - m * 4 - m * (cols - 1)) / cols;
+    var float call bt = max(2, ch * 0.03);
+    var float call yb = cy - h / 2 + m * 2 + ch / 2;
+    var int call sel = 0;
+    var int call i = 1;
+    loop [i <= n]{
+        if [fmLabels[i] != ""]{
+            var int call r = floor((i - 1) / cols);
+            var int call c = i - 1 - r * cols;
+            var float call x = cx - w / 2 + m * 2 + cw / 2 + c * (cw + m);
+            var float call y = yb + (nr - 1 - r) * (ch + m);
+            var string call inner = "#2f5f9f";
+            var string call tc = "#ffffff";
+            if [fmOff[i] == 1]{
+                inner = "#263f6b";
+                tc = "#7f93b8";
+            }
+            else if [sel == 0]{
+                sel = i;
+            }
+            dis.setObject([x, y], "fmg%i%bd", [cw, ch], "#9fbfff");
+            dis.setObject([x, y], "fmg%i%in", [cw - bt * 2, ch - bt * 2], inner);
+            var float call ts = ch * 0.3;
+            dis.setText([x, y - ts * 0.085], fmLabels[i], "fmg%i%tx", ts, false, tc);
+            can.setUi("fmg%i%bd");
+            can.setUi("fmg%i%in");
+            can.setUi("fmg%i%tx");
+            dis.setObjLayer("fmg%i%bd", 64);
+            dis.setObjLayer("fmg%i%in", 65);
+            dis.setObjLayer("fmg%i%tx", 66);
+        }
+        i = i + 1;
+    }
+    dis.setObjColor("fmg%sel%bd", "#ffe040");
+    sou.setSpeaker("ui");
+    loop [ky.z()] or [ky.x()]{ dis.waitF(1); }
+    var int call out = -1;
+    loop [out < 0]{
+        var int call dst = 0;
+        var string call held = "";
+        var int call sr = floor((sel - 1) / cols);
+        var int call sc = sel - 1 - sr * cols;
+        if [isKeyInput("right")] and [sc < cols - 1]{
+            held = "right";
+            dst = sel + 1;
+        }
+        if [isKeyInput("left")] and [sc > 0]{
+            held = "left";
+            dst = sel - 1;
+        }
+        if [isKeyInput("down")] and [sel + cols <= n]{
+            held = "down";
+            dst = sel + cols;
+        }
+        if [isKeyInput("up")] and [sel - cols >= 1]{
+            held = "up";
+            dst = sel - cols;
+        }
+        if [held != ""]{
+            if [dst >= 1] and [dst <= n]{
+                if [fmLabels[dst] != ""] and [fmOff[dst] == 0]{
+                    dis.setObjColor("fmg%sel%bd", "#9fbfff");
+                    sel = dst;
+                    dis.setObjColor("fmg%sel%bd", "#ffe040");
+                    sou.playSfx("ui", "choose", 2000);
+                }
+            }
+            loop [isKeyInput(held)] for 300{ dis.waitF(1); }
+        }
+        if [ky.z()]{
+            loop [ky.z()]{ dis.waitF(1); }
+            sou.playSfx("ui", "choose", 2000);
+            out = sel;
+        }
+        if [ky.x()]{
+            loop [ky.x()]{ dis.waitF(1); }
+            out = 0;
+        }
+        dis.waitF(1);
+    }
+    i = 1;
+    loop [i <= n]{
+        if [fmLabels[i] != ""]{
+            dis.removeObj("fmg%i%bd");
+            dis.removeObj("fmg%i%in");
+            dis.removeObj("fmg%i%tx");
+        }
+        i = i + 1;
+    }
+    fmResult = out;
+}
+
+// 여러 쪽 글 (fmPages 의 글 하나 = 한 쪽 · 폭에 맞춰 줄바꿈 · 많아야 9 줄) — Z · 오른쪽 · 아래 = 다음 쪽 (마지막 쪽에서 Z = 닫음) · 왼쪽 · 위 = 앞 쪽 · X = 닫음
+func pages(float cx, float cy, float w, float h, string title){
+    var int call n = fmPages.length;
+    dis.setObject([cx, cy], "fmsbg", [w, h], "#2f5f9f");
+    var float call m = h * 0.035;
+    var float call bt = max(2, h * 0.01);
+    dis.setObject([cx, cy], "fmsbd", [w - m * 2, h - m * 2], "#9fbfff");
+    dis.setObject([cx, cy], "fmsin", [w - m * 2 - bt * 2, h - m * 2 - bt * 2], "#2f5f9f");
+    var float call ts = h * 0.07;
+    dis.setText([cx - w / 2 + m * 2.5, cy + h / 2 - m * 2.5 - ts / 2], title, "fmst", ts, false, "#ffffff");
+    dis.setTextNudge("fmst", "left");
+    dis.setText([cx + w / 2 - m * 2.5, cy + h / 2 - m * 2.5 - ts / 2], "", "fmsp", ts * 0.7, false, "#cfe0ff");
+    dis.setTextNudge("fmsp", "right");
+    var float call cs = ts * 0.62;
+    var float call lx = cx - w / 2 + m * 3;
+    var float call ly = cy + h / 2 - m * 3.5 - ts * 1.4;
+    var int call q = 1;
+    loop [q <= 9]{
+        dis.setText([lx, ly - (q - 1) * cs * 1.55], "", "fms%q%", cs, false, "#e8ecff");
+        dis.setTextNudge("fms%q%", "left");
+        q = q + 1;
+    }
+    can.setUi("fmsbg");
+    can.setUi("fmsbd");
+    can.setUi("fmsin");
+    can.setUi("fmst");
+    can.setUi("fmsp");
+    dis.setObjLayer("fmsbg", 70);
+    dis.setObjLayer("fmsbd", 71);
+    dis.setObjLayer("fmsin", 72);
+    dis.setObjLayer("fmst", 73);
+    dis.setObjLayer("fmsp", 73);
+    q = 1;
+    loop [q <= 9]{
+        can.setUi("fms%q%");
+        dis.setObjLayer("fms%q%", 73);
+        q = q + 1;
+    }
+    var int call pg0 = 1;
+    var int call shown = 0;
+    sou.setSpeaker("ui");
+    loop [ky.z()] or [ky.x()]{ dis.waitF(1); }
+    var int call done = 0;
+    loop [done == 0]{
+        if [shown != pg0]{
+            shown = pg0;
+            dis.setTxtContent("fmsp", "" + pg0 + " / " + n);
+            var list call ln = splitStr(mu.wrapText(fmPages[pg0], cs, w - m * 7), "\n");
+            q = 1;
+            loop [q <= 9]{
+                var string call lt = "";
+                if [q <= ln.length]{
+                    lt = ln[q];
+                }
+                dis.setTxtContent("fms%q%", lt);
+                q = q + 1;
+            }
+        }
+        var string call held = "";
+        if [isKeyInput("right")] or [isKeyInput("down")]{
+            held = "right";
+            if [isKeyInput("down")]{
+                held = "down";
+            }
+            if [pg0 < n]{
+                pg0 = pg0 + 1;
+                sou.playSfx("ui", "choose", 2000);
+            }
+        }
+        if [isKeyInput("left")] or [isKeyInput("up")]{
+            held = "left";
+            if [isKeyInput("up")]{
+                held = "up";
+            }
+            if [pg0 > 1]{
+                pg0 = pg0 - 1;
+                sou.playSfx("ui", "choose", 2000);
+            }
+        }
+        if [held != ""]{
+            loop [isKeyInput(held)] for 300{ dis.waitF(1); }
+        }
+        if [ky.z()]{
+            loop [ky.z()]{ dis.waitF(1); }
+            sou.playSfx("ui", "choose", 2000);
+            if [pg0 < n]{
+                pg0 = pg0 + 1;
+            }
+            else{
+                done = 1;
+            }
+        }
+        if [ky.x()]{
+            loop [ky.x()]{ dis.waitF(1); }
+            done = 1;
+        }
+        dis.waitF(1);
+    }
+    dis.removeObj("fmsbg");
+    dis.removeObj("fmsbd");
+    dis.removeObj("fmsin");
+    dis.removeObj("fmst");
+    dis.removeObj("fmsp");
+    q = 1;
+    loop [q <= 9]{
+        dis.removeObj("fms%q%");
+        q = q + 1;
+    }
+}

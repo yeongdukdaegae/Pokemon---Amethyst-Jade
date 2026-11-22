@@ -1,0 +1,255 @@
+Use jawbreaker call jaw;
+Use Canvas call can;
+Use DisPlayer call dis;
+Use Magellan call mag;
+Use soundMaster call sou;
+Use fieldItem call fi;
+Use fieldNpc call fn;
+Use fieldTalk call ft;
+Use centerCore call cc;
+Use bagCore call bg;   // 도전장 (도구 902) 이 있는지
+Use gymFly call gf;   // 유풍체육관 안의 글라이더 (fsAct 3888)
+Use pcCore call pcc;   // 포켓몬센터 PC (fsAct 3880)
+Use storyCore call sc;
+Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+Use trainers call tr;   // 이긴 뒤 잡담 번호 (chatL)
+
+// 필드 블록 선택: 플레이어가 바라보는 앞 칸을 표시하고, Z 를 누르면 그 칸과 상호작용
+//   고르는 칸 = 바라보는 쪽으로 플레이어 히트박스 (12 x 12) 가 걸친 마지막 칸의 다음 칸 · 다른 축은 플레이어 가운데가 있는 칸
+//   표시 (showSel = 1 일 때만 · 지금은 꺼 둠 — 칸은 그대로 고름): 옅은 면 + 테두리 — 노랑 (빈 칸) · 빨강 (막힌 칸) · 초록 (상호작용할 수 있는 칸) · 맵 밖이면 숨김
+//   칸 정보는 방 스크립트가 넣음: fsW · fsH (맵 크기) · fsZx · fsZy (맵의 [0, 0] 칸) · fsSolid · fsAct (왼쪽 위 칸부터 한 줄씩)
+//   상호작용: fsAct 의 값 = 메시지의 lang 번호 → 대사 상자 (4 줄) 에 한 글자씩 (50 밀리초) 보여 줌 · X 로 한 번에 다 · 다 나온 뒤에 Z 로 닫음 (그동안 못 움직임) · 열 때와 넘길 때 choose 소리
+
+var public int call fsW;
+var public int call fsH;
+var public int call fsZx;
+var public int call fsZy;
+var public float call fsOx;   // 맵의 [0, 0] 칸이 놓인 곳 (방 스크립트가 넣음)
+var public float call fsOy;
+var public list call fsSolid;
+var public list call fsAct;
+var public bit call canMove;
+var public int call direction;   // 1 왼쪽 · 2 오른쪽 · 3 아래 · 4 위 (jahui.jb)
+var public list call lang;
+var public int call fsNow;     // 지금 바라보는 칸의 상호작용 (0 = 없음) — prtgRoom.jb 의 임시 Z 배틀이 봄
+var public list call npName;   // 사람의 이름 (lang 번호 · 0 = 비네임드 → 이름 상자 없음)
+var public list call npKind;
+var public list call npTr;
+var public list call trDone;   // 이긴 트레이너 번호 (리포트 17 번째 칸)
+var public int call gymGo;     // 1 = 경기장 문에 도전장을 갖다 댐 → prtgRoom.jb 가 체육관 안으로
+var public int call bossTalk;  // 말을 건 레이드 보스 (사람 번호 · npKind 8) → prtgRoom.jb 가 배틀
+var public int call trTalk;    // 말을 건 트레이너 (사람 번호) → prtgRoom.jb 가 배틀   // 0 대사 · 1 간호순 · 2 점원 · 4 경비원
+var public compound call myParty;
+var public int call story;
+var public int call storyGo;
+var public int call fsDirty;   // 1 = 칸 정보 (fsAct) 가 바뀜 → 바라보는 칸을 다시 살핌 (lib/fieldNpc.jbl)
+var public list call npMsg;    // 필드의 사람 (lib/fieldNpc.jbl): fsAct 가 20000 + k 인 칸 = 사람 k 번 → 플레이어 쪽을 보고 lang[npMsg[k]]
+var public int call quitTitle;   // 1 = 리포트 작성 뒤 타이틀 화면으로 나감 (fieldMenu.jb) → 필드 코드들이 멈춤 · prtgRoom.jb 가 필드를 지우고 타이틀로
+var public list call fiCnt;    // 그 도구의 개수 ("… n 개를 주웠다!")
+var public list call fiItem;   // 필드에 놓인 도구 (lib/fieldItem.jbl): fsAct 가 10000 + k 인 칸 = 도구 k 번 → Z 로 주움
+
+run{
+    dis.setObject([0, 0], "fselF", [16, 16], "#ffffff");
+    dis.setObject([0, 0], "fselT", [16, 1], "#ffe14d");
+    dis.setObject([0, 0], "fselB", [16, 1], "#ffe14d");
+    dis.setObject([0, 0], "fselL", [1, 16], "#ffe14d");
+    dis.setObject([0, 0], "fselR", [1, 16], "#ffe14d");
+    dis.tagObj("fselF", "fsel");
+    dis.tagObj("fselT", "fsel");
+    dis.tagObj("fselB", "fsel");
+    dis.tagObj("fselL", "fsel");
+    dis.tagObj("fselR", "fsel");
+    dis.setObjLayer("<fsel>", -1);   // 타일 위 · 플레이어 아래
+    var int call lastC = -99;
+    var int call lastR = -99;
+    var int call lastW = -99;
+    var float call lastOy = -99;
+    var int call nowAct = 0;
+    fsNow = 0;
+    var int call showSel = 0;   // 1 = 고른 칸의 사각형을 보여 줌
+    dis.setObjAlpha("<fsel>", 0);
+    sou.setSpeaker("ui");
+    loop [ky.z()]{ dis.waitF(1); }
+    loop{
+        if [quitTitle == 1]{
+            break();
+        }
+        // 플레이어 가운데 (칸 단위): 칸 c 는 [c, c + 1) · 줄은 아래로 갈수록 커짐
+        var float call cxF = (obj.prtg.Xpos - fsOx) / 16.0 + fsZx + 0.5;
+        var float call cyF = fsZy + 0.5 - (obj.prtg.Ypos - fsOy) / 16.0;
+        var int call tc = floor(cxF);
+        var int call tr = floor(cyF);
+        if [direction == 1]{
+            tc = floor(cxF - 0.375 + 0.001) - 1;
+        }
+        if [direction == 2]{
+            tc = floor(cxF + 0.375 - 0.001) + 1;
+        }
+        if [direction == 4]{
+            tr = floor(cyF - 0.375 + 0.001) - 1;
+        }
+        if [direction == 3] or [direction == 0]{
+            tr = floor(cyF + 0.375 - 0.001) + 1;
+        }
+        if [tc != lastC] or [tr != lastR] or [fsW != lastW] or [fsOy != lastOy] or [fsDirty == 1]{   // 칸이 바뀌었거나 맵 · 칸 정보가 바뀜
+            fsDirty = 0;
+            lastC = tc;
+            lastR = tr;
+            lastW = fsW;
+            lastOy = fsOy;
+            nowAct = 0;
+            if [tc < 0] or [tr < 0] or [tc >= fsW] or [tr >= fsH]{
+                dis.setObjAlpha("<fsel>", 0);
+            }
+            else{
+                var int call at = tr * fsW + tc + 1;
+                var float call sx = fsOx + (tc - fsZx) * 16;
+                var float call sy = fsOy + (fsZy - tr) * 16;
+                dis.setObjPos("fselF", [sx, sy]);
+                dis.setObjPos("fselT", [sx, sy + 7.5]);
+                dis.setObjPos("fselB", [sx, sy - 7.5]);
+                dis.setObjPos("fselL", [sx - 7.5, sy]);
+                dis.setObjPos("fselR", [sx + 7.5, sy]);
+                var string call ec = "#ffe14d";
+                var string call fc = "#ffffff";
+                var int call fa = 38;
+                if [fsSolid[at] == 1]{
+                    ec = "#ff5050";
+                    fc = "#ff3030";
+                    fa = 51;
+                }
+                nowAct = fsAct[at];
+                if [nowAct != 0]{
+                    ec = "#7dff7d";
+                    fc = "#7dff7d";
+                    fa = 51;
+                }
+                dis.setObjColor("fselT", ec);
+                dis.setObjColor("fselB", ec);
+                dis.setObjColor("fselL", ec);
+                dis.setObjColor("fselR", ec);
+                dis.setObjColor("fselF", fc);
+                if [showSel == 1]{
+                    dis.setObjAlpha("<fsel>", 255);
+                    dis.setObjAlpha("fselF", fa);
+                }
+            }
+        }
+        if [ky.z()] and [canMove == 1] and [nowAct != 0]{
+            // 상호작용: 대사 상자 (화면에 고정 · 4 줄) — Z 로 닫음
+            canMove = 0;
+            sou.playSfx("ui", "choose", 2000);
+            var string call actText = "";
+            var string call whoName = "";   // 말하는 사람의 이름 ("" = 이름 상자 없음)
+            var int call npcKind = 0;       // 0 대사 · 1 간호순 · 2 점원 (lib/fieldNpc.jbl)
+            if [nowAct >= 20000]{   // 사람: 플레이어 쪽으로 돌아보고 대사
+                var int call nk = nowAct - 20000;
+                var int call nd = 3;
+                if [direction == 1]{
+                    nd = 2;
+                }
+                if [direction == 2]{
+                    nd = 1;
+                }
+                if [direction == 3]{
+                    nd = 4;
+                }
+                fn.face(nk, nd);
+                if [npMsg[nk] != 0]{   // 간호순 · 점원은 대사 번호 없음 (lib/centerCore.jbl 이 말함)
+                    actText = lang[npMsg[nk]];
+                }
+                if [npName[nk] != 0]{
+                    whoName = lang[npName[nk]];
+                }
+                npcKind = npKind[nk];
+                if [npcKind == 4]{   // 경비원: 포켓몬이 있으면 다른 대사 (없으면 npMsg = 막는 대사)
+                    if [myParty.length > 0]{
+                        actText = lang[3894];
+                    }
+                    npcKind = 0;
+                }
+                if [npcKind == 6]{   // 박사 현정: 고르기 전 · 뒤
+                    actText = lang[7217];
+                    if [story >= 3]{
+                        actText = lang[7218];
+                    }
+                    npcKind = 0;
+                }
+                if [npcKind == 7]{   // 트레이너: 이긴 뒤에는 대사 (npMsg) · 아직이면 prtgRoom.jb 가 배틀 대사 → 배틀
+                    if [trDone.find(npTr[nk]) != 0]{   // 이긴 뒤: 잡담 (트레이너마다 두 가지 중 하나)
+                        actText = lang[tr.chatL(npTr[nk]) + floor(jaw.random(0, 2))];
+                        npcKind = 0;
+                    }
+                    else{
+                        trTalk = nk;
+                        npcKind = -1;
+                    }
+                }
+                if [npcKind == 8]{   // 레이드 보스 (심볼): prtgRoom.jb 가 대사 → 배틀
+                    bossTalk = nk;
+                    npcKind = -1;
+                }
+                if [npcKind == 5]{   // 탁자 위의 스타팅 (이야기 2)
+                    sc.chooseStarter(nk);
+                    npcKind = -1;
+                }
+            }
+            else if [nowAct >= 10000]{   // 놓인 도구: 가방에 넣고 "…(을)를 주웠다!"
+                var int call fk = nowAct - 10000;
+                var int call fid = fiItem[fk];
+                actText = replaceStr(replaceStr(lang[3823], "{item}", lang[3000 + fid]), "{n}", "" + fiCnt[fk]);
+                fi.take(fk);
+                lastC = -99;   // 그 칸을 다시 살핌 (상호작용이 없어짐)
+            }
+            else if [nowAct == 7459]{   // 유풍체육관 로비의 경기장 문: 도전장 (도구 902) 이 있으면 열림 → prtgRoom.jb 가 체육관 안으로 · 없으면 막힘
+                if [bg.countOf(902) > 0]{
+                    actText = lang[7463];
+                    gymGo = 1;
+                }
+                else{
+                    actText = lang[7459];
+                }
+            }
+            else if [nowAct == 3888]{   // 유풍체육관 안 시작 발판의 글라이더: 착용 (lib/gymFly.jbl)
+                gf.equip();
+                npcKind = -1;
+            }
+            else if [nowAct == 3887]{   // 유풍체육관 로비의 도전 신청 단말기: 도전장 (도구 902) 발급 (lib/pcCore.jbl)
+                pcc.gymApply();
+                npcKind = -1;
+            }
+            else if [nowAct == 3880]{   // 포켓몬센터 구석의 PC: 계정 활성화 · 맡기기 · 데려가기 (lib/pcCore.jbl)
+                pcc.open();
+                npcKind = -1;
+            }
+            else{
+                actText = lang[nowAct];
+            }
+            // 대사 상자 (lib/fieldTalk.jbl) — 간호순 · 점원은 lib/centerCore.jbl 이 대사를 이어 감
+            if [npcKind == 1]{
+                cc.nurse(whoName);
+            }
+            else if [npcKind == -1]{   // 스타팅: 이미 끝남 (lib/storyCore.jbl)
+            }
+            else if [npcKind == 2]{
+                cc.clerk();
+            }
+            else{
+                log("상호작용: " + actText);
+                ft.open(whoName);
+                ft.say(actText);
+                ft.close();
+            }
+            if [storyGo == 0]{   // 스타팅을 고른 뒤에는 prtgRoom.jb 가 밖으로 데리고 나감 (그동안 못 움직임)
+                canMove = 1;
+            }
+        }
+        fsNow = nowAct;
+        dis.waitF(1);
+    }
+    dis.removeObj("fselF");
+    dis.removeObj("fselT");
+    dis.removeObj("fselB");
+    dis.removeObj("fselL");
+    dis.removeObj("fselR");
+}

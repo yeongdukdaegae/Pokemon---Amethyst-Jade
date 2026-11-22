@@ -1,0 +1,344 @@
+Lib id pcCore;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Canvas call can;
+Use Magellan call mag;
+Use soundMaster call sou;
+Use fieldTalk call ft;
+Use fieldMenu call fm;
+Use partyUi call pu;
+Use pokeGen call pg;
+Use pokeInfo call pin;
+Use bagCore call bg;
+Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+
+// 포켓몬센터 구석의 PC (fsAct 3880 · fieldSelect.jb 가 open() 을 부름)
+//   pcOn = 0: 박사에게 받은 계정 메모 (도구 901 · 중요한 물건) 가 있으면 "계정 활성화하기" → pcOn = 1 (리포트 18 번째 칸) · 없으면 "지금은 쓸 수 없다"
+//   pcOn = 1: 포켓몬 맡기기 (지닌 포켓몬 → PC · 마지막 한 마리는 안 됨) · 포켓몬 데려가기 (박스 화면 → 지닌 포켓몬) · 끝내기
+//   PC (pcBox) = 맡긴 포켓몬을 차례대로 · 박스 하나 = 8 x 6 = 48 칸 (가방 화면과 같은 모양 · 맨 윗칸에서 좌우로 박스를 바꿈) · 박스 수 pcBoxN (처음 2 · 리포트 19 번째 칸)
+
+var public compound call myParty;
+var public compound call pcBox;
+var public compound call bag;
+var public list call lang;
+var public int call pcOn;
+var public int call pcBoxN;
+var public float call pmX;   // 필드 메뉴의 칸 (menu 가 받음)
+var public float call pmY;
+var public float call pmW;
+var public float call pmH;
+var public int call pcMenu;   // 1 = 필드 메뉴의 PC (fieldMenu.jb) 에서 엶 → 알림은 대사 상자 대신 메뉴 모양 (fm.info)
+var public int call ftResult;
+var public int call puResult;
+var public int call puAny;
+var public int call puKeep;
+var public list call partyHp;
+var public list call fmLabels;
+var public list call fmOff;
+var public int call fmResult;
+var public list call fmIcons;
+var public list call fmCounts;
+var public int call fmCat;
+var public int call fmCurR;
+var public int call fmCurC;
+
+// 유풍체육관 로비의 도전 신청 단말기 (fsAct 3887): "도전 신청서 발급" → 중요한 물건 유풍체육관 도전장 (도구 902) · 이미 있으면 안내만
+func gymApply(){
+    ft.open("");
+    if [bg.countOf(902) > 0]{
+        ft.say(lang[7461]);
+    }
+    else{
+        ft.type(lang[7458]);
+        ft.yesNo(lang[7460], lang[7388]);
+        if [ftResult == 1]{
+            var compound call gl = [902, 1];
+            bag.add(gl);
+            log("유풍체육관 도전장을 받음");
+            sou.playSfx("ui", "choose", 2000);
+            ft.say(replaceStr(replaceStr(lang[7239], "{item}", lang[3902]), "{n}", "1"));
+            ft.say(lang[7462]);
+        }
+    }
+    ft.close();
+}
+
+func open(){
+    if [pcBoxN < 1]{
+        pcBoxN = 2;
+    }
+    if [pcOn == 0]{
+        ft.open("");
+        if [bg.countOf(901) > 0]{
+            ft.type(lang[7386]);
+            ft.yesNo(lang[7387], lang[7388]);
+            if [ftResult == 1]{
+                pcOn = 1;
+                log("PC 계정 활성화");
+                ft.say(lang[7389]);
+            }
+        }
+        else{
+            ft.say(lang[3880]);
+        }
+        ft.close();
+    }
+    else{
+        var int call go = 1;
+        loop [go == 1]{
+            ft.open("");
+            ft.type(lang[7390]);
+            ft.choose3(lang[7391], lang[7392], lang[7393]);
+            var int call act = ftResult;
+            ft.close();
+            if [act == 1]{
+                deposit();
+            }
+            else if [act == 2]{
+                withdraw();
+            }
+            else{
+                go = 0;
+            }
+        }
+    }
+}
+
+func say(string t){
+    if [pcMenu == 1]{
+        fm.info(pmX, pmY, pmW, pmH, lang[3762], "", t, "");
+    }
+    else{
+        ft.open("");
+        ft.say(t);
+        ft.close();
+    }
+}
+
+// 필드 메뉴의 PC (스타팅을 받은 뒤 · 포켓몬센터의 PC 계정과 상관없이): 맡기기 · 데려가기 를 메뉴 모양으로 — X 로 돌아감
+func menu(float x, float y, float w, float h){
+    if [pcBoxN < 1]{
+        pcBoxN = 2;
+    }
+    pcMenu = 1;
+    pmX = x;
+    pmY = y;
+    pmW = w;
+    pmH = h;
+    var int call go = 1;
+    loop [go == 1]{
+        fmLabels = [];
+        fmLabels.add(lang[7391]);
+        fmLabels.add(lang[7392]);
+        fmOff = [0, 0];
+        fm.choice(x, y, w, h);
+        if [fmResult == 1]{
+            deposit();
+        }
+        else if [fmResult == 2]{
+            withdraw();
+        }
+        else{
+            go = 0;
+        }
+    }
+    pcMenu = 0;
+}
+
+// 맡기기: 지닌 포켓몬 창에서 고름 (X = 그만둠)
+func deposit(){
+    if [myParty.length <= 1]{
+        say(lang[7396]);
+    }
+    else if [pcBox.length >= pcBoxN * 48]{
+        say(lang[7397]);
+    }
+    else{
+        var float call cx = 0;
+        var float call cy = 0;
+        var float call w = dis.displayX;
+        var float call h = dis.displayY;
+        if [dis.idWidthmode == 0]{
+            cy = dis.displayY / 4;
+            h = dis.displayY / 2;
+        }
+        if [pcMenu == 1]{   // 필드 메뉴: 메뉴 칸 (맨 위 날짜 줄 아래)
+            cx = pmX;
+            cy = pmY;
+            w = pmW;
+            h = pmH;
+        }
+        partyHp = [];
+        var int call ph = 1;
+        loop [ph <= myParty.length]{
+            var compound call phk = myParty[ph];
+            partyHp.add(phk[25]);
+            ph = ph + 1;
+        }
+        puAny = 1;
+        puKeep = 0;
+        pu.choose(cx, cy, w, h, 0, 0, 0);
+        puAny = 0;
+        var int call di = puResult;
+        if [di > 0]{
+            var compound call dp = myParty[di];
+            pcBox.add(dp);
+            myParty.remove(di);
+            log("PC 에 맡김: " + dp[1]);
+            say(replaceStr(lang[7394], "{poke}", pg.pokeName(dp[1], dp[17])));
+        }
+    }
+}
+
+// 박스 화면 채우기: box 번째 박스 (48 칸) · 맨 윗칸 글자 = head
+func fillBox(int box, string head){
+    fmLabels = [];
+    fmLabels.add(head);
+    fmCat = 1;
+    fmIcons = [];
+    fmCounts = [];
+    var int call n = 1;
+    loop [n <= 48]{
+        var int call at = (box - 1) * 48 + n;
+        if [at <= pcBox.length]{
+            var compound call bp = pcBox[at];
+            fmIcons.add(pin.frontTex(bp[1]));
+            fmCounts.add("Lv." + bp[2]);
+        }
+        else{
+            fmIcons.add("");
+            fmCounts.add("");
+        }
+        n = n + 1;
+    }
+    fm.bagFill();
+    n = 1;
+    loop [n <= 48]{   // 포켓몬 그림은 96 x 96 (bagFill 은 도구 아이콘 32 x 32 로 자름)
+        var int call at2 = (box - 1) * 48 + n;
+        if [at2 <= pcBox.length]{
+            var compound call bp2 = pcBox[at2];
+            pin.setFront("fmi%n%ic", bp2[1]);   // 보이는 부분만 크게 (정보 화면과 같은 자르기)
+        }
+        n = n + 1;
+    }
+}
+
+func string boxHead(int box){
+    return(replaceStr(lang[7399], "{n}", "" + box) + "  (" + pcBox.length + " / " + (pcBoxN * 48) + ")");
+}
+
+// 데려가기: 박스 화면 (방향키 · 맨 윗칸에서 좌우 = 박스 바꾸기 · Z = 데려가기 · X = 나가기)
+func withdraw(){
+    if [myParty.length >= 6]{
+        say(lang[7398]);
+    }
+    else if [pcBox.length == 0]{
+        say(lang[7400]);
+    }
+    else{
+        var float call cx = 0;
+        var float call cy = 0;
+        var float call w = dis.displayX;
+        var float call h = dis.displayY;
+        if [dis.idWidthmode == 0]{
+            cy = dis.displayY / 4;
+            h = dis.displayY / 2;
+        }
+        if [pcMenu == 1]{   // 필드 메뉴: 메뉴 칸 (맨 위 날짜 줄 아래)
+            cx = pmX;
+            cy = pmY;
+            w = pmW;
+            h = pmH;
+        }
+        fm.bagDraw(cx, cy, w, h);
+        var int call box = 1;
+        fillBox(box, boxHead(box));
+        var int call r = 2;
+        var int call c = 1;
+        fm.bagCursor(r, c);
+        sou.setSpeaker("ui");
+        loop [ky.z()] or [ky.x()]{ dis.waitF(1); }
+        var int call out = 0;
+        loop [out == 0]{
+            var string call key = "";
+            var int call nr = r;
+            var int call nc = c;
+            if [isKeyInput("up")]{
+                key = "up";
+                nr = max(1, r - 1);
+            }
+            if [isKeyInput("down")]{
+                key = "down";
+                nr = min(7, r + 1);
+            }
+            if [isKeyInput("left")]{
+                key = "left";
+                if [r == 1]{
+                    box = box - 1;
+                    if [box < 1]{
+                        box = pcBoxN;
+                    }
+                    fillBox(box, boxHead(box));
+                }
+                else{
+                    nc = max(1, c - 1);
+                }
+            }
+            if [isKeyInput("right")]{
+                key = "right";
+                if [r == 1]{
+                    box = box + 1;
+                    if [box > pcBoxN]{
+                        box = 1;
+                    }
+                    fillBox(box, boxHead(box));
+                }
+                else{
+                    nc = min(8, c + 1);
+                }
+            }
+            if [key != ""]{
+                if [nr != r] or [nc != c]{
+                    r = nr;
+                    c = nc;
+                    fm.bagCursor(r, c);
+                    var string call hd = boxHead(box);
+                    if [r >= 2]{
+                        var int call at = (box - 1) * 48 + (r - 2) * 8 + c;
+                        if [at <= pcBox.length]{
+                            var compound call hp = pcBox[at];
+                            hd = pg.pokeName(hp[1], hp[17]) + "  Lv." + hp[2];
+                        }
+                    }
+                    dis.setTxtContent("fmct", hd);
+                }
+                sou.playSfx("ui", "choose", 2000);
+                loop [isKeyInput(key)] for 200{ dis.waitF(1); }
+            }
+            if [ky.z()]{
+                loop [ky.z()]{ dis.waitF(1); }
+                if [r >= 2]{
+                    var int call wa = (box - 1) * 48 + (r - 2) * 8 + c;
+                    if [wa <= pcBox.length]{
+                        sou.playSfx("ui", "choose", 2000);
+                        var compound call wp = pcBox[wa];
+                        myParty.add(wp);
+                        pcBox.remove(wa);
+                        log("PC 에서 데려감: " + wp[1]);
+                        fillBox(box, replaceStr(lang[7395], "{poke}", pg.pokeName(wp[1], wp[17])));
+                        if [myParty.length >= 6] or [pcBox.length == 0]{
+                            wait(800);
+                            out = 1;
+                        }
+                    }
+                }
+            }
+            if [ky.x()]{
+                loop [ky.x()]{ dis.waitF(1); }
+                out = 1;
+            }
+            dis.waitF(1);
+        }
+        fm.bagClose();
+    }
+}

@@ -1,0 +1,270 @@
+Lib id evoCore;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Magellan call mag;
+Use Canvas call can;
+Use soundMaster call sou;
+Use pokeGen call pg;
+Use fieldTalk call ft;
+Use pokeInfo call pin;
+Use battleCore call bc;
+Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+
+// 진화 (4세대 방식): 배틀에서 레벨이 오른 포켓몬 (evoQ · battleManager.jb 가 적음) 을 배틀이 끝난 뒤 필드에서 차례로 진화시킴
+//   조건: 아직 기절하지 않음 · 진화 레벨 (pg.evoTo · pg.evoLv) 이상 · 진화하지 않는 돌 (지닌 도구 229) 이 없음
+//   화면: 검은 바탕 (필드 메뉴와 같은 자리) 가운데에 앞모습 → "어라…!? (이름)의 모습이…!" · 진화 음악
+//     → 하얀 실루엣이 되어 진화 전 · 진화 후 실루엣이 번갈아 커졌다 작아졌다 (점점 빠르게) — 이 동안 X 를 누르면 멈춤 ("변화가 멈췄다!")
+//     → 끝까지 가면 화면이 하얗게 번쩍 → 진화 후 모습 · 축하 음악 (한 번) · 울음소리 · "축하합니다! …"
+//     → 종족 · 능력치 (최대 HP 가 늘어난 만큼 남은 HP 도) · 특성 (같은 칸) 을 바꾸고, 진화 후 포켓몬이 지금 레벨에 배우는 기술을 배움 (칸이 다 찼으면 정보 화면 · lib/pokeInfo.jbl)
+//   레이어 70 ~ 76 (대화 상자 80 ~ · 정보 화면 100 ~ 위에) · 모두 화면에 고정 · 끝나면 지움
+//   음악은 끝나면 끊기만 함 → prtgRoom.jb 가 필드 음악을 다시 틂
+
+var public compound call myParty;
+var public list call lang;
+var public compound call movedex;
+var public compound call learnset;
+var public list call learnsetIds;
+var public list call evoQ;         // 배틀에서 레벨이 오른 포켓몬의 칸 번호
+var public int call pinResult;
+var public int call evCancel;      // 1 = X 로 멈춤
+var int call evNew;                // 진화 후 id (runAll · evolveTo 가 정함)
+
+func string tex(int id){
+    var list call frontIds = [67, 68, 69, 70, 71, 74, 75, 76, 77, 78, 79, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 111, 112, 113, 114, 115, 116, 117, 118, 120, 121, 122, 123, 124, 125, 126, 127, 128, 131, 132, 133, 134, 135, 136, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 175, 176, 80, 177, 178, 10, 12, 179, 180, 181, 182, 183, 184, 185, 186, 187, 81, 82, 83, 84, 85, 86, 72, 73, 151];
+    if [frontIds.find(id) != 0]{
+        return("%id%f");
+    }
+    return("backNone");
+}
+
+// ms 동안 기다리며 X 를 살핌 (누르면 evCancel = 1)
+func pause(int ms){
+    loop [ky.x() == 0] for ms{
+        dis.waitF(1);
+    }
+    if [ky.x() == 1]{
+        evCancel = 1;
+    }
+}
+
+func runAll(){
+    var int call i = 1;
+    loop [i <= myParty.length]{
+        if [evoQ.find(i) != 0]{
+            var compound call pk = myParty[i];
+            var int call tgt = pg.levelEvoTo(i);   // 레벨 · 친밀도 · 시간대 · 기술 조건 (lib/pokeGen.jbl)
+            if [tgt != 0] and [pk[25] > 0] and [pk[21] != 229]{
+                evNew = tgt;
+                evolve(i);
+            }
+        }
+        i = i + 1;
+    }
+    evoQ = [];
+}
+
+// 정해진 모습으로 진화 (진화의 돌 · fieldMenu.jb → prtgRoom.jb) — 진화하지 않는 돌과 상관없음
+func evolveTo(int idx, int tgt){
+    evNew = tgt;
+    evolve(idx);
+}
+
+func evolve(int idx){
+    var compound call pk = myParty[idx];
+    var int call oldId = pk[1];
+    var int call newId = evNew;
+    var string call nm = pg.pokeName(oldId, pk[17]);
+    var float call cx = 0;
+    var float call cy = 0;
+    var float call W = dis.displayX;
+    var float call H = dis.displayY;
+    if [dis.idWidthmode == 0]{
+        cy = dis.displayY / 4;
+        H = dis.displayY / 2;
+    }
+    var float call S = H * 0.5;
+    var float call sy = cy + H * 0.14;
+    var float call bgH = H;
+    if [dis.idWidthmode == 1]{   // PC: 화면 위아래 끝까지 덮음
+        bgH = H + 250;
+    }
+    dis.setObject([cx, cy], "evbg", [W, bgH], "#000000");
+    dis.setObject([cx, sy], "evold", [S, S], "#ffffff");
+    mag.setObjTexture("evold", tex(oldId), [0, 0], [96, 96]);
+    dis.setObject([cx, sy], "evnew", [S, S], "#ffffff");
+    mag.setObjTexture("evnew", tex(newId), [0, 0], [96, 96]);
+    dis.setObject([cx, cy], "evfl", [W, bgH], "#ffffff");
+    can.setUi("evbg");
+    can.setUi("evold");
+    can.setUi("evnew");
+    can.setUi("evfl");
+    dis.setObjLayer("evbg", 70);
+    dis.setObjLayer("evold", 72);
+    dis.setObjLayer("evnew", 73);
+    dis.setObjLayer("evfl", 76);
+    dis.setObjAlpha("evnew", 0);
+    dis.setObjAlpha("evfl", 0);
+    dis.setObjAlpha("evbg", 0);
+    dis.setObjAlpha("evold", 0);
+    dis.setObjAlpha("evbg", 255) for 300;
+    dis.setObjAlpha("evold", 255) for 300;
+    wait(320);
+    sou.break("global", true);
+    sou.repeatingPlay("global", "evolution", 0);
+    log("진화 시작: " + lang[50 + oldId] + " → " + lang[50 + newId]);
+    ft.open("");
+    ft.type(replaceStr(lang[7243], "{poke}", nm));
+    bc.cry(oldId);
+    wait(1200);
+    // 하얀 실루엣
+    dis.setObjOverlay("evold", "#ffffff", 255) for 700;
+    wait(720);
+    dis.setObjOverlay("evnew", "#ffffff", 255);
+    dis.setObjScale("evnew", [S * 0.1, S * 0.1]);
+    dis.setObjAlpha("evnew", 255);
+    evCancel = 0;
+    loop [ky.x()]{ dis.waitF(1); }   // 대사를 넘기던 X 로 바로 멈추지 않게
+    var float call Tf = 560;
+    var int call T = 560;
+    var float call sm = S * 0.1;
+    loop [T > 45] and [evCancel == 0]{
+        dis.setObjScale("evold", [sm, sm]) for T;
+        dis.setObjScale("evnew", [S, S]) for T;
+        pause(T);
+        if [evCancel == 0]{
+            dis.setObjScale("evold", [S, S]) for T;
+            dis.setObjScale("evnew", [sm, sm]) for T;
+            pause(T);
+        }
+        Tf = Tf * 0.84;
+        T = floor(Tf);
+    }
+    if [evCancel == 0]{
+        dis.setObjScale("evold", [sm, sm]) for 120;
+        dis.setObjScale("evnew", [S, S]) for 120;
+        wait(140);
+    }
+    ft.close();
+    sou.break("global", true);
+    if [evCancel == 1]{   // 멈춤: 원래 모습으로
+        dis.setObjScale("evnew", [sm, sm]);
+        dis.setObjAlpha("evnew", 0);
+        dis.setObjScale("evold", [S, S]);
+        dis.setObjOverlay("evold", "#ffffff", 0) for 300;
+        wait(320);
+        log("진화 멈춤: " + lang[50 + oldId]);
+        ft.open("");
+        ft.say(replaceStr(lang[7245], "{poke}", nm));
+        ft.close();
+    }
+    else{
+        // 번쩍 → 진화 후 모습
+        dis.setObjAlpha("evfl", 255) for 250;
+        wait(260);
+        dis.setObjAlpha("evold", 0);
+        dis.setObjOverlay("evnew", "#ffffff", 0);
+        dis.setObjAlpha("evfl", 0) for 600;
+        wait(400);
+        // 데이터: 종족 · 남은 HP (최대 HP 가 늘어난 만큼) · 특성 (같은 칸)
+        var int call oldMax = pg.calcStat(pg.baseStat(oldId, 1), pk[3], pk[9], pk[2], 1);
+        var int call newMax = pg.calcStat(pg.baseStat(newId, 1), pk[3], pk[9], pk[2], 1);
+        var int call ab = pk[16];
+        if [pk[28] == 1] and [pg.abilityAt(newId, 3) != 0]{   // 숨겨진 특성 → 진화 후의 숨겨진 특성
+            ab = pg.abilityAt(newId, 3);
+        }
+        if [pk[28] == 0]{
+            if [ab == pg.abilityAt(oldId, 2)] and [pg.abilityAt(newId, 2) != 0]{
+                ab = pg.abilityAt(newId, 2);
+            }
+            else{
+                ab = pg.abilityAt(newId, 1);
+            }
+        }
+        pk[1] = newId;
+        pk[16] = ab;
+        pk[25] = pk[25] + newMax - oldMax;
+        myParty[idx] = pk;
+        sou.repeatingPlay("global", "evolved", 1);
+        bc.cry(newId);
+        log("진화: " + lang[50 + oldId] + " → " + lang[50 + newId] + " · HP " + pk[25] + "/" + newMax);
+        ft.open("");
+        ft.type(replaceStr(replaceStr(lang[7244], "{poke}", nm), "{new}", lang[50 + newId]));
+        wait(4800);   // 축하 음악이 끝날 때까지
+        ft.waitZ();
+        ft.close();
+        learnNow(idx);
+    }
+    dis.setObjAlpha("evbg", 0) for 300;
+    dis.setObjAlpha("evold", 0) for 300;
+    dis.setObjAlpha("evnew", 0) for 300;
+    wait(320);
+    dis.removeObj("evbg");
+    dis.removeObj("evold");
+    dis.removeObj("evnew");
+    dis.removeObj("evfl");
+}
+
+// 진화 후 포켓몬이 지금 레벨에 배우는 기술
+func learnNow(int idx){
+    var compound call pk = myParty[idx];
+    var int call id = pk[1];
+    var list call ls = [];
+    if [learnsetIds.find(id) != 0]{
+        ls = learnset[id];
+    }
+    var string call nm = pg.pokeName(id, pk[17]);
+    var int call li = 1;
+    loop [li < ls.length]{
+        if [ls[li] == pk[2]] or [ls[li] == -1]{   // 지금 레벨에 배우는 기술 · 진화할 때 배우는 기술 (레벨 -1)
+            var int call mv = ls[li + 1];
+            pk = myParty[idx];
+            var compound call km = pk[22];
+            if [km.find(mv) == 0]{
+                if [km.length < 4]{
+                    var compound call kp = pk[23];
+                    var compound call ku = pk[24];
+                    km.add(mv);
+                    kp.add(movedex[mv][7]);
+                    ku.add(0);
+                    pk[22] = km;
+                    pk[23] = kp;
+                    pk[24] = ku;
+                    myParty[idx] = pk;
+                    ft.open("");
+                    ft.say(replaceStr(replaceStr(lang[1311], "{poke}", nm), "{move}", lang[300 + mv]));
+                    ft.close();
+                }
+                else{
+                    ft.open("");
+                    ft.say(replaceStr(replaceStr(lang[7234], "{poke}", nm), "{move}", lang[300 + mv]));
+                    ft.close();
+                    pin.open(idx, mv);
+                    pk = myParty[idx];
+                    var int call fgt = pinResult;
+                    ft.open("");
+                    if [fgt > 0]{
+                        km = pk[22];
+                        var compound call kp2 = pk[23];
+                        var compound call ku2 = pk[24];
+                        var int call oldMv = km[fgt];
+                        km[fgt] = mv;
+                        kp2[fgt] = movedex[mv][7];
+                        ku2[fgt] = 0;
+                        pk[22] = km;
+                        pk[23] = kp2;
+                        pk[24] = ku2;
+                        myParty[idx] = pk;
+                        ft.say(replaceStr(replaceStr(lang[7235], "{poke}", nm), "{old}", lang[300 + oldMv]));
+                        ft.say(replaceStr(replaceStr(lang[1311], "{poke}", nm), "{move}", lang[300 + mv]));
+                    }
+                    else{
+                        ft.say(replaceStr(replaceStr(lang[7236], "{poke}", nm), "{move}", lang[300 + mv]));
+                    }
+                    ft.close();
+                }
+                log("진화 뒤 기술: " + lang[300 + mv]);
+            }
+        }
+        li = li + 2;
+    }
+}

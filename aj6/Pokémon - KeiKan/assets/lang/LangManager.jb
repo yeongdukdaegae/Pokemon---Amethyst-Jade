@@ -1,0 +1,18 @@
+Use jawbreaker call jaw;
+
+var public list call lang;
+var public int call usingLang;
+
+run{
+    setup("assets/lang/eng.jb");
+    setup("assets/lang/kor.jb");
+    loop{
+        if [usingLang == 0]{
+            lang = engLang;
+        }
+        if [usingLang == 1]{
+            lang = korLang;
+        }
+        wait(16);
+    }
+}

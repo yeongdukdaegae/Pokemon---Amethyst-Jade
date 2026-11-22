@@ -1,0 +1,796 @@
+Use jawbreaker call jaw;
+Use Canvas call can;
+Use Magellan call mag;
+Use DisPlayer call dis;
+Use soundMaster call sou;
+Use fieldMenu call fm;
+Use timeCore call tmc;
+Use bagCore call bg;
+Use pokeGen call pg;
+Use healCore call hc;
+Use partyUi call pu;
+Use pokeInfo call pin;
+Use listUi call lu;
+Use pcCore call pcc;   // 메뉴의 PC (박스) · 포켓몬 메뉴의 박스로 보내기
+Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+
+// 필드 메뉴: 걸어 다닐 때 X 를 누르면 열림 (2 x 4 칸 · 포켓몬 교체 화면과 같은 모양) — 그동안은 못 움직임 · X 로 닫음
+//   맨 위에 날짜 · 시각 · 시간대 (timeCore.jbl 의 tmc.text · 왼쪽) · 소지금 (오른쪽)
+//   포켓몬  메세지
+//   PC      지도
+//   도감    도구
+//   설정    리포트 작성
+//   PC: 스타팅을 받은 뒤 (story 3 ~) 열림 → 박스 맡기기 · 데려가기 (lib/pcCore.jbl 의 menu)
+//   지금은 포켓몬 (빈 칸 6 개만 보여 줌) · 메세지 (받은 문자 한 통 · 내용은 아직 없음) · 지도 (지역 지도 · 지금 있는 곳) · 도구 (가방) · 리포트 작성 만 열림 — 나머지는 잠김 (fmOff 를 0 으로 바꾸면 고를 수 있음)
+
+var public list call fmLabels;
+var public list call fmPages;
+var public list call fmOff;
+var public int call fmResult;
+var public int call fmKeep;
+var public list call fmSubs;
+var public list call fmTx;   // 지도의 마을 자리 · 이름 (lib/fieldMenu.jbl 의 townMap)
+var public list call fmTy;
+var public list call fmTn;
+var public bit call isBoy;
+var public list call fmIcons;
+var public list call fmCounts;
+var public int call fmCat;
+var public compound call bag;          // 가방: [[도구 번호, 개수], …]
+var public matrix[8, 8] call selectUi;   // 가방 화면의 커서 (menuSelection.jb): 1 번째 줄 = 분류 8 칸 · 2 ~ 7 번째 줄 = 도구 칸 8 x 6
+var public list call selectedBox;      // [가로 칸, 세로 칸]
+var public bit call isUi;
+var public bit call canMove;
+var public int call fmClock;   // 1 = 메뉴가 열려 있음 → timeManager.jb 가 맨 위의 날짜 · 시각 글자 (fmhdrt) 를 1 분마다 고침
+var public list call lang;
+var public int call money;          // 소지금 (맨 위 오른쪽에 보여 줌)
+var public compound call myParty;
+var public int call repelSteps;   // 벌레회피스프레이: 남은 걸음 (0 = 효과 없음 · prtgRoom.jb 가 걸음마다 줄이고 야생 포켓몬을 막음)
+var public int call evPendI;    // 진화의 돌을 쓴 포켓몬 칸 (0 = 없음) → 메뉴를 닫고 prtgRoom.jb 가 진화
+var public int call evPendTo;   // 그 포켓몬이 진화할 모습
+var public int call quitTitle;
+var public int call reloadSave;   // 1 = 리포트를 파일에서 불러옴 → 타이틀 화면이 리포트를 다시 읽음   // 1 = 리포트 작성 뒤 타이틀 화면으로 나감 (fieldMenu.jb) → 필드 코드들이 멈춤 · prtgRoom.jb 가 필드를 지우고 타이틀로
+var public int call hcAmount;
+var public list call partyHp;      // 포켓몬 화면 (lib/partyUi.jbl) 이 보는 남은 체력
+var public int call puResult;
+var public int call puAny;
+var public int call story;   // 스타팅을 받은 뒤 (3 ~) 부터 메뉴의 PC 를 씀
+var public compound call pcBox;
+var public int call pcBoxN;
+var public int call puKeep;
+var public list call luLabels;
+var public list call luIcons;
+var public list call luOff;
+var public list call luCounts;
+var public int call luResult;
+var public int call luBase;
+var public int call place;
+var public int call zone;      // placeName.jb 의 구역 (4 = 1번도로)
+var public int call gMonth;
+var public int call gDay;
+var public int call gWeek;
+var public int call gHour;
+var public int call gMin;
+var public int call qMo;   // 리포트를 쓴 때의 시각 → 타이틀로 나가면 이 시각으로 돌림 (prtgRoom.jb)
+var public int call qDa;
+var public int call qWe;
+var public int call qHo;
+var public int call qMi;       // 회복 도구가 회복한 HP (lib/healCore.jbl)
+
+run{
+    sou.setSpeaker("ui");
+    loop [ky.x()]{ dis.waitF(1); }
+    loop{
+        if [ky.x()] and [canMove == 1]{
+            canMove = 0;
+            sou.playSfx("ui", "choose", 2000);
+            // 화면 전체 (모바일은 조작부 위의 화면)
+            var float call mX = 0;
+            var float call mY = 0;
+            var float call mW = dis.displayX;
+            var float call mH = dis.displayY;
+            if [dis.idWidthmode == 0]{
+                mY = dis.displayY / 4;
+                mH = dis.displayY / 2;
+            }
+            // 맨 위: 날짜 · 시각 (화면 높이의 9%) — 그 아래가 메뉴 칸
+            var float call hH = mH * 0.09;
+            dis.setObject([mX, mY + mH / 2 - hH / 2], "fmhdr", [mW, hH], "#263f6b");
+            dis.setText([mX - mW / 2 + hH * 0.4, mY + mH / 2 - hH / 2 - hH * 0.05], tmc.text(), "fmhdrt", hH * 0.52, false, "#ffffff");
+            dis.setTextNudge("fmhdrt", "left");
+            dis.setText([mX + mW / 2 - hH * 0.4, mY + mH / 2 - hH / 2 - hH * 0.05], replaceStr(lang[3845], "{m}", bg.comma(money)), "fmhdrm", hH * 0.52, false, "#ffe9a8");
+            dis.setTextNudge("fmhdrm", "right");
+            can.setUi("fmhdr");
+            can.setUi("fmhdrt");
+            can.setUi("fmhdrm");
+            dis.setObjLayer("fmhdrm", 67);
+            dis.setObjLayer("fmhdr", 66);
+            dis.setObjLayer("fmhdrt", 67);
+            fmClock = 1;
+            mY = mY - hH / 2;
+            mH = mH - hH;
+            var int call at = 1;
+            var int call open = 1;
+            loop [open == 1]{
+                fmLabels = [];
+                fmLabels.add(lang[3760]);
+                fmLabels.add(lang[3761]);
+                fmLabels.add(lang[3762]);
+                fmLabels.add(lang[3763]);
+                fmLabels.add(lang[3764]);
+                fmLabels.add(lang[3765]);
+                fmLabels.add(lang[3831]);   // 설정 (리포트 내보내기 · 불러오기)
+                fmLabels.add(lang[3832]);   // 리포트 작성
+                var int call pcLock = 1;   // PC (박스): 스타팅을 받은 뒤부터
+                if [story >= 3]{
+                    pcLock = 0;
+                }
+                fmOff = [0, 0, pcLock, 0, 1, 0, 0, 0];   // 설정: 리포트 내보내기 · 불러오기
+                fmKeep = 1;
+                fm.grid(mX, mY, mW, mH, at);
+                fmKeep = 0;
+                fm.gridClose();
+                at = fmResult;
+                if [fmResult == 0]{
+                    open = 0;
+                }
+                if [fmResult == 1]{   // 포켓몬: 지닌 포켓몬 (배틀의 교체 화면과 같은 모양) — Z 로 고르면 정보 · 아이템 · 도감 · 놓아주기 · X 로 메뉴로
+                    var int call pOpen = 1;
+                    loop [pOpen == 1]{
+                        partyHp = [];
+                        var int call ph = 1;
+                        loop [ph <= myParty.length]{
+                            var compound call phk = myParty[ph];
+                            partyHp.add(phk[25]);
+                            ph = ph + 1;
+                        }
+                        puAny = 1;
+                        puKeep = 1;   // 고른 뒤에도 포켓몬 창을 남겨 둠 (그 위에 메뉴 · 정보 화면)
+                        pu.choose(mX, mY, mW, mH, 0, 0, 0);
+                        puAny = 0;
+                        puKeep = 0;
+                        if [puResult == 0]{
+                            pOpen = 0;
+                            pu.close();
+                        }
+                        else{
+                            var int call pIdx = puResult;
+                            var compound call pPk = myParty[pIdx];
+                            var string call pNm = pg.pokeName(pPk[1], pPk[17]);
+                            fmLabels = [];
+                            fmLabels.add(lang[7219]);
+                            fmLabels.add(lang[7220]);
+                            fmLabels.add(lang[7374]);   // 지닌 물건 받기 (지닌 도구가 없으면 흐림)
+                            fmLabels.add(lang[7506]);   // 박스로 보내기 (스타팅을 받은 뒤 · 마지막 한 마리 · 박스가 가득 차면 흐림)
+                            fmLabels.add(lang[7221]);
+                            fmLabels.add(lang[7222]);
+                            var int call relOff = 0;
+                            if [myParty.length <= 1]{
+                                relOff = 1;
+                            }
+                            if [pPk.length >= 30]{   // 30: 볼 (스티커 볼 = 900 → 놓아줄 수 없음)
+                                if [pPk[30] == 900]{
+                                    relOff = 1;
+                                }
+                            }
+                            var int call heldOff = 1;
+                            if [pPk[21] != 0]{
+                                heldOff = 0;
+                            }
+                            var int call boxOff = 0;
+                            if [myParty.length <= 1] or [story < 3]{
+                                boxOff = 1;
+                            }
+                            if [pcBoxN < 1]{
+                                pcBoxN = 2;
+                            }
+                            if [pcBox.length >= pcBoxN * 48]{
+                                boxOff = 1;
+                            }
+                            fmOff = [0, 0, heldOff, boxOff, 1, relOff];
+                            fm.choice(mX, mY, mW, mH);
+                            var int call pAct = fmResult;
+                            if [pAct == 3]{   // 3 = 지닌 물건 받기 (→ 6) · 4 = 박스로 보내기 (→ 7) · 그 아래 (도감 · 놓아주기) 는 번호를 둘씩 당김
+                                pAct = 6;
+                            }
+                            else if [pAct == 4]{
+                                pAct = 7;
+                            }
+                            else if [pAct >= 5]{
+                                pAct = pAct - 2;
+                            }
+                            if [pAct == 7] and [boxOff == 1]{   // 박스로 보낼 수 없음
+                                var string call bxWhy = lang[7397];
+                                if [myParty.length <= 1]{
+                                    bxWhy = lang[7396];
+                                }
+                                fm.info(mX, mY, mW, mH, lang[7506], "", bxWhy, "");
+                                pAct = 0;
+                            }
+                            if [pAct == 7]{   // 박스로 보내기: PC 의 박스 (맨 뒤) 로 · 지닌 포켓몬에서 빠짐
+                                pcBox.add(pPk);
+                                myParty.remove(pIdx);
+                                log("박스로 보내기: " + pNm);
+                                fm.info(mX, mY, mW, mH, lang[7506], "", replaceStr(lang[7394], "{poke}", pNm), "");
+                            }
+                            if [pAct == 6] and [heldOff == 0]{   // 지닌 물건 받기: 가방으로
+                                var int call hId = pPk[21];
+                                pPk[21] = 0;
+                                myParty[pIdx] = pPk;
+                                var int call hFound = 0;
+                                var int call hi = 1;
+                                loop [hi <= bag.length]{
+                                    var compound call hb = bag[hi];
+                                    if [hb[1] == hId]{
+                                        hb[2] = hb[2] + 1;
+                                        bag[hi] = hb;
+                                        hFound = 1;
+                                    }
+                                    hi = hi + 1;
+                                }
+                                if [hFound == 0]{
+                                    var compound call hnb = [hId, 1];
+                                    bag.add(hnb);
+                                }
+                                log("지닌 물건 받기: " + hId + " ← " + pIdx);
+                                fm.info(mX, mY, mW, mH, lang[3000 + hId], "item_" + hId, replaceStr(replaceStr(lang[7375], "{poke}", pNm), "{item}", lang[3000 + hId]), "");
+                            }
+                            if [pAct == 1]{   // 정보: 큰 앞모습 + 기술 칸 (순서 바꾸기)
+                                pin.open(pIdx, 0);
+                            }
+                            if [pAct == 2]{   // 아이템: 볼 · 중요한 물건을 뺀 가방 목록 → 사용 / 지니게 하기
+                                luLabels = [];
+                                luIcons = [];
+                                luOff = [];
+                                luCounts = [];
+                                var list call iAt = [];
+                                var int call ii = 1;
+                                loop [ii <= bag.length]{
+                                    var compound call ie = bag[ii];
+                                    if [bg.cat(ie[1]) != 1] and ([bg.isKey(ie[1]) == 0] or [ie[1] == 903] or [ie[1] == 904]){   // 체육관 상처약 · 기력의조각 (중요한 물건이지만 씀)
+                                        iAt.add(ii);
+                                        luLabels.add(lang[3000 + ie[1]]);
+                                        luIcons.add("item_" + ie[1]);
+                                        luOff.add(0);
+                                        luCounts.add("x" + ie[2]);
+                                    }
+                                    ii = ii + 1;
+                                }
+                                if [iAt.length == 0]{
+                                    fm.info(mX, mY, mW, mH, lang[7220], "", lang[7232], "");
+                                }
+                                else{
+                                    var int call iRows = iAt.length;
+                                    if [iRows > 6]{
+                                        iRows = 6;
+                                    }
+                                    var float call iRh = mH * 0.085;
+                                    luBase = 70;
+                                    lu.open(mX + mW * 0.3, mY - iRh * iRows / 2, mW * 0.6, iRh, iRows);
+                                    luBase = 0;
+                                    if [luResult > 0]{
+                                        var int call iBAt = iAt[luResult];
+                                        var compound call iIt = bag[iBAt];
+                                        var int call iId = iIt[1];
+                                        fmLabels = [];
+                                        fmLabels.add(lang[3844]);
+                                        fmLabels.add(lang[7227]);
+                                        fmOff = [1 - hc.usable(iId), 0];
+                                        fm.choice(mX, mY, mW, mH);
+                                        var int call iAct = fmResult;
+                                        var int call iTake = 0;
+                                        var int call oldIt = 0;
+                                        var string call iMsg = "";
+                                        if [iAct == 1] and ([iId == 79] or [iId == 76] or [iId == 77]){   // 벌레회피스프레이 계열: 포켓몬과 상관없이 씀
+                                            iMsg = replaceStr(lang[7293], "{item}", lang[3000 + iId]);
+                                            if [repelSteps == 0]{
+                                                repelSteps = 100;
+                                                if [iId == 76]{
+                                                    repelSteps = 200;
+                                                }
+                                                if [iId == 77]{
+                                                    repelSteps = 250;
+                                                }
+                                                iTake = 1;
+                                                iMsg = replaceStr(lang[7292], "{item}", lang[3000 + iId]);
+                                            }
+                                            iAct = 3;
+                                        }
+                                        if [iAct == 1] and [pg.isStone(iId) == 1]{   // 진화의 돌: 진화할 수 있으면 하나 쓰고 메뉴를 닫음 → prtgRoom.jb 가 진화
+                                            var int call sTo = pg.stoneEvoTo(pPk[1], iId);
+                                            iMsg = lang[3843];
+                                            if [sTo != 0]{
+                                                evPendI = pIdx;
+                                                evPendTo = sTo;
+                                                iTake = 1;
+                                                pOpen = 0;
+                                                open = 0;
+                                            }
+                                            iAct = 3;
+                                        }
+                                        if [iAct == 1]{   // 사용 (회복 도구)
+                                            var int call uK = hc.apply(iId, pIdx);
+                                            iMsg = lang[3843];
+                                            if [uK == 1] or [uK == 4]{
+                                                iMsg = replaceStr(replaceStr(lang[3840], "{poke}", pNm), "{n}", "" + hcAmount);
+                                            }
+                                            if [uK == 2]{
+                                                iMsg = replaceStr(lang[3841], "{poke}", pNm);
+                                            }
+                                            if [uK == 3]{
+                                                iMsg = replaceStr(lang[3842], "{poke}", pNm);
+                                            }
+                                            if [uK != 0]{
+                                                iTake = 1;
+                                            }
+                                        }
+                                        if [iAct == 2]{   // 지니게 하기: 원래 지닌 도구는 가방으로
+                                            pPk = myParty[pIdx];
+                                            oldIt = pPk[21];
+                                            pPk[21] = iId;
+                                            myParty[pIdx] = pPk;
+                                            iTake = 1;
+                                            iMsg = replaceStr(replaceStr(lang[7228], "{poke}", pNm), "{item}", lang[3000 + iId]);
+                                            if [oldIt != 0]{
+                                                iMsg = replaceStr(replaceStr(replaceStr(lang[7229], "{poke}", pNm), "{item}", lang[3000 + iId]), "{old}", lang[3000 + oldIt]);
+                                            }
+                                        }
+                                        if [iTake == 1]{   // 하나 줄임 (먼저 줄인 뒤 원래 지닌 도구를 넣음 · 칸 번호가 바뀌지 않게)
+                                            if [iIt[2] > 1]{
+                                                iIt[2] = iIt[2] - 1;
+                                                bag[iBAt] = iIt;
+                                            }
+                                            else{
+                                                bag.remove(iBAt);
+                                            }
+                                            if [iAct == 2] and [oldIt != 0]{
+                                                var int call aFound = 0;
+                                                var int call ai = 1;
+                                                loop [ai <= bag.length]{
+                                                    var compound call ab = bag[ai];
+                                                    if [ab[1] == oldIt]{
+                                                        ab[2] = ab[2] + 1;
+                                                        bag[ai] = ab;
+                                                        aFound = 1;
+                                                    }
+                                                    ai = ai + 1;
+                                                }
+                                                if [aFound == 0]{
+                                                    var compound call nb = [oldIt, 1];
+                                                    bag.add(nb);
+                                                }
+                                            }
+                                            log("포켓몬 아이템: " + iAct + " · " + iId + " → " + pIdx);
+                                        }
+                                        if [iAct > 0] and [evPendI == 0]{
+                                            fm.info(mX, mY, mW, mH, lang[3000 + iId], "item_" + iId, iMsg, "");
+                                        }
+                                    }
+                                }
+                            }
+                            if [pAct == 3]{   // 도감: 아직 없음
+                                fm.info(mX, mY, mW, mH, lang[7221], "", lang[7233], "");
+                            }
+                            if [pAct == 4] and [relOff == 1]{   // 놓아줄 수 없음: 마지막 한 마리 · 스티커 볼
+                                var string call relWhy = lang[7225];
+                                if [myParty.length <= 1]{
+                                    relWhy = lang[7226];
+                                }
+                                fm.info(mX, mY, mW, mH, lang[7222], "", relWhy, "");
+                                pAct = 0;
+                            }
+                            if [pAct == 4]{   // 놓아주기: 스티커 볼 · 마지막 한 마리는 안 됨
+                                fm.ask(mX, mY, mW, mH, lang[7222], replaceStr(lang[7223], "{poke}", pNm), lang[1456], lang[1457]);
+                                if [fmResult == 1]{
+                                    myParty.remove(pIdx);
+                                    log("놓아주기: " + pNm);
+                                    fm.info(mX, mY, mW, mH, lang[7222], "", replaceStr(lang[7224], "{poke}", pNm), "");
+                                }
+                            }
+                            pu.close();   // 다시 그림 (체력 · 순서가 바뀌었을 수 있음)
+                        }
+                    }
+                    fmResult = 1;
+                }
+                if [fmResult == 3]{   // PC: 박스 (맡기기 · 데려가기 · lib/pcCore.jbl 의 menu)
+                    pcc.menu(mX, mY, mW, mH);
+                    fmResult = 3;
+                }
+                if [fmResult == 6]{
+                    // 도구 (가방): 맨 위 가운데의 분류 칸 + 정사각형 도구 칸 8 x 6 — 방향키로 옮기고 · 분류 칸에 올라가 좌우로 분류를 바꿈 · 도구에서 Z → 정보 / 버리기 · X 로 닫음
+                    fmLabels = [];
+                    var int call bq = 0;
+                    loop [bq < 8]{
+                        fmLabels.add(lang[3800 + bq]);
+                        bq = bq + 1;
+                    }
+                    fm.bagDraw(mX, mY, mW, mH);
+                    var int call br = 1;
+                    loop [br <= 8]{
+                        var int call bc2 = 1;
+                        loop [bc2 <= 8]{
+                            selectUi[br, bc2] = (br - 1) * 8 + bc2;
+                            if [br == 8]{   // 8 번째 줄은 없음 (분류 1 줄 + 도구 6 줄)
+                                selectUi[br, bc2] = 0;
+                            }
+                            bc2 = bc2 + 1;
+                        }
+                        br = br + 1;
+                    }
+                    selectedBox = [1, 2];
+                    fmCat = 1;
+                    var int call lastCat = 0;
+                    var int call lastBx = 0;
+                    var int call lastBy = 0;
+                    var list call slotAt = [];     // 보이는 칸 → 가방에서의 자리
+                    var int call onCat = 0;        // 커서가 분류 칸에 있음 · 그때의 열
+                    var int call catCol = 1;
+                    isUi = 1;
+                    setup("assets/codes/ui/menuSelection.jb");
+                    var int call bOpen = 1;
+                    loop [bOpen == 1]{
+                        // 분류 칸 (1 번째 줄) 에 커서가 있을 때 좌우 = 분류 바꾸기 (커서의 가로 자리는 올라올 때의 열 그대로 둠)
+                        if [selectedBox[2] == 1]{
+                            if [onCat == 0]{
+                                onCat = 1;
+                                catCol = selectedBox[1];
+                            }
+                            if [selectedBox[1] != catCol]{
+                                var int call cd = selectedBox[1] - catCol;
+                                if [cd == 1] or [cd == -7]{
+                                    fmCat = fmCat + 1;
+                                    if [fmCat > 8]{
+                                        fmCat = 1;
+                                    }
+                                }
+                                else{
+                                    fmCat = fmCat - 1;
+                                    if [fmCat < 1]{
+                                        fmCat = 8;
+                                    }
+                                }
+                                selectedBox[1] = catCol;
+                            }
+                        }
+                        else{
+                            onCat = 0;
+                        }
+                        if [fmCat != lastCat]{
+                            lastCat = fmCat;
+                            fmIcons = [];
+                            fmCounts = [];
+                            slotAt = [];
+                            var int call bi = 1;
+                            loop [bi <= bag.length]{
+                                var compound call be = bag[bi];
+                                if [bg.cat(be[1]) == fmCat] and [slotAt.length < 48]{
+                                    slotAt.add(bi);
+                                    fmIcons.add("item_" + be[1]);
+                                    fmCounts.add("x" + be[2]);
+                                }
+                                bi = bi + 1;
+                            }
+                            loop [fmIcons.length < 48]{
+                                fmIcons.add("");
+                                fmCounts.add("");
+                            }
+                            fm.bagFill();
+                        }
+                        if [selectedBox[1] != lastBx] or [selectedBox[2] != lastBy]{
+                            lastBx = selectedBox[1];
+                            lastBy = selectedBox[2];
+                            fm.bagCursor(lastBy, lastBx);
+                        }
+                        if [ky.z()] and [selectedBox[2] >= 2]{
+                            loop [ky.z()]{ dis.waitF(1); }
+                            var int call bSlot = (selectedBox[2] - 2) * 8 + selectedBox[1];
+                            if [bSlot <= slotAt.length]{
+                                isUi = 0;          // 커서 멈춤 (선택 상자가 뜨는 동안)
+                                dis.waitF(2);
+                                sou.playSfx("ui", "choose", 2000);
+                                var int call bAt = slotAt[bSlot];
+                                var compound call bIt = bag[bAt];
+                                var int call bId = bIt[1];
+                                var list call keepL = fmLabels;
+                                var int call bUse = hc.usable(bId);   // 회복 도구: 사용 · 정보 · 버리기 / 그 밖에는 정보 · 버리기
+                                fmLabels = [];
+                                if [bUse == 1]{
+                                    fmLabels.add(lang[3844]);
+                                }
+                                fmLabels.add(lang[3810]);
+                                fmLabels.add(lang[3811]);
+                                if [bUse == 1]{
+                                    fmOff = [0, 0, bg.isKey(bId)];
+                                }
+                                else{
+                                    fmOff = [0, bg.isKey(bId)];
+                                }
+                                fm.choice(mX, mY, mW, mH);
+                                var int call bAct = fmResult;   // 1 사용 · 2 정보 · 3 버리기 (못 쓰는 도구는 한 칸씩 밀어서 맞춤)
+                                if [bUse == 0] and [bAct > 0]{
+                                    bAct = bAct + 1;
+                                }
+                                if [bAct == 1] and ([bId == 79] or [bId == 76] or [bId == 77]){   // 벌레회피스프레이 계열: 포켓몬을 고르지 않고 바로 씀 (이미 효과가 있으면 못 씀)
+                                    var string call rpMsg = replaceStr(lang[7293], "{item}", lang[3000 + bId]);
+                                    if [repelSteps == 0]{
+                                        repelSteps = 100;
+                                        if [bId == 76]{
+                                            repelSteps = 200;
+                                        }
+                                        if [bId == 77]{
+                                            repelSteps = 250;
+                                        }
+                                        if [bIt[2] > 1]{
+                                            bIt[2] = bIt[2] - 1;
+                                            bag[bAt] = bIt;
+                                        }
+                                        else{
+                                            bag.remove(bAt);
+                                        }
+                                        lastCat = 0;
+                                        rpMsg = replaceStr(lang[7292], "{item}", lang[3000 + bId]);
+                                        log("벌레회피스프레이: %repelSteps% 걸음");
+                                    }
+                                    fm.info(mX, mY, mW, mH, lang[3000 + bId], "item_" + bId, rpMsg, "");
+                                    bAct = 0;
+                                }
+                                if [bAct == 1]{   // 사용: 포켓몬을 고르고 → 효과가 있으면 하나 줄어듦
+                                    if [myParty.length == 0]{
+                                        fm.info(mX, mY, mW, mH, lang[3000 + bId], "item_" + bId, lang[3855], "");
+                                    }
+                                    else{
+                                        partyHp = [];   // 포켓몬 메뉴와 같은 포켓몬 창 (lib/partyUi.jbl)
+                                        var int call uph = 1;
+                                        loop [uph <= myParty.length]{
+                                            var compound call uphk = myParty[uph];
+                                            partyHp.add(uphk[25]);
+                                            uph = uph + 1;
+                                        }
+                                        puAny = 1;
+                                        puKeep = 0;
+                                        pu.choose(mX, mY, mW, mH, 0, 0, 0);
+                                        puAny = 0;
+                                        fmResult = puResult;
+                                        if [fmResult > 0]{
+                                            var int call uIdx = fmResult;
+                                            var int call uK = 0;
+                                            var int call uStone = 0;   // 진화의 돌: 진화할 모습 (0 = 효과 없음)
+                                            if [pg.isStone(bId) == 1]{
+                                                var compound call sPk = myParty[uIdx];
+                                                uStone = pg.stoneEvoTo(sPk[1], bId);
+                                                if [uStone != 0]{
+                                                    uK = 5;
+                                                    evPendI = uIdx;
+                                                    evPendTo = uStone;
+                                                    bOpen = 0;
+                                                    open = 0;
+                                                }
+                                            }
+                                            else{
+                                                uK = hc.apply(bId, uIdx);
+                                            }
+                                            var compound call uPk = myParty[uIdx];
+                                            var string call uNm = pg.pokeName(uPk[1], uPk[17]);
+                                            var string call uMsg = lang[3843];
+                                            if [uK == 1] or [uK == 4]{
+                                                uMsg = replaceStr(replaceStr(lang[3840], "{poke}", uNm), "{n}", "" + hcAmount);
+                                            }
+                                            if [uK == 2]{
+                                                uMsg = replaceStr(lang[3841], "{poke}", uNm);
+                                            }
+                                            if [uK == 3]{
+                                                uMsg = replaceStr(lang[3842], "{poke}", uNm);
+                                            }
+                                            if [uK != 0]{
+                                                if [bIt[2] > 1]{
+                                                    bIt[2] = bIt[2] - 1;
+                                                    bag[bAt] = bIt;
+                                                }
+                                                else{
+                                                    bag.remove(bAt);
+                                                }
+                                                lastCat = 0;   // 칸을 다시 채움
+                                                log("도구 사용: " + bId + " → " + uIdx + " · " + uMsg);
+                                            }
+                                            if [uK != 5]{
+                                                fm.info(mX, mY, mW, mH, lang[3000 + bId], "item_" + bId, uMsg, "");
+                                            }
+                                        }
+                                    }
+                                }
+                                if [bAct == 2]{   // 정보: 이름 + 설명
+                                    var string call bNote = "";   // 덧붙이는 말 (맨 아래 흐린 글씨): lang[bg.noteOf(도구)]
+                                    if [bg.noteOf(bId) != 0]{
+                                        bNote = lang[bg.noteOf(bId)];
+                                    }
+                                    fm.info(mX, mY, mW, mH, lang[3000 + bId], "item_" + bId, lang[5000 + bId], bNote);
+                                }
+                                if [bAct == 3]{   // 버리기: 중요한 물건은 못 버림 · 그 밖에는 하나 버림
+                                    if [bg.isKey(bId) == 1]{
+                                        fm.info(mX, mY, mW, mH, lang[3000 + bId], "item_" + bId, lang[3812], "");
+                                    }
+                                    else{
+                                        if [bIt[2] > 1]{
+                                            bIt[2] = bIt[2] - 1;
+                                            bag[bAt] = bIt;
+                                        }
+                                        else{
+                                            bag.remove(bAt);
+                                        }
+                                        fm.info(mX, mY, mW, mH, lang[3000 + bId], "item_" + bId, replaceStr(lang[3813], "{item}", lang[3000 + bId]), "");
+                                        lastCat = 0;   // 칸을 다시 채움
+                                    }
+                                }
+                                fmLabels = keepL;
+                                fmResult = 6;
+                                isUi = 1;
+                                setup("assets/codes/ui/menuSelection.jb");
+                            }
+                        }
+                        if [ky.x()]{
+                            loop [ky.x()]{ dis.waitF(1); }
+                            bOpen = 0;
+                        }
+                        dis.waitF(1);
+                    }
+                    isUi = 0;
+                    dis.waitF(2);
+                    fm.bagClose();
+                    fmResult = 6;
+                }
+                if [fmResult == 4]{
+                    // 지도: 지역 지도 그림 (assets/textures/ui/region_map.png · 264 x 184 · 손그림 지도를 곧게 편 것) — 마을 자리는 그 그림의 픽셀
+                    //   순서: 유풍시티 · 열화시티 · 북악마을 · 취음시티 · 유영시티 · 금언시티 · 가산시티 · 벨시티 · 용산시티 · 골산마을 · 관산마을 (공항은 아직 표시하지 않음)
+                    fmTx = [48, 64, 88, 192, 168, 76, 60, 108, 156, 176, 108];
+                    fmTy = [112, 60, 28, 72, 124, 96, 152, 44, 60, 20, 124];
+                    fmTn = [7101, 7102, 7103, 7104, 7105, 7106, 7107, 7108, 7109, 7110, 7111];   // 마을 이름 lang 7100 ~ (3000 + 도구 번호와 겹치지 않게)
+                    var int call fmRoad = 0;
+                    if [place == 1] and [zone == 4]{   // 1번도로에 있음 (placeName.jb 의 구역)
+                        fmRoad = 1;
+                    }
+                    if [place == 5]{   // 보라매숲 (던전): 지도에서 숲 부분만
+                        fmRoad = 2;
+                    }
+                    if [place == 6]{   // 1번도로 서쪽 (보라매숲과 유풍시티 사이): 1번도로
+                        fmRoad = 1;
+                    }
+                    var int call fmCur = 11;   // 지금 있는 마을: 관산마을 (11)
+                    if ([place >= 7] and [place <= 9]) or [place == 11] or [place == 12]{   // 유풍시티 · 유풍 상점 · 유풍 포켓몬센터 · 유풍체육관 로비
+                        fmCur = 1;
+                    }
+                    fm.townMap(mX, mY, mW, mH, fmCur, 264, 184, fmRoad);
+                    fmResult = 4;
+                }
+                if [fmResult == 7]{   // 설정: 리포트 내보내기 (난독화한 파일로 내려받음) · 리포트 불러오기 (파일을 골라 리포트로 → 타이틀 화면으로)
+                    // 설정 화면: 제목 · 아래쪽에 메뉴 칸 같은 버튼 (윗줄 오른쪽 = 저작권 · 아랫줄 = 리포트 내보내기 · 리포트 불러오기) — 저작권을 보고 나면 다시 설정 화면
+                    var int call stAct = 0;   // 1 내보내기 · 2 불러오기 · 0 닫음
+                    var int call stLoop = 1;
+                    loop [stLoop == 1]{
+                        fm.panelShow(mX, mY, mW, mH, lang[3831], "");
+                        fmLabels = [];
+                        fmLabels.add("");
+                        fmLabels.add(lang[7258]);
+                        fmLabels.add(lang[7247]);
+                        fmLabels.add(lang[7248]);
+                        fmOff = [0, 0, 0, 0];
+                        fm.buttonGrid(mX, mY, mW, mH, 2);
+                        if [fmResult == 2]{   // 저작권: 여러 쪽 글 (docs/저작권.md 의 요약)
+                            fmPages = [];
+                            fmPages.add(lang[7280]);
+                            fmPages.add(lang[7281]);
+                            fmPages.add(lang[7282]);
+                            fmPages.add(lang[7283]);
+                            fm.pages(mX, mY, mW, mH, lang[7258]);
+                            fm.panelHide();
+                        }
+                        else{
+                            stLoop = 0;
+                            if [fmResult == 0]{
+                                stAct = 0;
+                            }
+                            else{
+                                stAct = fmResult - 2;
+                            }
+                        }
+                    }
+                    if [stAct == 1]{
+                        if [fileExists("data/save/save.json")]{
+                            exportFile("data/save/save.json", "PokemonAJ_report.jbx");
+                            fm.info(mX, mY, mW, mH, lang[7247], "", lang[7249], "");
+                        }
+                        else{
+                            fm.info(mX, mY, mW, mH, lang[7247], "", lang[7250], "");
+                        }
+                        fm.panelHide();
+                    }
+                    if [stAct != 1]{   // 불러오기를 묻는 화면도 같은 판을 씀 → 먼저 닫음
+                        fm.panelHide();
+                    }
+                    if [stAct == 2]{
+                        fm.ask(mX, mY, mW, mH, lang[7248], lang[7251], lang[1456], lang[1457]);
+                        if [fmResult == 1]{
+                            setJson("imp", [0]);   // 표시: 파일을 고르지 않거나 잘못된 파일이면 그대로 남음
+                            genJson("data/save/import.json", "imp");
+                            openFile("data/save/import.json");
+                            var compound call impD = [];
+                            loadJson("data/save/import.json", "impD");
+                            var int call impOk = 0;
+                            if [impD.length >= 7]{
+                                if [impD[1] == "keikan"]{
+                                    impOk = 1;
+                                }
+                            }
+                            if [impOk == 1]{
+                                setJson("save", impD);
+                                genJson("data/save/save.json", "save");
+                                log("리포트 불러오기 (파일)");
+                                fm.info(mX, mY, mW, mH, lang[7248], "", lang[7252], "");
+                                reloadSave = 1;   // 타이틀 화면이 리포트를 다시 읽음 (loadManager.jb)
+                                quitTitle = 1;
+                                open = 0;
+                            }
+                            else{
+                                fm.info(mX, mY, mW, mH, lang[7248], "", lang[7253], "");
+                            }
+                        }
+                    }
+                    fmResult = 7;
+                }
+                if [fmResult == 8]{
+                    // 리포트 작성: 물음 (예 / 아니오) → 예면 "작성하고 있습니다..." 를 띄운 채 리포트를 씀 (saveManager.jb) → "확실히 작성했다!" (Z · X 로 닫음)
+                    fm.ask(mX, mY, mW, mH, lang[3832], lang[3833], lang[1456], lang[1457]);
+                    if [fmResult == 1]{
+                        fm.panelShow(mX, mY, mW, mH, lang[3832], lang[3836]);
+                        qMo = gMonth;
+                        qDa = gDay;
+                        qWe = gWeek;
+                        qHo = gHour;
+                        qMi = gMin;
+                        setup("assets/codes/saveManager.jb");
+                        wait(700);
+                        fm.panelHide();
+                        // 다 쓰면 "리포트를 확실히 작성했다!" 아래에 타이틀 화면으로 나갈지 물음 (예 = 타이틀로 · 아니오 = 메뉴로)
+                        fm.ask(mX, mY, mW, mH, lang[3832], lang[3837] + "\n" + lang[3838], lang[1456], lang[1457]);
+                        if [fmResult == 1]{
+                            quitTitle = 1;
+                            open = 0;
+                        }
+                    }
+                    fmResult = 8;
+                }
+                if [fmResult == 2]{
+                    // 메세지: 받은 문자 목록 — 보낸 사람은 주인공이 남자면 지현 (lang 3767) · 여자면 재휘 (3768) · 고르면 내용 화면 (아직 비어 있음)
+                    var int call mOpen = 1;
+                    loop [mOpen == 1]{
+                        var string call mFrom = lang[3768];
+                        if [isBoy == 1]{
+                            mFrom = lang[3767];
+                        }
+                        fmLabels = [];
+                        fmLabels.add(mFrom);
+                        fmSubs = [];
+                        fmSubs.add(lang[3769]);
+                        fm.rows(mX, mY, mW, mH, lang[3761]);
+                        if [fmResult == 0]{
+                            mOpen = 0;
+                        }
+                        else{
+                            fm.panel(mX, mY, mW, mH, mFrom, "");   // 내용은 아직 없음
+                        }
+                    }
+                    fmResult = 2;
+                }
+            }
+            fmClock = 0;
+            dis.removeObj("fmhdr");
+            dis.removeObj("fmhdrt");
+            dis.removeObj("fmhdrm");
+            loop [ky.x()]{ dis.waitF(1); }
+            if [quitTitle == 1]{   // 타이틀로 나감: 움직이지 못하게 둔 채 이 메뉴 코드도 끝
+                break();
+            }
+            canMove = 1;
+        }
+        dis.waitF(1);
+    }
+}

@@ -1,0 +1,25 @@
+Use jawbreaker call jaw;
+Use Canvas call can;
+Use DisPlayer call dis;
+
+run{
+    dis.BelongObj("upButton");
+    if [dis.idWidthmode == 1]{
+        dis.disableObj("upButton");
+    }
+    can.setUpScene();
+    dis.setupObject();
+    can.setasButton("upButton");
+    can.obj.setExistableScene("*", "");
+    can.bindInput("") to ("up");
+    loop{
+        if [can.obj.IsButtonPushed == 1]{
+            dis.setObjColor("", "#bfbfbf");
+        }
+        else if  [can.obj.IsButtonReleased == 1]{
+            dis.setObjColor("", "#dfdfdf");
+        }
+        dis.waitF(1);   // 화면 프레임마다 한 번만 확인 (쉬지 않고 돌면 다른 코드가 느려짐)
+    }
+}
+

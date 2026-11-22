@@ -1,0 +1,85 @@
+// 코드는 run{ } 안에 써야 실행됩니다.
+Use jawbreaker call jaw;
+Use Magellan call mag;
+Use DisPlayer call dis;
+Use Canvas call can;
+use soundMaster call sou;
+
+run{
+    setup("assets/codes/loadManager.jb");   // 리포트 확인 · 언어 등 값만 불러옴 (이어하기는 타이틀에서)
+    mag.importFile("assets/fonts/pokemon-dppt.ttf") save as ("font");
+    mag.importFile("assets/sounds/sfx/ui/choose.mp3") save as ("choose");
+    mag.importFile("assets/sounds/sfx/ui/exclaim.mp3") save as ("exclaim");   // "!" (트레이너와 눈이 마주침 · 드문 야생 포켓몬) — pret/pokeemerald se_pin
+    mag.importFile("assets/textures/battle/platform.png") save as ("platform");   // 배틀: 포켓몬이 딛는 타원 발판 (200 x 100 · 흰 바탕에 몬스터볼 문양)
+    mag.importFile("assets/textures/battle/white_71f.png") save as ("71fw");       // 따라큐 앞모습의 하얀 실루엣 (탈이 벗겨질 때 하얘지는 연출)
+    mag.importFile("assets/textures/battle/white_71_1f.png") save as ("71_1fw");   // 들킨 모습의 하얀 실루엣
+    mag.importFile("assets/textures/battle/back_none.png") save as ("backNone");   // 뒷모습 그림이 없는 포켓몬의 예비 그림
+    // 기술에 맞았을 때의 이펙트 (16 x 16 · 흰색 6 장 → 기술 타입 색으로 물들임)
+    mag.importFile("assets/textures/battle/hitfx_1.png") save as ("hitfx1");
+    mag.importFile("assets/textures/battle/fx_circle.png") save as ("fxcirc");   // 기술 이펙트의 픽셀 원 (lib/battleCore.jbl 의 pxCirc)
+    mag.importFile("assets/textures/battle/hitfx_2.png") save as ("hitfx2");
+    mag.importFile("assets/textures/battle/hitfx_3.png") save as ("hitfx3");
+    mag.importFile("assets/textures/battle/hitfx_4.png") save as ("hitfx4");
+    mag.importFile("assets/textures/battle/hitfx_5.png") save as ("hitfx5");
+    mag.importFile("assets/textures/battle/hitfx_6.png") save as ("hitfx6");
+    mag.importFile("assets/sounds/sfx/battle/statRise.mp3") save as ("statRise");   // 랭크가 올라갈 때
+    mag.importFile("assets/sounds/sfx/battle/statFall.mp3") save as ("statFall");   // 랭크가 내려갈 때
+    mag.importFile("assets/sounds/sfx/battle/hit.mp3") save as ("hit");                                   // 맞는 소리: 보통
+    mag.importFile("assets/sounds/sfx/battle/hitSuperEffective.mp3") save as ("hitSuperEffective");       // 효과가 굉장함
+    mag.importFile("assets/sounds/sfx/battle/hitNotVeryEffective.mp3") save as ("hitNotVeryEffective");   // 효과가 별로
+    mag.importFile("assets/sounds/bgm/1/palletTown.mp3") save as ("pallet");
+    mag.importFile("assets/sounds/bgm/1/pokemonCenter.mp3") save as ("pokecenter");   // 포켓몬센터 안 (하트골드 · 소울실버)
+    mag.importFile("assets/sounds/bgm/1/route1.mp3") save as ("route1");         // 1번도로 (prtgRoom.jb 가 한 바퀴 구간을 반복)
+    mag.importFile("assets/sounds/bgm/1/viridianForest.mp3") save as ("forest");   // 보라매숲 (『하트골드 · 소울실버』 상록숲 · 처음부터 끝까지 반복)
+    mag.importFile("assets/sounds/bgm/1/evolution.mp3") save as ("evolution");   // 진화 중
+    mag.importFile("assets/sounds/bgm/1/evolved.mp3") save as ("evolved");       // 진화 축하 · 포켓몬을 잡았을 때 (한 번)
+    mag.importFile("assets/maps/room_1.tl") save as ("room1");
+    mag.importFile("assets/maps/road_1.tl") save as ("road1");   // 방 문 밖의 돌 벽돌 길
+    mag.importFile("assets/maps/center_1.tl") save as ("center1");   // 관산마을 포켓몬센터 안
+    mag.importFile("assets/maps/lab_1.tl") save as ("lab1");   // 경한대 직속 연구소 안
+    mag.importFile("assets/maps/mart_1.tl") save as ("mart1");   // 관산마을 상점 안
+    mag.importFile("assets/maps/boramae_1.tl") save as ("boramae1");   // 보라매숲 (1번도로 서쪽 끝에서 · 지금은 입구 쪽만)
+    mag.importFile("assets/maps/road1w_1.tl") save as ("road1w");   // 1번도로 서쪽 (보라매숲 서쪽 출구 너머 · 12 칸)
+    mag.importFile("assets/maps/yupung_1.tl") save as ("yupung1");
+    mag.importFile("assets/maps/gym_lobby_1.tl") save as ("gymlobby1");
+    mag.importFile("assets/maps/gym_1.tl") save as ("gym1");   // 유풍체육관 안 (하늘 위 발판)   // 유풍체육관 로비 (접수처 · 도전 신청 단말기)   // 유풍시티 (지금은 곧은 벽돌 길만)
+    mag.importFile("assets/sounds/bgm/1/yupungCity.mp3") save as ("yupungCity");   // 유풍시티 (제작자 제공)
+    mag.importFile("assets/sounds/bgm/1/trainerBattle.mp3") save as ("trainerBattle");
+    mag.importFile("assets/sounds/bgm/1/wildVictory.mp3") save as ("wildVictory");         // 승리 음악: 야생 포켓몬
+    mag.importFile("assets/sounds/bgm/1/trainerVictory.mp3") save as ("trainerVictory");   // 승리 음악: 트레이너
+    mag.importFile("assets/sounds/bgm/1/wildBattle.mp3") save as ("wildBattle");   // 1번 배틀 (야생) 음악 — 원본의 90 초부터 잘라 둔 파일 · 2.6 ~ 90 초 (원본 92.6 ~ 180 초) 구간을 반복
+    dis.setFont("font");
+    setup("assets/codes/pokeDataManager.jb");
+    setup("assets/codes/moveManager.jb");   // 기술 데이터 (movedex · mv기술이름)
+    setup("assets/lang/LangManager.jb");
+    mag.importFolder("assets/textures/poke/back");
+    mag.importFolder("assets/textures/poke/front");
+    mag.importFile("assets/textures/trainers/cynthia.png") save as ("trCynthia");   // 트레이너 그림 (128 x 128): 챔피언 난천
+    mag.importFolder("assets/textures/items");   // 지닌 도구 아이콘: item_ + 본가 도구 번호
+    mag.importFolder("assets/textures/ow");      // 포켓몬 필드 그림 (ow_ + 도감 번호 · 『하트골드 · 소울실버』 데리고 걷기 그림 · 32 x 32 칸 8 장을 세로로: 위 0 1 · 아래 2 3 · 왼쪽 4 5 · 오른쪽 6 7 · 강철톤만 64 x 64)
+    mag.importFolder("assets/textures/poke/white");   // 하얀 실루엣 (w + 그림 이름): 등장할 때 하얀 상태에서 원래 색으로
+    mag.importFolder("assets/sounds/cries");   // 울음소리: cry + 도감 번호 · 기절할 때 cryf + 도감 번호 (0.8 배속 · 음높이도 낮아짐 — 미리 만들어 둔 파일)
+    mag.importFolder("assets/textures/types");   // 타입 아이콘 type_0 ~ type_20 (흰색 · 원본 svg 는 svg 폴더)
+    can.setUpScene();
+    dis.setupObject();
+    can.nameScene("startscreen");
+    mag.importFile("assets/sounds/bgm/1/opening_sfx.mp3") save as ("opening");
+    mag.importFile("assets/textures/ui/1/jawbreaker.png") save as ("logo");
+    mag.importFile("assets/textures/ui/field_item.png") save as ("fieldItem");
+    mag.importFile("assets/textures/ui/region_map.png") save as ("regionMap");   // 스마트로토무 지도 (손그림 지도를 대략 옮긴 그림)
+    mag.importFile("assets/textures/npc/nurse.png") save as ("npcNurse");   // 간호순 (DPPt 필드 스프라이트)
+    mag.importFile("assets/textures/npc/clerk.png") save as ("npcClerk");   // 포켓몬센터 점원 (DPPt 필드 스프라이트)
+    mag.importFile("assets/textures/npc/prof_frame.png") save as ("npcProf");   // 박사 자리 (아직 텍스쳐 틀 · 나중에 그림만 바꿈)
+    mag.importFile("assets/textures/npc/starter_frame.png") save as ("npcStarter");   // 스타팅 포켓몬 자리 (텍스쳐 틀)
+    mag.importFile("assets/textures/npc/policeman.png") save as ("npcPolice");
+    mag.importFile("assets/textures/npc/bug_catcher.png") save as ("npcBugCatcher");   // 곤충채집소년 (DPPt 필드 스프라이트)
+    mag.importFile("assets/textures/trainers/bug_catcher.png") save as ("trBugCatcher");   // 트레이너 그림 (80 x 80): 곤충채집소년
+    mag.importFile("assets/textures/npc/lass.png") save as ("npcLass");   // 짧은치마 (DPPt 필드 스프라이트)
+    mag.importFile("assets/textures/trainers/lass.png") save as ("trLass");   // 트레이너 그림 (80 x 80): 짧은치마
+    mag.importFile("assets/textures/trainers/rival_frame.png") save as ("trRival");   // 라이벌 배틀 그림 (아직 빈 텍스쳐 틀 · 80 x 80)
+    mag.importFile("assets/textures/ui/lab_door_l.png") save as ("labDoorL");   // 연구소 자동문 (문 밖 타일 그림 그대로)
+    mag.importFile("assets/textures/ui/lab_door_r.png") save as ("labDoorR");   // 1번도로 입구의 경비원 (DPPt 경찰관 필드 스프라이트 · 0 번 색만 투명)
+    mag.importFile("assets/textures/npc/fat_man.png") save as ("npcFatMan");   // 필드의 사람: 과학의 힘 아저씨 (DPPt 필드 스프라이트 · lib/fieldNpc.jbl)   // 필드에 놓인 도구 (lib/fieldItem.jbl)
+    setup("assets/codes/ui/mainScreen.jb");
+    setup("assets/codes/frameCounter.jb");
+}

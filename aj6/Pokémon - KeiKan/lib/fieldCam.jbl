@@ -1,0 +1,208 @@
+Lib id fieldCam;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Canvas call can;
+
+// 필드 카메라: 카메라는 보이지 않는 오브젝트 "camt" 를 따라감 (prtgRoom.jb) — 매 프레임 update(플레이어 x, y) 로 camt 를 옮김
+//   문 밖 (place 1) 에서는 구역마다 카메라가 넘지 않는 끝이 있음 (마을과 1번도로의 경계 x = -248)
+//     관산마을 쪽: 카메라가 마을 서쪽 끝 (경계) 너머를 보여 주지 않음
+//     1번도로 쪽: 카메라가 도로 동쪽 끝 (경계) 너머를 보여 주지 않음 · 서쪽은 맵 끝 (x = -888) 까지
+//     경계를 넘으면: 화면이 검게 덮이고 (500 밀리초 · 점점) → 카메라가 새 구역으로 바로 (0 초) 옮겨짐 → 다시 걷힘 (500 밀리초) · 그동안 플레이어는 못 움직임
+//   모바일: 플레이어가 화면 (조작부 위) 가운데보다 조금 아래에 오도록 (예전의 anchor 와 같은 높이)
+//   그 밖의 맵 (방 · 포켓몬센터 · 연구소) 은 플레이어를 그대로 따라감
+
+var public int call place;
+var public float call camX;   // 지금 카메라가 보는 곳
+var public float call camY;
+var public int call camPan;   // 1 = 경계를 넘어 화면이 덮인 중
+var public bit call canMove;
+var public int call camSide;  // 0 = 끝 없음 · 1 = 마을 쪽 · 2 = 1번도로 쪽
+
+func start(float px, float py){
+    camSide = 0;
+    camPan = 0;
+    camX = px;
+    camY = py;
+    update(px, py);
+    camPan = 0;
+    camX = goalX(px);
+    dis.setObjPos("camt", [camX, camY]);
+}
+
+// 그 위치에서 카메라가 있어야 할 x (구역의 끝을 넘지 않게)
+func float goalX(float px){
+    var float call z = 720 / 240;
+    if [dis.idWidthmode == 0]{
+        z = 4;
+    }
+    var float call hw = dis.displayX / 2 / z;   // 화면 반 폭 (세계 좌표)
+    var float call tx = px;
+    if [place == 1]{
+        if [px < -248]{
+            if [tx > -248 - hw]{
+                tx = -248 - hw;
+            }
+            if [tx < -888 + hw]{
+                tx = -888 + hw;
+            }
+        }
+        else{
+            if [tx < -248 + hw]{
+                tx = -248 + hw;
+            }
+        }
+    }
+    if [place == 6]{   // 1번도로 서쪽 (28 x 26 · [0, 0] 칸 = 26 열 12 줄): 맵 끝 (x 10576 ~ 11024) 너머를 보여 주지 않음
+        if [tx > 11024 - hw]{
+            tx = 11024 - hw;
+        }
+        if [tx < 10576 + hw]{
+            tx = 10576 + hw;
+        }
+    }
+    if [place == 7]{   // 유풍시티 (100 x 64 · [0, 0] 칸 = 98 열 36 줄): 맵 끝 (x 11424 ~ 13024) 너머를 보여 주지 않음
+        if [tx > 13024 - hw]{
+            tx = 13024 - hw;
+        }
+        if [tx < 11424 + hw]{
+            tx = 11424 + hw;
+        }
+    }
+    if [place == 12]{   // 유풍체육관 안 (36 x 36 · [0, 0] 칸 = 17 열 35 줄): 맵 끝 (x 20720 ~ 21296) 너머를 보여 주지 않음
+        if [tx > 21296 - hw]{
+            tx = 21296 - hw;
+        }
+        if [tx < 20720 + hw]{
+            tx = 20720 + hw;
+        }
+    }
+    if [place == 5]{   // 보라매숲 (78 x 90 · lib/boramaeMap.jbl): 맵 끝 (x 7760 ~ 9008) 너머를 보여 주지 않음
+        if [tx > 9008 - hw]{
+            tx = 9008 - hw;
+        }
+        if [tx < 7760 + hw]{
+            tx = 7760 + hw;
+        }
+    }
+    return(tx);
+}
+
+// 그 위치에서 카메라가 있어야 할 y — 보라매숲은 맵 위아래 끝 (y 2152 ~ 3600) · 길 (road1) 은 맨 아래 끝 (y -168 · 집 뒤 나무) 너머를 보여 주지 않음
+func float goalY(float ty){
+    if [place == 6]{   // 1번도로 서쪽: y 2784 ~ 3200
+        var float call z6 = 720 / 240;
+        var float call hh6 = dis.displayY / 2 / z6;
+        if [dis.idWidthmode == 0]{
+            z6 = 4;
+            hh6 = dis.displayY / 4 / z6;
+        }
+        if [ty > 3200 - hh6]{
+            ty = 3200 - hh6;
+        }
+        if [ty < 2784 + hh6]{
+            ty = 2784 + hh6;
+        }
+    }
+    if [place == 12]{   // 유풍체육관 안: y 2992 ~ 3568 — PC: 화면 가운데 ± 반 높이 · 모바일: 보이는 곳 (조작부 위) = 카메라 y 부터 위로 화면 높이의 반 / 배율 (카메라 y 가 보이는 곳의 아래 끝)
+        var float call lo12 = 2992 + dis.displayY / 2 / (720 / 240);
+        var float call hi12 = 3568 - dis.displayY / 2 / (720 / 240);
+        if [dis.idWidthmode == 0]{
+            lo12 = 2992;
+            hi12 = 3568 - dis.displayY / 2 / 4;
+        }
+        if [ty > hi12]{
+            ty = hi12;
+        }
+        if [ty < lo12]{
+            ty = lo12;
+        }
+    }
+    if [place == 7]{   // 유풍시티: y 2560 ~ 3584
+        var float call z7 = 720 / 240;
+        var float call hh7 = dis.displayY / 2 / z7;
+        if [dis.idWidthmode == 0]{
+            z7 = 4;
+            hh7 = dis.displayY / 4 / z7;
+        }
+        if [ty > 3584 - hh7]{
+            ty = 3584 - hh7;
+        }
+        if [ty < 2560 + hh7]{
+            ty = 2560 + hh7;
+        }
+    }
+    if [place == 1]{
+        var float call z1 = 720 / 240;
+        var float call hh1 = dis.displayY / 2 / z1;
+        if [dis.idWidthmode == 0]{
+            z1 = 4;
+            hh1 = dis.displayY / 4 / z1;
+        }
+        if [ty < -168 + hh1]{
+            ty = -168 + hh1;
+        }
+    }
+    if [place == 5]{
+        var float call z = 720 / 240;
+        var float call hh = dis.displayY / 2 / z;
+        if [dis.idWidthmode == 0]{
+            z = 4;
+            hh = dis.displayY / 4 / z;
+        }
+        if [ty > 3600 - hh]{
+            ty = 3600 - hh;
+        }
+        if [ty < 2152 + hh]{
+            ty = 2152 + hh;
+        }
+    }
+    return(ty);
+}
+
+func update(float px, float py){
+    var int call side = 0;
+    if [place == 1]{
+        side = 1;
+        if [px < -248]{
+            side = 2;
+        }
+    }
+    if [side != camSide]{
+        if [camSide != 0] and [side != 0]{   // 마을 ↔ 1번도로: 검게 덮었다가 (500) 카메라를 바로 옮기고 다시 걷음 (500)
+            camPan = 1;
+            canMove = 0;
+            if [dis.idWidthmode == 1]{
+                dis.setObject([0, 0], "cammask", [dis.displayX, dis.displayY + 250], "#000000");
+            }
+            else{
+                dis.setObject([0, dis.displayY / 4 + 50], "cammask", [dis.displayX, dis.displayY / 2 + 100], "#000000");
+            }
+            can.setUi("cammask");
+            dis.setObjLayer("cammask", 95);
+            dis.setObjAlpha("cammask", 0);
+            dis.setObjAlpha("cammask", 255) for 500;
+            wait(500);
+            camSide = side;
+            camX = goalX(px);
+            camY = py;
+            if [dis.idWidthmode == 0]{
+                camY = py - dis.displayY / 16;
+            }
+            dis.setObjPos("camt", [camX, camY]);
+            dis.waitF(1);
+            dis.setObjAlpha("cammask", 0) for 500;
+            wait(500);
+            dis.removeObj("cammask");
+            camPan = 0;
+            canMove = 1;
+        }
+        camSide = side;
+    }
+    camX = goalX(px);
+    camY = py;
+    if [dis.idWidthmode == 0]{
+        camY = py - dis.displayY / 16;
+    }
+    camY = goalY(camY);
+    dis.setObjPos("camt", [camX, camY]);
+}

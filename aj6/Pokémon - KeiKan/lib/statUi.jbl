@@ -1,0 +1,301 @@
+Lib id statUi;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Magellan call mag;
+Use moveUi call mu;
+
+var public list call lang;
+
+// 배틀 스탯 UI (상대 · 내 포켓몬)
+//   이름               성별 Lv.레벨
+//   HP [■■■■■■■■■■■■■■■■■■■■■■]
+//   · 상자 [x, y] = 가운데 · 폭 w · 높이 h
+//   · 체력바 = 본가 방식: 남은 체력 비율만큼 왼쪽 끝 기준으로 줄어듦 (dis.setObjNudge "left")
+//       초록 > 1/2 · 노랑 > 1/5 · 빨강 ≤ 1/5 · 체력이 1 이라도 남아 있으면 최소 1 칸은 보임
+//       drainHp: 막대 전체(48칸)를 1 프레임에 1 칸씩 움직이는 속도 — 깎인 양에 비례해 시간이 걸리고, 도중에 색이 바뀜
+//   만든 오브젝트: id%bd · id · id%name · id%gen · id%lv · id%hpl · id%trk · id%tin · id%bar  (removeStatBox 로 모두 지움)
+
+func makeStatBox(string id, float x, float y, float w, float h, string name, int gender, int level, int hp, int maxHp){
+    var float call bt = max(2, h * 0.05);   // 테두리 두께
+    var float call p = h * 0.06;            // 안쪽 여백
+    var float call left = x - w / 2;
+    var float call right = x + w / 2;
+    var float call top = y + h / 2;
+    var float call bot = y - h / 2;
+    dis.setObject([x, y], "%id%bd", [w, h], "#9fbfff");
+    dis.setObjLayer("%id%bd", 3);
+    dis.setObject([x, y], "%id%", [w - bt * 2, h - bt * 2], "#2f5f9f");
+    dis.setObjLayer("%id%", 4);
+
+    // 1 줄: 이름 (왼쪽) · 성별 (오른쪽) — 0 수컷 ♂ · 1 암컷 ♀ · 2 무성 (안 보임)
+    var float call ns = h * 0.45;   // 이름 · 성별 글자 크기
+    var float call ny = top - bt - p - ns / 2;
+    var string call g = "";
+    var string call gc = "#ffffff";
+    if [gender == 0]{
+        g = "♂";
+        gc = "#6fb4ff";
+    }
+    if [gender == 1]{
+        g = "♀";
+        gc = "#ff7f9f";
+    }
+    // 레벨 (오른쪽 끝 · 이름보다 조금 작게 · 아랫줄을 이름에 맞춤) — 성별은 그 왼쪽
+    var float call lvs = ns * 0.8;
+    dis.setText([right - bt - p, ny - ns / 2 + lvs / 2 - lvs * 0.085], "Lv.%level%", "%id%lv", lvs, false, "#ffffff");
+    dis.setTextNudge("%id%lv", "right");
+    dis.setObjLayer("%id%lv", 5);
+    var float call lvw = 0;
+    dis.getVar("%id%lv", "scale[1, 1]") as lvw;
+    dis.setText([right - bt - p - lvw - p * 0.6, ny - ns * 0.085], g, "%id%gen", ns, false, gc);
+    dis.setTextNudge("%id%gen", "right");
+    dis.setObjLayer("%id%gen", 5);
+    var float call gw = 0;
+    dis.getVar("%id%gen", "scale[1, 1]") as gw;
+    var float call nx = left + bt + p;
+    dis.setText([nx, ny - ns * 0.085], name, "%id%name", ns, false, "#ffffff");
+    dis.setTextNudge("%id%name", "left");
+    dis.setObjLayer("%id%name", 5);
+    var float call room = right - bt - p - lvw - p * 0.6 - gw - p * 0.6 - nx;   // 성별 앞까지
+    var float call nw = 0;
+    dis.getVar("%id%name", "scale[1, 1]") as nw;
+    if [nw > room]{   // 안 들어가면 글자를 줄임
+        dis.setText([nx, ny - ns * room / nw * 0.085], name, "%id%name", ns * room / nw, false, "#ffffff");
+    }
+
+    // 2 줄: HP 글자 + 체력바 (바깥 흰 테두리 · 안쪽 어두운 칸 · 그 안에 색 막대)
+    var float call bh = h * 0.2;     // 막대 높이
+    var float call ls = h * 0.267;   // HP 글자 크기
+    var float call by = bot + bt + p + ls / 2;
+    dis.setText([nx, by - ls * 0.085], "HP", "%id%hpl", ls, false, "#f8c040");
+    dis.setTextNudge("%id%hpl", "left");
+    dis.setObjLayer("%id%hpl", 5);
+    var float call lw = 0;
+    dis.getVar("%id%hpl", "scale[1, 1]") as lw;
+    var float call tl = nx + lw + p * 0.5;     // 막대 왼쪽 끝
+    var float call tr = right - bt - p;       // 막대 오른쪽 끝
+    var float call ib = max(1.5, bh * 0.15);  // 테두리 두께
+    dis.setObject([(tl + tr) / 2, by], "%id%trk", [tr - tl, bh], "#e8f0f8");
+    dis.setObjLayer("%id%trk", 5);
+    dis.setObject([(tl + tr) / 2, by], "%id%tin", [tr - tl - ib * 2, bh - ib * 2], "#384450");
+    dis.setObjLayer("%id%tin", 6);
+    dis.setObject([tl + ib, by], "%id%bar", [tr - tl - ib * 2, bh - ib * 2], "#58d878");
+    dis.setObjNudge("%id%bar", "left");   // 위치 = 왼쪽 끝 → 폭만 바꾸면 왼쪽에 붙은 채 줄어듦
+    dis.setObjLayer("%id%bar", 7);
+    // 상태 이상 표시 자리 (처음엔 안 보임 · setStatus 로 켬)
+    dis.setObject([x, y], "%id%stb", [1, 1], "#ffffff");
+    dis.setObjLayer("%id%stb", 5);
+    dis.setObjAlpha("%id%stb", 0);
+    dis.setText([x, y], "-", "%id%stt", ns * 0.5, false, "#ffffff");
+    dis.setObjLayer("%id%stt", 6);
+    dis.setObjAlpha("%id%stt", 0);
+    setHp(id, hp, maxHp);
+}
+
+// 상태 이상 표시: 이름 바로 옆에 그 상태의 색 사각형 + 이름 (code 0 = 없음 → 숨김)
+//   1 화상 (주황) · 2 마비 (노랑) · 3 독 (보라) · 4 맹독 (진보라) · 5 잠듦 (회색) · 6 얼음 (하늘)
+func setStatus(string id, int code){
+    if [code == 0]{
+        dis.setObjAlpha("%id%stb", 0);
+        dis.setObjAlpha("%id%stt", 0);
+    }
+    else{
+        var string call col = "#f08030";
+        var string call tc = "#ffffff";
+        if [code == 2]{
+            col = "#f8d030";
+            tc = "#303030";
+        }
+        if [code == 3]{
+            col = "#a040a0";
+        }
+        if [code == 4]{
+            col = "#682a80";
+        }
+        if [code == 5]{
+            col = "#8890a0";
+        }
+        if [code == 6]{
+            col = "#78c8d8";
+            tc = "#303030";
+        }
+        var float call nx = 0;
+        var float call ny = 0;
+        var float call nw = 0;
+        var float call ns = 0;
+        dis.getVar("%id%name", "coord[1, 1]") as nx;
+        dis.getVar("%id%name", "coord[1, 2]") as ny;
+        dis.getVar("%id%name", "scale[1, 1]") as nw;
+        dis.getVar("%id%name", "scale[1, 2]") as ns;
+        var float call ts = ns * 0.5;
+        dis.setText([0, 0], lang[1340 + code], "%id%stt", ts, false, tc);
+        var float call tw = 0;
+        dis.getVar("%id%stt", "scale[1, 1]") as tw;
+        var float call bw = tw + ts * 0.7;
+        var float call cx = nx + nw + ns * 0.2 + bw / 2;
+        dis.setObject([cx, ny + ns * 0.085], "%id%stb", [bw, ts * 1.5], col);
+        dis.setObjLayer("%id%stb", 5);
+        dis.setObjAlpha("%id%stb", 255);
+        dis.setText([cx, ny + ns * 0.085 - ts * 0.085], lang[1340 + code], "%id%stt", ts, false, tc);
+        dis.setObjLayer("%id%stt", 6);
+        dis.setObjAlpha("%id%stt", 255);
+    }
+}
+
+// 체력바를 바로 hp 로 (애니메이션 없음)
+func setHp(string id, float hp, int maxHp){
+    var float call full = 0;   // 막대가 꽉 찼을 때 폭 = 안쪽 칸 폭
+    var float call fh = 0;
+    dis.getVar("%id%tin", "scale[1, 1]") as full;
+    dis.getVar("%id%tin", "scale[1, 2]") as fh;
+    var float call r = hp / maxHp;
+    if [r < 0]{
+        r = 0;
+    }
+    if [r > 1]{
+        r = 1;
+    }
+    var float call bw = full * r;
+    if [hp > 0] and [bw < 1]{   // 1 이라도 남으면 최소 1 칸
+        bw = 1;
+    }
+    if [hp <= 0]{
+        dis.setObjAlpha("%id%bar", 0);
+    }
+    else{
+        dis.setObjAlpha("%id%bar", 255);
+        dis.setObjScale("%id%bar", [bw, fh]);
+    }
+    if [r > 0.5]{
+        dis.setObjColor("%id%bar", "#58d878");   // 초록
+    }
+    else{
+        if [r > 0.2]{
+            dis.setObjColor("%id%bar", "#f8d030");   // 노랑
+        }
+        else{
+            dis.setObjColor("%id%bar", "#f85838");   // 빨강
+        }
+    }
+}
+
+// 체력바를 hpFrom → hpTo 로 줄이거나 늘림 (끝날 때까지 기다림)
+//   본가처럼 막대 전체(48칸)를 1 프레임에 1 칸씩: 깎인 비율 × 48 프레임
+func drainHp(string id, int hpFrom, int hpTo, int maxHp){
+    var int call steps = ceil(abs(hpTo - hpFrom) * 48.0 / maxHp);
+    var int call i = 1;
+    loop [i <= steps]{
+        setHp(id, hpFrom + (hpTo - hpFrom) * i / (steps * 1.0), maxHp);
+        dis.waitF(1);
+        i = i + 1;
+    }
+    setHp(id, hpTo, maxHp);
+}
+
+// 체력바를 hpFrom → hpTo 로 ms 동안 (깎인 양과 상관없이 같은 시간 · 끝날 때까지 기다림)
+func drainHpMs(string id, int hpFrom, int hpTo, int maxHp, int ms){
+    var int call steps = max(1, floor(ms / 20));
+    var int call i = 1;
+    loop [i <= steps] and [hpFrom != hpTo]{
+        setHp(id, hpFrom + (hpTo - hpFrom) * i / (steps * 1.0), maxHp);
+        wait(20);
+        i = i + 1;
+    }
+    setHp(id, hpTo, maxHp);
+}
+
+// 경험치 바: 스탯 상자 [x, y, w, h] 바로 아래에 붙는 작은 막대 (r = 0 ~ 1) — 만든 오브젝트: id%xbd · id%xtin · id%xbar
+func makeExpBar(string id, float x, float y, float w, float h, float r){
+    var float call bt = max(2, h * 0.05);
+    var float call eh = h * 0.13;
+    var float call ey = y - h / 2 - eh / 2 + bt;   // 상자 아래 테두리와 겹치게
+    dis.setObject([x, ey], "%id%xbd", [w, eh], "#9fbfff");
+    dis.setObjLayer("%id%xbd", 3);
+    dis.setObject([x, ey], "%id%xtin", [w - bt * 2, eh - bt * 2], "#384450");
+    dis.setObjLayer("%id%xtin", 4);
+    dis.setObject([x - w / 2 + bt, ey], "%id%xbar", [w - bt * 2, eh - bt * 2], "#48c8f8");
+    dis.setObjNudge("%id%xbar", "left");
+    dis.setObjLayer("%id%xbar", 5);
+    setExp(id, r);
+}
+func setExp(string id, float r){
+    var float call full = 0;
+    var float call fh = 0;
+    dis.getVar("%id%xtin", "scale[1, 1]") as full;
+    dis.getVar("%id%xtin", "scale[1, 2]") as fh;
+    if [r <= 0]{
+        dis.setObjAlpha("%id%xbar", 0);
+    }
+    else{
+        dis.setObjAlpha("%id%xbar", 255);
+        dis.setObjScale("%id%xbar", [full * min(r, 1), fh]);
+    }
+}
+// 경험치 바를 r0 → r1 로 ms 동안 채움 (끝날 때까지 기다림)
+func animExp(string id, float r0, float r1, int ms){
+    var int call steps = max(1, floor(ms / 20));
+    var int call i = 1;
+    loop [i <= steps]{
+        setExp(id, r0 + (r1 - r0) * i / (steps * 1.0));
+        wait(20);
+        i = i + 1;
+    }
+}
+func removeExpBar(string id){
+    dis.removeObj("%id%xbar");
+    dis.removeObj("%id%xtin");
+    dis.removeObj("%id%xbd");
+}
+
+// 이름 상자 옆의 타입 (정사각형 · 흰 테두리 · 타입 색 바탕에 흰 타입 아이콘) — side 1 = 상자 오른쪽 (상대) · 2 = 상자 왼쪽 (나) · 두 번째 타입이 없으면 (0) 하나만
+//   만든 오브젝트: <id>ty1 · <id>ty1in · <id>ty1ic · (두 번째) <id>ty2… — removeStatBox 가 함께 지움
+func makeTypes(string id, float x, float y, float w, float h, int side, int t1, int t2){
+    var float call s = h * 0.6;              // 한 변
+    var float call g = h * 0.12;             // 상자와의 간격 · 타입끼리 간격
+    var float call wb = max(2, s * 0.08);    // 흰 테두리 두께
+    var int call k = 1;
+    loop [k <= 2]{
+        var int call t = t1;
+        if [k == 2]{
+            t = t2;
+        }
+        var float call tx = x + w / 2 + g + s / 2 + (k - 1) * (s + g);
+        if [side == 2]{
+            tx = x - w / 2 - g - s / 2 - (k - 1) * (s + g);
+        }
+        dis.setObject([tx, y], "%id%ty%k%", [s, s], "#ffffff");
+        dis.setObjLayer("%id%ty%k%", 4);
+        dis.setObject([tx, y], "%id%ty%k%in", [s - wb * 2, s - wb * 2], mu.typeCol(t));
+        dis.setObjLayer("%id%ty%k%in", 5);
+        dis.setObject([tx, y], "%id%ty%k%ic", [s * 0.72, s * 0.72], "#ffffff");
+        mag.setObjTexture("%id%ty%k%ic", "type_%t%", [0, 0], [96, 96]);
+        dis.setObjLayer("%id%ty%k%ic", 6);
+        if [t == 0]{   // 두 번째 타입 없음
+            dis.setObjAlpha("%id%ty%k%", 0);
+            dis.setObjAlpha("%id%ty%k%in", 0);
+            dis.setObjAlpha("%id%ty%k%ic", 0);
+        }
+        k = k + 1;
+    }
+}
+
+func removeStatBox(string id){
+    var int call k = 1;
+    loop [k <= 2]{
+        dis.removeObj("%id%ty%k%");
+        dis.removeObj("%id%ty%k%in");
+        dis.removeObj("%id%ty%k%ic");
+        k = k + 1;
+    }
+    dis.removeObj("%id%bar");
+    dis.removeObj("%id%tin");
+    dis.removeObj("%id%trk");
+    dis.removeObj("%id%hpl");
+    dis.removeObj("%id%name");
+    dis.removeObj("%id%gen");
+    dis.removeObj("%id%stb");
+    dis.removeObj("%id%stt");
+    dis.removeObj("%id%lv");
+    dis.removeObj("%id%");
+    dis.removeObj("%id%bd");
+}

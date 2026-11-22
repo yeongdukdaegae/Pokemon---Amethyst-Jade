@@ -1,0 +1,167 @@
+Use jawbreaker call jaw;
+Use Canvas call can;
+Use DisPlayer call dis;
+Use Magellan call mag;
+Use soundMaster call sou;
+Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+
+var float call btnSize;     // 시작 버튼 글자 크기
+var float call btnY;        // 시작 버튼 위치 (세로)
+var float call resetSize;   // 리셋 안내 글자 크기
+var int call held;          // X 를 누르고 있는 시간 (약 10ms 단위)
+// 리포트 리셋 때 이미 불러온 값도 처음으로 (안 그러면 리셋 뒤 새 게임에 예전 가방 · 소지금이 남음)
+var public compound call myParty;
+var public compound call pcBox;
+var public int call pcOn;
+var public int call pcBoxN;
+var public compound call gyRes;
+var public compound call bag;
+var public list call fiTaken;
+var public int call money;
+var public int call gMonth;
+var public int call place;
+var public int call story;
+var public int call stPick;
+var public int call badges;
+var public list call trDone;
+var public int call reloadSave;
+var public bit call hasSave;
+var public int call titleMade;   // 1 = 장면을 이미 만듦 (리포트 작성 뒤 타이틀로 다시 올 때 또 만들지 않음)
+var public int call sbsMade;
+
+run{
+    can.setUpScene();
+    if [titleMade == 0]{
+        can.setScene("titleScreen");
+        titleMade = 1;
+    }
+    can.sendtoScene("titleScreen");
+    log("gotta catch'em all!");
+    sou.setSpeaker("main2");
+    sou.setFadein("main2", 1000);
+    sou.setFadeout("main2", 1000);
+    sou.repeatPart("main2", "opening", 67000, -1);
+    dis.setupObject();
+    // 가로 · 세로 화면에 맞춘 크기 · 위치 — 리셋 안내는 시작 버튼 위 20 픽셀 (글자 사이 간격)
+    if [dis.idWidthmode == 1]{
+        btnSize = 40;
+        btnY = -180;
+    }
+    else{
+        btnSize = dis.displayY / 36;
+        btnY = dis.displayY / 8;
+    }
+    if [reloadSave == 1]{   // 설정에서 리포트를 불러옴 → 리포트를 다시 읽음
+        reloadSave = 0;
+        setup("assets/codes/loadManager.jb");
+        wait(100);
+    }
+    resetSize = btnSize * 0.7;
+    dis.setText([0, btnY], lang[1], "startButton", btnSize, false, "#efefef");
+    dis.setObjAlpha("startButton", 0);
+    dis.setText([0, btnY + btnSize / 2 + 20 + resetSize / 2], lang[7254], "resetButton", resetSize, false, "#9f9f9f");   // 리포트가 없으면: X = 리포트 불러오기 (파일)
+    dis.setObjAlpha("resetButton", 0);
+    if [hasSave == 1]{   // 리포트가 있으면: Z = 불러오기 · X 길게 = 리포트 리셋
+        dis.setTxtContent("startButton", lang[9]);
+        dis.setTxtContent("resetButton", lang[10]);
+    }
+    wait(1000);
+    dis.setObjAlpha("startButton", 255) for 500;
+    dis.setObjAlpha("resetButton", 255) for 500;
+    loop{
+        if [hasSave == 1] and [ky.z()]{   // Z: 리포트 불러오기 — 저장한 장소 · 위치로
+            dis.setObjAlpha("startButton", 0) for 500;
+            dis.setObjAlpha("resetButton", 0) for 500;
+            wait(500);
+            sou.break("main2");
+            continuing = 1;
+            sendto("assets/codes/places/enterPlace.jb");
+        }
+        if [hasSave == 0] and [ky.x()]{   // X: 리포트 불러오기 (리포트가 없을 때 · 내보낸 파일을 고름)
+            loop [ky.x()]{ dis.waitF(1); }
+            setJson("imp", [0]);
+            genJson("data/save/import.json", "imp");
+            openFile("data/save/import.json");
+            var compound call impD = [];
+            loadJson("data/save/import.json", "impD");
+            var int call impOk = 0;
+            if [impD.length >= 7]{
+                if [impD[1] == "keikan"]{
+                    impOk = 1;
+                }
+            }
+            if [impOk == 1]{
+                setJson("save", impD);
+                genJson("data/save/save.json", "save");
+                setup("assets/codes/loadManager.jb");
+                wait(100);
+            }
+            if [hasSave == 1]{   // 불러옴: 이어하기 · 리포트 리셋 안내로
+                dis.setTxtContent("startButton", lang[9]);
+                dis.setTxtContent("resetButton", lang[10]);
+                log("리포트 불러오기 (타이틀 · 파일)");
+            }
+            else{
+                dis.setTxtContent("resetButton", lang[7253]);
+                wait(1500);
+                dis.setTxtContent("resetButton", lang[7254]);
+            }
+        }
+        if [hasSave == 0] and [ky.z()]{   // Z: 새로 시작 (리포트가 없을 때)
+            dis.setObjAlpha("startButton", 0) for 500;
+            dis.setObjAlpha("resetButton", 0) for 500;
+            wait(500);
+            can.setUpScene();
+            sou.break("main2");
+            if [sbsMade == 0]{
+                can.setScene("settingBeforeStart");
+                sbsMade = 1;
+            }
+            can.sendtoScene("settingBeforeStart");
+            dis.setDisplayColor("#5f9fff");
+            sendto("assets/codes/ui/settings/beforeStart.jb");
+        }
+        if [hasSave == 1] and [ky.x()]{   // X 를 길게 (약 1.5초): 리포트 리셋 — 누르는 동안 안내가 점점 흐려짐
+            held = 0;
+            loop{
+                if not [ky.x()]{
+                    break();
+                }
+                held = held + 1;
+                dis.setObjAlpha("resetButton", 255 - held);
+                if [held >= 150]{
+                    break();
+                }
+                wait(10);
+            }
+            if [held >= 150]{
+                setJson("reset", []);
+                genJson("data/save/save.json", "reset");   // 빈 리포트 → 다음부터 새 게임
+                hasSave = 0;
+                myParty = [];
+                pcBox = [];
+                bag = [];
+                fiTaken = [];
+                money = 3000;
+                pcOn = 0;
+                pcBoxN = 2;
+                gyRes = [];   // 유풍체육관 상태 (리포트 리셋)
+                gMonth = 0;   // 시간 · 날짜도 처음으로 (timeManager.jb)
+                place = 0;
+                story = 0;
+                stPick = 0;
+                badges = 0;
+                trDone = [];
+                log("리포트 리셋");
+                dis.setTxtContent("startButton", lang[1]);
+                dis.setTxtContent("resetButton", lang[7254]);
+                dis.setObjAlpha("resetButton", 255);
+                loop [ky.x()]{ dis.waitF(1); }   // 리셋한 X 로 바로 불러오기 창이 열리지 않게
+            }
+            else{
+                dis.setObjAlpha("resetButton", 255);   // 중간에 떼면 취소
+            }
+        }
+        dis.waitF(1);
+    }
+}

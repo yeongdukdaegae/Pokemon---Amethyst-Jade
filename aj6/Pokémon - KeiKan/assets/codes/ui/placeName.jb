@@ -1,0 +1,152 @@
+Use jawbreaker call jaw;
+Use Canvas call can;
+Use DisPlayer call dis;
+
+// 장소 이름 알림: 구역을 옮기면 화면 왼쪽 위에서 그 장소의 이름이 내려왔다가 2000 밀리초 뒤에 다시 올라감
+//   구역 (zone): 0 = 이름 없음 (방) · 1 = 관산골길 (집 앞에서 마을까지의 길) · 2 = 관산마을 (십자로가 있는 마을) · 3 = 14번도로 · 4 = 1번도로 · 5 = 8번도로 (사거리 오른쪽)
+//     이름 = lang[3823 + zone] · 3 · 5 는 아직 맵이 없어 나오지 않음 · 4 (1번도로) = 마을 서쪽 경계 (x = -248) 를 넘으면 (맵을 만들면 아래 구역 판정에 덧붙일 것)
+//   구역 판정 (문 밖 맵 road1): 길과 마을의 경계 = 37 번째 줄과 36 번째 줄 사이 (y = 568) — 경계에서 오락가락해도 깜빡이지 않게 4 픽셀씩 여유
+//   게임을 시작하거나 리포트를 불러온 직후에는 알리지 않음 (구역이 바뀔 때만)
+//   움직임: 12 프레임 (200 밀리초) 동안 내려옴 → 120 프레임 (2000 밀리초) 머묾 → 12 프레임 동안 올라감 · 머무는 중에 구역이 또 바뀌면 글자만 바꾸고 다시 2000 밀리초
+//   만든 오브젝트: pnbd · pnbg · pntx (화면에 고정 · 메뉴 / 대사 상자보다 아래 레이어)
+
+var public int call place;
+var public list call lang;
+var public int call zone;
+var public int call quitTitle;   // 1 = 리포트 작성 뒤 타이틀 화면으로 나감 (fieldMenu.jb) → 필드 코드들이 멈춤 · prtgRoom.jb 가 필드를 지우고 타이틀로
+
+
+run{
+    var int call first = 1;    // 1 = 아직 첫 판정 전 (알리지 않음)
+    var int call pnSt = 0;     // 0 숨음 · 1 내려오는 중 · 2 머무는 중 · 3 올라가는 중
+    var int call pnT = 0;      // 머문 프레임 수
+    var float call pnX = 0;
+    var float call pnY = 0;    // 지금 높이
+    var float call showY = 0;
+    var float call hideY = 0;
+    var float call pnStep = 0;
+    var float call pnH = 0;
+    zone = 0;
+    loop{
+        if [quitTitle == 1]{
+            break();
+        }
+        // ── 구역 판정 ──
+        var int call nz = zone;
+        if [place == 0]{
+            nz = 0;
+        }
+        else if [place == 5]{   // 보라매숲
+            nz = 6;
+        }
+        else if [place == 6]{   // 1번도로 서쪽 (보라매숲 너머)
+            nz = 4;
+        }
+        else if [place == 7] or [place == 8] or [place == 9] or [place == 11] or [place == 12]{   // 유풍시티 (상점 · 포켓몬센터 · 체육관 로비 안 포함)
+            nz = 7;
+        }
+        else if [place >= 2]{   // 건물 안 (포켓몬센터 · 연구소): 구역 그대로
+            nz = zone;
+        }
+        else{
+            if [zone == 0]{   // 방금 문 밖으로 나옴 (또는 문 밖에서 시작)
+                nz = 1;
+                if [obj.prtg.Ypos > 568]{
+                    nz = 2;
+                }
+            }
+            if [obj.prtg.Ypos > 572]{
+                nz = 2;
+            }
+            if [obj.prtg.Ypos < 564]{
+                nz = 1;
+            }
+            if [obj.prtg.Xpos < -252]{   // 1번도로 (마을 서쪽 경계 x = -248 너머 30 칸 · 맵 0 ~ 29 열)
+                nz = 4;
+            }
+            if [zone == 4] and [obj.prtg.Xpos < -244]{
+                nz = 4;
+            }
+        }
+        if [nz != zone]{
+            zone = nz;
+            var string call zName = lang[3823 + zone];   // 구역 이름 (6 보라매숲 = lang[7256])
+            if [zone == 6]{
+                zName = lang[7256];
+            }
+            if [zone == 7]{
+                zName = lang[7376];
+            }
+            if [first == 0] and [zone != 0]{
+                // ── 알림 띄우기 (이미 떠 있으면 글자만 바꿈) ──
+                var float call aY = 0;
+                var float call aW = dis.displayX;
+                var float call aH = dis.displayY;
+                if [dis.idWidthmode == 0]{   // 모바일: 조작부 위의 화면
+                    aY = dis.displayY / 4;
+                    aH = dis.displayY / 2;
+                }
+                pnH = aH * 0.085;
+                var float call pnW = pnH * 4.6;
+                pnX = pnH * 0.25 + pnW / 2 - aW / 2;
+                showY = aY + aH / 2 - pnH * 0.25 - pnH / 2;
+                hideY = aY + aH / 2 + pnH / 2 + 4;
+                pnStep = (hideY - showY) / 12.0;
+                if [pnSt == 0]{
+                    pnY = hideY;
+                    dis.setObject([pnX, pnY], "pnbd", [pnW, pnH], "#9fbfff");
+                    dis.setObject([pnX, pnY], "pnbg", [pnW - 6, pnH - 6], "#2f5f9f");
+                    dis.setText([pnX, pnY - pnH * 0.05], zName, "pntx", pnH * 0.5, false, "#ffffff");
+                    can.setUi("pnbd");
+                    can.setUi("pnbg");
+                    can.setUi("pntx");
+                    dis.setObjLayer("pnbd", 50);
+                    dis.setObjLayer("pnbg", 51);
+                    dis.setObjLayer("pntx", 52);
+                }
+                else{
+                    dis.setTxtContent("pntx", zName);
+                }
+                pnSt = 1;
+                pnT = 0;
+                log("장소: " + zName);
+            }
+        }
+        first = 0;
+        // ── 알림 움직이기 ──
+        if [pnSt == 1]{
+            pnY = pnY - pnStep;
+            if [pnY <= showY]{
+                pnY = showY;
+                pnSt = 2;
+                pnT = 0;
+            }
+        }
+        else if [pnSt == 2]{
+            pnT = pnT + 1;
+            if [pnT >= 120]{
+                pnSt = 3;
+            }
+        }
+        else if [pnSt == 3]{
+            pnY = pnY + pnStep;
+            if [pnY >= hideY]{
+                pnSt = 0;
+                dis.removeObj("pnbd");
+                dis.removeObj("pnbg");
+                dis.removeObj("pntx");
+            }
+        }
+        if [pnSt != 0]{
+            dis.setObjPos("pnbd", [pnX, pnY]);
+            dis.setObjPos("pnbg", [pnX, pnY]);
+            dis.setObjPos("pntx", [pnX, pnY - pnH * 0.05]);
+        }
+        dis.waitF(1);
+    }
+    if [pnSt != 0]{   // 타이틀로 나갈 때 떠 있던 알림
+        dis.removeObj("pnbd");
+        dis.removeObj("pnbg");
+        dis.removeObj("pntx");
+    }
+}

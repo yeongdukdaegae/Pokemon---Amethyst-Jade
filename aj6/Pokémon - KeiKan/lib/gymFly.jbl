@@ -1,0 +1,667 @@
+Lib id gymFly;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Canvas call can;
+Use Magellan call mag;
+Use colliders call col;
+Use soundMaster call sou;
+Use fieldTalk call ft;
+Use bagCore call bg;
+Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+
+// 유풍체육관 안 (place 12 · gym1 · 36 x 36 · [0, 0] 칸 = 17 열 35 줄 = [21000, 3000]) — 하늘 위 발판을 글라이더로 날아다님
+//   enter(): 맵을 깔 때 (prtgRoom.jb) — 체육관 전용 도구 (903 상처약 2 · 904 기력의조각 1) · 부스터 1 · 양력 100 · 맵 끝 투명벽 · 시작 발판 투명벽 (글라이더 전) · 글라이더 · 찌르꼬
+//   이륙: 글라이더를 찬 뒤 발판 위에서 Z (바라보는 칸에 상호작용이 없을 때) → 날기 시작 · 이륙 전에는 발판 밖으로 못 나감 · 하늘을 지나 발판에 닿으면 착지 (다시 Z 로 이륙)
+//   equip(): 시작 발판의 글라이더를 Z (fsAct 3888 · fieldSelect.jb) → 착용 → 시작 발판 투명벽을 없앰 · 양력 게이지
+//   tick(x, y, canMove): 매 프레임 (prtgRoom.jb) — 하늘 위에서는 양력이 줄고 (움직인 거리 + 시간) 발판 위에서는 100 으로 · Z = 부스터 (양력 +10)
+//     돌려주는 값: 0 없음 · 1 양력 0 (떨어짐 → 로비) · 2 들어온 뒤 처음 (도구를 받았다는 대사) · 100 + k = 찌르꼬 k 와 부딪힘 (배틀)
+//   trainerAt(x, y): 체육관 트레이너 (lib/fieldNpc.jbl 31 ~ 33) 가 선 5 x 5 발판에 올라섰으면 그 사람 번호 (아직 안 이겼을 때)
+//   leave(): 맵을 지울 때 (나감 · 떨어짐 · 전멸) — 그린 것 · 투명벽을 지우고 체육관 전용 도구를 거둠
+//   리포트: saveManager.jb 가 체육관 상태 (글라이더 · 나는 중 · 양력 · 부스터 · 찌르꼬 · 바람 · 방향) 를 20 번째 칸에 · 불러오면 enter 가 이어 함 (도구는 가방에 그대로)
+//   바람 이펙트: 화면에 흰 바람 줄기가 바람 방향으로 흐름 (fxMake · fxMove)
+//   바람: 5 초마다 방향이 바뀜 (8 방향 · 아랫방향 = 역풍은 드묾) · 나는 중에만 그 방향으로 밀림 (가장 빠를 때의 0.3 배) · 게이지 아래에 방향 표시
+//   양력: 하늘 위에서 1 픽셀마다 0.35 · 1 초마다 2 줄어듦 (곧게 날면 약 16 칸) · 발판에 내리면 다시 100 · 부스터 = +10 (최대 100)
+
+var public compound call bag;
+var public list call lang;
+var public int call ftResult;
+var public list call fsSolid;
+var public list call fsAct;
+var public int call fsDirty;
+var public list call trDone;
+var public list call npPlace;
+var public list call npCol;
+var public list call npRow;
+var public list call npTr;
+var public int call gyIn;      // 1 = 체육관 안 (enter 뒤 · leave 전)
+var public int call gyGlide;   // 1 = 글라이더를 참
+var public int call gyFly;     // 0 = 서 있음 · 1 = 나는 중 (발판 위에서 Z 로 이륙 · 멈출 수 없음) · 2 = 착지해서 미끄러지는 중 (멈추면 0)
+var public int call gyCd;      // 이륙 뒤 부스터를 못 쓰는 프레임 수
+var public int call gyAir;
+var public float call gyDx;    // 나는 방향 (단위 벡터 · 방향키를 놓아도 그대로)
+var public float call gyDy;
+var public float call gyVx;    // 나는 속도 (jahui.jb 가 플레이어에게 줌)
+var public float call gyVy;
+var public int call gyWd;      // 바람 방향 0 ~ 7 (0 위 · 1 오른쪽 위 · 2 오른쪽 · 3 오른쪽 아래 · 4 아래 · 5 왼쪽 아래 · 6 왼쪽 · 7 왼쪽 위 · 이름 lang[7498 + 방향])
+var public int call gyWt;      // 바람이 바뀔 때까지 남은 프레임 (5 초 = 300)
+var public compound call gyRes;   // 리포트에서 읽은 체육관 상태 (loadManager.jb · enter 가 한 번 쓰고 비움)
+var public list call gyFxX;    // 바람 이펙트 줄기 위치 (화면)
+var public list call gyFxY;
+var public float call gyAx;    // 바람 이펙트가 흐르는 화면 (폭 · 가운데 y · 높이)
+var public float call gyAy;
+var public float call gyAh;
+var public int call gySl;      // 착지 뒤 미끄러지는 남은 프레임
+var public int call direction;
+var public float call speed;     // 1 = 이륙한 뒤 하늘 위에 나간 적이 있음 (그 뒤 발판에 닿으면 착지)
+var public int call fsNow;     // 바라보는 칸의 상호작용 (fieldSelect.jb) — 0 일 때만 Z 가 이륙
+var public float call gyLift;  // 양력 (0 ~ 100)
+var public int call gyBoost;   // 남은 부스터
+var public int call gyMsg;     // 1 = 들어온 뒤 아직 대사 전
+var public int call gyZp;      // 지난 프레임의 Z
+var public float call gyPx;
+var public float call gyPy;
+var public int call gyF;       // 프레임 수 (찌르꼬 날갯짓)
+var public list call gyPl;     // 발판 [열, 줄, 폭, 높이, …]
+var public list call gySr;     // 찌르꼬: 줄
+var public list call gyS0;     //   왼쪽 끝 x
+var public list call gyS1;     //   오른쪽 끝 x
+var public list call gySx;     //   지금 x
+var public list call gySd;     //   방향 (-1 · 1)
+var public list call gyOn;     //   1 = 있음 (부딪히면 사라짐 · 다시 들어오면 다시)
+
+func float cx(int c){
+    return(21000 + (c - 17) * 16);
+}
+func float cy(int r){
+    return(3000 + (35 - r) * 16);
+}
+
+// 그 위치가 발판 위인지
+func int onPlat(float px, float py){
+    var int call c = floor((px - 21000) / 16.0 + 17 + 0.5);
+    var int call r = floor(35 + 0.5 - (py - 3000) / 16.0);
+    var int call i = 1;
+    loop [i < gyPl.length]{
+        if [c >= gyPl[i]] and [c < gyPl[i] + gyPl[i + 2]] and [r >= gyPl[i + 1]] and [r < gyPl[i + 1] + gyPl[i + 3]]{
+            return(1);
+        }
+        i = i + 4;
+    }
+    return(0);
+}
+
+func enter(){
+    var int call rs = 0;   // 1 = 리포트에서 이어 함 (gyRes · loadManager.jb)
+    if [gyRes.length >= 13]{
+        if [gyRes[1] == 1]{
+            rs = 1;
+        }
+    }
+    gyIn = 1;
+    gyGlide = 0;
+    gyFly = 0;
+    gyAir = 0;
+    gyVx = 0;
+    gyVy = 0;
+    gyDx = 0;
+    gyDy = 1;
+    windRoll();
+    gyLift = 100;
+    gyBoost = 1;
+    gyMsg = 1;
+    gyZp = 1;
+    gyPx = 21008;
+    gyPy = 3016;
+    gyF = 0;
+    gyPl = [15, 32, 6, 4, 6, 21, 5, 5, 19, 13, 5, 5, 7, 5, 5, 5, 13, 0, 10, 3];
+    gyOn = [1, 1, 1, 1];
+    if [rs == 1]{   // 리포트: [1 체육관 안, 글라이더, 나는 중, 양력, 부스터, 찌르꼬 1 ~ 4, 바람, 방향 x, 방향 y, 들어온 뒤 대사 전] — 도구는 가방에 그대로 있음
+        gyGlide = gyRes[2];
+        gyFly = gyRes[3];
+        if [gyFly == 2]{
+            gyFly = 0;
+        }
+        gyAir = 1;
+        gyLift = gyRes[4];
+        gyBoost = gyRes[5];
+        gyOn = [gyRes[6], gyRes[7], gyRes[8], gyRes[9]];
+        gyWd = gyRes[10];
+        gyDx = gyRes[11];
+        gyDy = gyRes[12];
+        gyMsg = gyRes[13];
+        log("체육관 안: 리포트에서 이어 함 (글라이더 %gyGlide% · 양력 %gyLift% · 부스터 %gyBoost%)");
+    }
+    else{
+        // 체육관 전용 도구: 들어올 때마다 상처약 2 · 기력의조각 1 (남아 있던 것은 거두고 새로)
+        var int call n3 = bg.countOf(903);
+        if [n3 > 0]{
+            bg.take(903, n3);
+        }
+        var int call n4 = bg.countOf(904);
+        if [n4 > 0]{
+            bg.take(904, n4);
+        }
+        var compound call gi1 = [903, 2];
+        bag.add(gi1);
+        var compound call gi2 = [904, 1];
+        bag.add(gi2);
+    }
+    gyRes = [];
+    // 맵 끝 투명벽 (아래쪽은 매트 (17 · 18 열) 만 비움 → 매트 아래로 나가면 로비)
+    col.setCollider([20712, 3280], [16, 608], "gyWL", 0, false);
+    col.setCollider([21304, 3280], [16, 608], "gyWR", 0, false);
+    col.setCollider([21008, 3576], [608, 16], "gyWT", 0, false);
+    col.setCollider([20848, 2984], [288, 16], "gyWB1", 0, false);
+    col.setCollider([21168, 2984], [288, 16], "gyWB2", 0, false);
+    if [gyGlide == 0]{
+        // 시작 발판 (15 ~ 20 열 · 32 ~ 35 줄) 둘레 투명벽 — 글라이더를 차면 없앰
+        col.setCollider([20952, 3024], [16, 80], "gyBL", 0, false);
+        col.setCollider([21064, 3024], [16, 80], "gyBR", 0, false);
+        col.setCollider([21008, 3064], [128, 16], "gyBT", 0, false);
+        // 글라이더 (20 열 33 줄 · 플레이어 오른쪽 옆)
+        var float call gx = cx(20);
+        var float call gy = cy(33);
+        dis.setObjPlg([gx - 7, gy + 2], [gx + 7, gy + 2], [gx, gy + 6], "gyGd1", "#89aae3");
+        dis.setObjPlg([gx - 7, gy + 2], [gx, gy - 1], [gx + 7, gy + 2], "gyGd2", "#28386a");
+        dis.setObject([gx, gy - 3], "gyGd3", [2, 7], "#28386a");
+        dis.setObject([gx, gy - 6], "gyGd4", [8, 2], "#28386a");
+        col.setCollider([gx, gy], [16, 16], "gyGdc", 0, false);
+        var int call ga = 33 * 36 + 20 + 1;
+        fsAct[ga] = 3888;
+        fsSolid[ga] = 1;
+        fsDirty = 1;
+    }
+    else{   // 이미 찬 글라이더 (리포트)
+        wingMake();
+        uiMake();
+    }
+    // 찌르꼬 (발판 사이를 좌우로 날아다님 · 부딪히면 배틀 · 잡을 수 없음)
+    gySr = [28, 19, 11, 3];
+    gyS0 = [cx(9), cx(10), cx(10), cx(2)];
+    gyS1 = [cx(17), cx(19), cx(20), cx(11)];
+    gySx = [cx(12), cx(16), cx(13), cx(5)];
+    gySd = [1, -1, 1, -1];
+    var int call k = 1;
+    loop [k <= 4]{
+        if [gyOn[k] == 1]{
+            dis.setObject([gySx[k], cy(gySr[k])], "gyS%k%", [26, 26], "#ffffff");
+            dis.setObjLayer("gyS%k%", 3);
+            sFrame(k);
+        }
+        k = k + 1;
+    }
+    fxMake();
+    log("체육관 안: 들어옴 (양력 %gyLift% · 부스터 %gyBoost%)");
+}
+
+// 플레이어 위 글라이더 날개
+func wingMake(){
+    dis.setObject([gyPx, gyPy + 13], "gyWg", [28, 4], "#89aae3");
+    dis.setObject([gyPx, gyPy + 9], "gyWs", [2, 7], "#28386a");
+    dis.setObjLayer("gyWg", 2);
+    dis.setObjLayer("gyWs", 2);
+}
+
+// 바람 이펙트: 화면 (조작부 위) 에 흰 바람 줄기 14 개 — 줄기마다 점 4 개 (앞이 진하고 뒤로 갈수록 흐림) · 바람 방향으로 흘러가고 화면 끝을 넘으면 반대편에서 다시
+func fxArea(){
+    gyAx = dis.displayX;
+    gyAy = 0;
+    gyAh = dis.displayY;
+    if [dis.idWidthmode == 0]{
+        gyAy = dis.displayY / 4;
+        gyAh = dis.displayY / 2;
+    }
+}
+func fxMake(){
+    fxArea();
+    gyFxX = [];
+    gyFxY = [];
+    var int call k = 1;
+    loop [k <= 14]{
+        gyFxX.add(jaw.random(0 - gyAx / 2, gyAx / 2));
+        gyFxY.add(gyAy + jaw.random(0 - gyAh / 2, gyAh / 2));
+        var int call j = 1;
+        loop [j <= 4]{
+            dis.setObject([gyFxX[k], gyFxY[k]], "gyFx%k%_%j%", [gyAh * 0.008, gyAh * 0.008], "#ffffff");
+            can.setUi("gyFx%k%_%j%");
+            dis.setObjLayer("gyFx%k%_%j%", 50);
+            dis.setObjAlpha("gyFx%k%_%j%", 150 - j * 30);
+            j = j + 1;
+        }
+        k = k + 1;
+    }
+    fxMove();
+}
+func fxMove(){
+    var float call wa = 90 - gyWd * 45;
+    var float call ux = cos(wa);
+    var float call uy = sin(wa);
+    var float call st = gyAh * 0.012;   // 한 프레임에 흐르는 거리 (화면 높이의 1.2 %)
+    var float call gap = gyAh * 0.012;  // 점 사이
+    var int call k = 1;
+    loop [k <= 14]{
+        var float call fx = gyFxX[k] + ux * st * (0.7 + 0.04 * k);
+        var float call fy = gyFxY[k] + uy * st * (0.7 + 0.04 * k);
+        if [fx > gyAx / 2 + 20]{
+            fx = 0 - gyAx / 2 - 20;
+            fy = gyAy + jaw.random(0 - gyAh / 2, gyAh / 2);
+        }
+        if [fx < 0 - gyAx / 2 - 20]{
+            fx = gyAx / 2 + 20;
+            fy = gyAy + jaw.random(0 - gyAh / 2, gyAh / 2);
+        }
+        if [fy > gyAy + gyAh / 2 + 20]{
+            fy = gyAy - gyAh / 2 - 20;
+            fx = jaw.random(0 - gyAx / 2, gyAx / 2);
+        }
+        if [fy < gyAy - gyAh / 2 - 20]{
+            fy = gyAy + gyAh / 2 + 20;
+            fx = jaw.random(0 - gyAx / 2, gyAx / 2);
+        }
+        gyFxX[k] = fx;
+        gyFxY[k] = fy;
+        var int call j = 1;
+        loop [j <= 4]{
+            dis.setObjPos("gyFx%k%_%j%", [fx - ux * gap * (j - 1), fy - uy * gap * (j - 1)]);
+            j = j + 1;
+        }
+        k = k + 1;
+    }
+}
+func fxRemove(){
+    var int call k = 1;
+    loop [k <= 14]{
+        var int call j = 1;
+        loop [j <= 4]{
+            dis.removeObj("gyFx%k%_%j%");
+            j = j + 1;
+        }
+        k = k + 1;
+    }
+}
+
+// 찌르꼬 k 의 그림 (ow_77 · 왼쪽 4 · 5 · 오른쪽 6 · 7 · 날갯짓)
+func sFrame(int k){
+    var int call fr = 4;
+    if [gySd[k] == 1]{
+        fr = 6;
+    }
+    var int call ph = floor(gyF / 10) + k;
+    if [ph - floor(ph / 2) * 2 == 1]{
+        fr = fr + 1;
+    }
+    mag.setObjTexture("gyS%k%", "ow_77", [0, fr * 32], [32, fr * 32 + 32]);
+}
+
+// 양력 게이지 (화면 위 가운데 · 최대 100) · 부스터 수
+func uiMake(){
+    var float call aY = 0;
+    var float call aW = dis.displayX;
+    var float call aH = dis.displayY;
+    if [dis.idWidthmode == 0]{
+        aY = dis.displayY / 4;
+        aH = dis.displayY / 2;
+    }
+    var float call bw = aW * 0.34;
+    var float call bh = aH * 0.035;
+    var float call by = aY + aH / 2 - aH * 0.075;
+    dis.setObject([0, by], "gyUb", [bw + 8, bh + 8], "#28386a");
+    dis.setObject([0, by], "gyUg", [bw, bh], "#1b2440");
+    dis.setObject([0, by], "gyUf", [bw, bh], "#89aae3");
+    dis.setText([0, by + bh * 1.6], lang[7490], "gyUt", bh * 1.1, false, "#ffffff");
+    dis.setText([bw / 2 + bh * 3.2, by], "", "gyUn", bh * 1.1, false, "#ffffff");
+    dis.setText([0, by - bh * 1.7], "", "gyUw", bh * 0.9, false, "#ffffff");   // 바람 방향 (게이지 바로 아래)
+    dis.setText([0, by - bh * 3.0], "", "gyUz", bh * 0.9, false, "#dfe9ff");
+    can.setUi("gyUb");
+    can.setUi("gyUg");
+    can.setUi("gyUf");
+    can.setUi("gyUt");
+    can.setUi("gyUn");
+    can.setUi("gyUz");
+    can.setUi("gyUw");
+    dis.setObjLayer("gyUb", 60);
+    dis.setObjLayer("gyUg", 61);
+    dis.setObjLayer("gyUf", 62);
+    dis.setObjLayer("gyUt", 63);
+    dis.setObjLayer("gyUn", 63);
+    dis.setObjLayer("gyUz", 63);
+    dis.setObjLayer("gyUw", 63);
+    uiSet();
+}
+func uiSet(){
+    var float call aW = dis.displayX;
+    var float call aH = dis.displayY;
+    if [dis.idWidthmode == 0]{
+        aH = dis.displayY / 2;
+    }
+    var float call bw = aW * 0.34;
+    var float call bh = aH * 0.035;
+    var float call fw = bw * gyLift / 100;
+    if [fw < 0.5]{
+        fw = 0.5;
+    }
+    dis.setObjScale("gyUf", [fw, bh]);
+    dis.setObjPos("gyUf", [fw / 2 - bw / 2, obj.gyUg.Ypos]);
+    var string call fc = "#89aae3";
+    if [gyLift < 30]{
+        fc = "#ff6a6a";
+    }
+    dis.setObjColor("gyUf", fc);
+    var int call li = ceil(gyLift);
+    dis.setTxtContent("gyUn", "%li%");
+    dis.setTxtContent("gyUw", replaceStr(lang[7497], "{d}", lang[7498 + gyWd]));
+    if [gyFly == 0]{
+        dis.setTxtContent("gyUz", lang[7492]);
+    }
+    else{
+        dis.setTxtContent("gyUz", replaceStr(lang[7491], "{n}", "%gyBoost%"));
+    }
+}
+
+// 글라이더를 Z (fsAct 3888)
+func equip(){
+    ft.open("");
+    ft.type(lang[7486]);
+    ft.yesNo(lang[7487], lang[7388]);
+    if [ftResult == 1]{
+        gyGlide = 1;
+        dis.removeObj("gyGd1");
+        dis.removeObj("gyGd2");
+        dis.removeObj("gyGd3");
+        dis.removeObj("gyGd4");
+        dis.removeObj("gyGdc");
+        dis.removeObj("gyBL");
+        dis.removeObj("gyBR");
+        dis.removeObj("gyBT");
+        var int call ga = 33 * 36 + 20 + 1;
+        fsAct[ga] = 0;
+        fsSolid[ga] = 0;
+        fsDirty = 1;
+        wingMake();
+        uiMake();
+        log("글라이더 착용");
+        ft.say(lang[7488]);
+    }
+    ft.close();
+    gyZp = 1;
+}
+
+// 바람 방향 뽑기 (아랫방향 = 역풍은 드묾): 위 20 · 오른쪽 위 15 · 왼쪽 위 15 · 오른쪽 15 · 왼쪽 15 · 오른쪽 아래 7 · 왼쪽 아래 7 · 아래 6 (%)
+func windRoll(){
+    var float call wr = jaw.random(0, 100);
+    gyWd = 0;
+    if [wr >= 20]{
+        gyWd = 1;
+    }
+    if [wr >= 35]{
+        gyWd = 7;
+    }
+    if [wr >= 50]{
+        gyWd = 2;
+    }
+    if [wr >= 65]{
+        gyWd = 6;
+    }
+    if [wr >= 80]{
+        gyWd = 3;
+    }
+    if [wr >= 87]{
+        gyWd = 5;
+    }
+    if [wr >= 94]{
+        gyWd = 4;
+    }
+    gyWt = 300;
+    log("체육관 바람: %gyWd%");
+}
+
+// 나는 속도: 방향키 (대각선 포함) 로 방향만 바꿈 · 놓으면 그 방향 그대로
+//   빠르기 = 걷기의 0.75 배 × (1 + 0.7 × (1 - 양력 / 100)) → 양력 100 에서 0.75 배 · 양력 0 에서 그 1.7 배
+func glideVel(){
+    var float call kx = 0;
+    var float call ky2 = 0;
+    if [isKeyInput("left")]{
+        kx = -1;
+    }
+    if [isKeyInput("right")]{
+        kx = 1;
+    }
+    if [isKeyInput("down")]{
+        ky2 = -1;
+    }
+    if [isKeyInput("up")]{
+        ky2 = 1;
+    }
+    if [kx != 0] or [ky2 != 0]{
+        var float call kl = sqrt(kx * kx + ky2 * ky2);
+        gyDx = kx / kl;
+        gyDy = ky2 / kl;
+    }
+    var float call sp = 64 * speed * 0.75 * (1 + 0.7 * (1 - gyLift / 100));
+    // 바람: 가장 빠를 때 (1.7 배) 의 0.3 배 세기로 바람 방향으로 밀림
+    var float call wsp = 64 * speed * 0.75 * 1.7 * 0.3;
+    var float call wa = 90 - gyWd * 45;
+    gyVx = gyDx * sp + cos(wa) * wsp;
+    gyVy = gyDy * sp + sin(wa) * wsp;
+}
+
+func int tick(float px, float py, int cm){
+    if [gyIn == 0]{
+        return(0);
+    }
+    var int call res = 0;
+    var int call stay = 0;   // 1 = 이륙 전에 발판 밖으로 나가려 해서 제자리로 돌림
+    var int call zNow = ky.z();
+    if [cm == 1]{
+        gyF = gyF + 1;
+        fxMove();
+        gyWt = gyWt - 1;
+        if [gyWt <= 0]{   // 5 초마다 바람이 바뀜
+            windRoll();
+            if [gyGlide == 1]{
+                uiSet();
+            }
+        }
+        var int call k = 1;
+        loop [k <= 4]{   // 찌르꼬: 좌우로 왕복
+            if [gyOn[k] == 1]{
+                gySx[k] = gySx[k] + gySd[k] * 0.7;
+                if [gySx[k] > gyS1[k]]{
+                    gySd[k] = -1;
+                }
+                if [gySx[k] < gyS0[k]]{
+                    gySd[k] = 1;
+                }
+                dis.setObjPos("gyS%k%", [gySx[k], cy(gySr[k]) + 4 * sin(gyF * 6 + k * 90)]);
+                if [gyF - floor(gyF / 10) * 10 == 0]{
+                    sFrame(k);
+                }
+                var float call ddx = gySx[k] - px;
+                var float call ddy = cy(gySr[k]) - py;
+                if [res == 0] and [ddx * ddx + ddy * ddy < 324]{   // 부딪힘 (18 픽셀 안)
+                    gyOn[k] = 0;
+                    dis.removeObj("gyS%k%");
+                    res = 100 + k;
+                }
+            }
+            k = k + 1;
+        }
+        if [gyGlide == 1] and [gyFly == 0]{   // 글라이더를 찼지만 아직 이륙 전: 발판 밖으로 못 나감 (나가려 하면 제자리로) · Z = 이륙
+            gyLift = 100;
+            if [onPlat(px, py) == 0]{
+                dis.setObjPos("prtg", [gyPx, gyPy]);
+                stay = 1;
+            }
+            else{
+                if [zNow == 1] and [gyZp == 0] and [fsNow == 0]{
+                    gyFly = 1;
+                    gyAir = 0;
+                    gyCd = 30;   // 이륙한 Z 가 바로 부스터로 쓰이지 않게 (0.5 초)
+                    gyDx = 0;
+                    gyDy = 1;
+                    if [direction == 1]{
+                        gyDx = -1;
+                        gyDy = 0;
+                    }
+                    if [direction == 2]{
+                        gyDx = 1;
+                        gyDy = 0;
+                    }
+                    if [direction == 3]{
+                        gyDy = -1;
+                    }
+                    glideVel();
+                    sou.playSfx("ui", "choose", 2000);
+                    log("글라이더: 이륙");
+                }
+            }
+            uiSet();
+        }
+        else if [gyGlide == 1] and [gyFly == 2]{   // 착지 뒤 미끄러짐: 속도가 줄다가 멈춤 (발판 밖으로 나가려 하면 바로 멈춤) → 멈추면 이벤트 (트레이너 · prtgRoom.jb)
+            gyLift = 100;
+            if [onPlat(px, py) == 0]{
+                dis.setObjPos("prtg", [gyPx, gyPy]);
+                stay = 1;
+                gySl = 0;
+            }
+            gyVx = gyVx * 0.86;
+            gyVy = gyVy * 0.86;
+            gySl = gySl - 1;
+            if [gySl <= 0]{
+                gyFly = 0;
+                gyVx = 0;
+                gyVy = 0;
+                log("글라이더: 착지 (멈춤)");
+            }
+            uiSet();
+        }
+        else if [gyGlide == 1]{   // 나는 중: 멈출 수 없음 (방향키로 방향만 바꿈 · lib 이 정한 속도 gyVx · gyVy 를 jahui.jb 가 씀) · 하늘 위에서는 양력이 줆 · 발판에 다시 내려앉으면 미끄러지며 착지
+            if [onPlat(px, py) == 1]{
+                gyLift = 100;
+                if [gyAir == 1]{
+                    gyFly = 2;
+                    gySl = 24;
+                    log("글라이더: 착지 (미끄러짐)");
+                }
+                else{
+                    glideVel();
+                }
+            }
+            else{
+                glideVel();
+                gyAir = 1;
+                var float call mx = px - gyPx;
+                var float call my = py - gyPy;
+                gyLift = gyLift - sqrt(mx * mx + my * my) * 0.35 - 2 / 60.0;
+                if [gyCd > 0]{
+                    gyCd = gyCd - 1;
+                }
+                if [zNow == 1] and [gyZp == 0] and [gyBoost > 0] and [gyCd <= 0]{   // 부스터
+                    gyBoost = gyBoost - 1;
+                    gyLift = min(100, gyLift + 10);
+                    sou.playSfx("ui", "choose", 2000);
+                    log("부스터: 양력 +10");
+                }
+                if [gyLift <= 0]{   // 떨어짐: 나는 것을 멈춤 (prtgRoom.jb 가 대사 → 로비)
+                    gyLift = 0;
+                    gyFly = 0;
+                    gyVx = 0;
+                    gyVy = 0;
+                    if [res == 0]{
+                        res = 1;
+                    }
+                }
+            }
+            uiSet();
+        }
+        if [res == 0] and [gyMsg == 1]{
+            gyMsg = 0;
+            res = 2;
+        }
+    }
+    if [stay == 0]{
+        gyPx = px;
+        gyPy = py;
+    }
+    if [gyGlide == 1]{
+        dis.setObjPos("gyWg", [gyPx, gyPy + 13]);
+        dis.setObjPos("gyWs", [gyPx, gyPy + 9]);
+    }
+    gyZp = zNow;
+    return(res);
+}
+
+// 체육관 트레이너 (사람 31 ~ 33) 의 5 x 5 발판 위인지 → 그 사람 번호 (이미 이겼으면 0)
+func int trainerAt(float px, float py){
+    var int call c = floor((px - 21000) / 16.0 + 17 + 0.5);
+    var int call r = floor(35 + 0.5 - (py - 3000) / 16.0);
+    var int call k = 31;
+    loop [k <= 33]{
+        if [k <= npPlace.length]{
+            if [npPlace[k] == 12] and [trDone.find(npTr[k]) == 0]{
+                if [c >= npCol[k] - 2] and [c <= npCol[k] + 2] and [r >= npRow[k] - 2] and [r <= npRow[k] + 2]{
+                    return(k);
+                }
+            }
+        }
+        k = k + 1;
+    }
+    return(0);
+}
+
+func leave(){
+    if [gyIn == 1]{
+        leaveNow();
+    }
+}
+func leaveNow(){
+    gyIn = 0;
+    fxRemove();
+    gyFly = 0;   // jahui.jb 가 다시 방향키로 걷게
+    gyVx = 0;
+    gyVy = 0;
+    dis.removeObj("gyWL");
+    dis.removeObj("gyWR");
+    dis.removeObj("gyWT");
+    dis.removeObj("gyWB1");
+    dis.removeObj("gyWB2");
+    if [gyGlide == 0]{
+        dis.removeObj("gyBL");
+        dis.removeObj("gyBR");
+        dis.removeObj("gyBT");
+        dis.removeObj("gyGd1");
+        dis.removeObj("gyGd2");
+        dis.removeObj("gyGd3");
+        dis.removeObj("gyGd4");
+        dis.removeObj("gyGdc");
+    }
+    else{
+        dis.removeObj("gyWg");
+        dis.removeObj("gyWs");
+        dis.removeObj("gyUb");
+        dis.removeObj("gyUg");
+        dis.removeObj("gyUf");
+        dis.removeObj("gyUt");
+        dis.removeObj("gyUn");
+        dis.removeObj("gyUz");
+        dis.removeObj("gyUw");
+    }
+    gyGlide = 0;
+    var int call k = 1;
+    loop [k <= 4]{
+        if [gyOn[k] == 1]{
+            dis.removeObj("gyS%k%");
+            gyOn[k] = 0;
+        }
+        k = k + 1;
+    }
+    var int call n3 = bg.countOf(903);
+    if [n3 > 0]{
+        bg.take(903, n3);
+    }
+    var int call n4 = bg.countOf(904);
+    if [n4 > 0]{
+        bg.take(904, n4);
+    }
+    log("체육관 안: 나감 (체육관 전용 도구를 거둠)");
+}

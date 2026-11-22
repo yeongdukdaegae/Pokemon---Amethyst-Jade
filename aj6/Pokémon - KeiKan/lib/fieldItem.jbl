@@ -1,0 +1,100 @@
+Lib id fieldItem;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Magellan call mag;
+Use colliders call col;
+
+// 필드에 놓인 도구 (바닥의 볼 아이콘 · 그림 "fieldItem" = assets/textures/ui/field_item.png · 16 x 16)
+//   도구 k 번: fiPlace (놓인 맵 · prtgRoom.jb 의 place) · fiCol · fiRow (그 맵의 칸) · fiItem (도구 번호) · fiCnt (개수)
+//   fiTaken[k] = 1 이면 이미 주움 (리포트 12 번째 칸에 적힘) → 다시 나오지 않음
+//   show(맵): 그 맵에 있는 아직 안 주운 도구를 그리고 (오브젝트 "fitem<k>") 그 칸의 fsAct 를 10000 + k 로 → fieldSelect.jb 가 Z 로 주움
+//   hide(맵): 맵을 지울 때 그 맵의 도구 그림을 지움 · take(k): 가방에 넣고 그림과 상호작용을 지움
+//   도구를 늘리려면 setData 의 목록에 한 칸씩 덧붙일 것 (순서는 바꾸지 말 것 — 리포트의 fiTaken 과 짝)
+//   도구 칸에는 칸 크기의 보이지 않는 벽 ("fitem<k>c") 을 만듦 → 걸을 수 있는 칸에도 놓을 수 있음 · 주우면 벽도 지우고 그 칸의 막힘을 원래대로
+
+var public list call fiPlace;
+var public list call fiCol;
+var public list call fiRow;
+var public list call fiItem;
+var public list call fiCnt;
+var public list call fiTaken;
+var public list call fiSol;    // 도구를 놓기 전 그 칸의 막힘 (주우면 되돌림)
+var public int call fsW;
+var public int call fsZx;
+var public int call fsZy;
+var public float call fsOx;
+var public float call fsOy;
+var public list call fsSolid;
+var public list call fsAct;
+var public compound call bag;
+
+func setData(){
+    // 1 번: 문 밖 (road1) · 주인공의 집과 라이벌의 집 사이 (지붕 줄에서 두 칸 아래) — 슈퍼볼 3 개
+    // 2 ~ 9 번: 보라매숲 (place 5) — 북서 막힌 출구 몬스터볼 · 북쪽 깔때기 왼쪽 상처약 · 서쪽 막힌 출구 해독제 · 위쪽 띠 왼쪽 마비치료제
+    //   오른쪽 위 띠 몬스터볼 2 개 (남쪽 · 남서는 보스 자리의 벽 너머라 지금은 갈 수 없음) · 호수 오른쪽 막다른 곳 오랭열매 · 오른쪽 위 넓은 곳 상처약 · 호수 왼쪽 길 벌레회피스프레이
+    fiPlace = [1, 5, 5, 5, 5, 5, 5, 5, 5];
+    fiCol = [64, 17, 30, 2, 15, 46, 37, 48, 26];
+    fiRow = [90, 3, 3, 19, 18, 18, 34, 30, 48];
+    fiSol = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    fiItem = [3, 4, 17, 18, 22, 4, 155, 17, 79];
+    fiCnt = [3, 1, 1, 1, 1, 2, 1, 1, 1];
+    loop [fiTaken.length < fiPlace.length]{   // 예전 리포트 · 새 게임: 모자란 칸은 아직 안 주운 것으로
+        fiTaken.add(0);
+    }
+}
+
+func show(int pl){
+    var int call k = 1;
+    loop [k <= fiPlace.length]{
+        if [fiPlace[k] == pl] and [fiTaken[k] == 0]{
+            var float call ix = fsOx + (fiCol[k] - fsZx) * 16;
+            var float call iy = fsOy + (fsZy - fiRow[k]) * 16;
+            dis.setObject([ix, iy], "fitem%k%", [16, 16], "#ffffff");
+            mag.setObjTexture("fitem%k%", "fieldItem", [0, 0], [16, 16]);
+            dis.setObjLayer("fitem%k%", -1);   // 타일 위 · 플레이어 아래
+            var int call sAt = fiRow[k] * fsW + fiCol[k] + 1;
+            fsAct[sAt] = 10000 + k;
+            fiSol[k] = fsSolid[sAt];
+            fsSolid[sAt] = 1;
+            col.setCollider([ix, iy], [16, 16], "fitem%k%c", 0, false);   // 그 칸을 막음 (움직이지 않는 벽)
+        }
+        k = k + 1;
+    }
+}
+
+func hide(int pl){
+    var int call k = 1;
+    loop [k <= fiPlace.length]{
+        if [fiPlace[k] == pl] and [fiTaken[k] == 0]{
+            dis.removeObj("fitem%k%");
+            dis.removeObj("fitem%k%c");
+        }
+        k = k + 1;
+    }
+}
+
+func take(int k){
+    var int call tId = fiItem[k];
+    var int call tCn = fiCnt[k];
+    var int call found = 0;
+    var int call i = 1;
+    loop [i <= bag.length]{   // 가방에 같은 도구가 있으면 개수만 늘림
+        var compound call tb = bag[i];
+        if [tb[1] == tId]{
+            tb[2] = tb[2] + tCn;
+            bag[i] = tb;
+            found = 1;
+        }
+        i = i + 1;
+    }
+    if [found == 0]{
+        var compound call nb = [tId, tCn];
+        bag.add(nb);
+    }
+    fiTaken[k] = 1;
+    dis.removeObj("fitem%k%");
+    dis.removeObj("fitem%k%c");
+    var int call tAt = fiRow[k] * fsW + fiCol[k] + 1;
+    fsAct[tAt] = 0;
+    fsSolid[tAt] = fiSol[k];
+}

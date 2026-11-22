@@ -1,0 +1,86 @@
+Lib id timeCore;
+Use jawbreaker call jaw;
+
+// 시간 · 날짜 계산 (timeManager.jb · fieldMenu.jb 가 씀)
+//   시간대 (timeBand): 1 아침 (6 ~ 10 시) · 2 낮 (10 ~ 17 시) · 3 저녁 (17 ~ 20 시) · 4 밤 (20 ~ 6 시)
+//   실외의 빛: 시각에 따라 화면에 덧씌우는 색과 진하기 — light(시각) 이 lightR · G · B · A 에 적음 (정해 둔 시각 사이는 고르게 이어짐)
+
+var public list call lang;
+var public int call gMonth;
+var public int call gDay;
+var public int call gWeek;    // 1 일 ~ 7 토
+var public int call gHour;
+var public int call gMin;
+var public int call timeBand;
+var public float call lightR;
+var public float call lightG;
+var public float call lightB;
+var public float call lightA;
+
+func int bandOf(int hour){
+    if [hour >= 6] and [hour < 10]{
+        return(1);
+    }
+    if [hour >= 10] and [hour < 17]{
+        return(2);
+    }
+    if [hour >= 17] and [hour < 20]{
+        return(3);
+    }
+    return(4);
+}
+
+func int monthDays(int m){
+    var list call md = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    return(md[m]);
+}
+
+func string two(int n){
+    if [n < 10]{
+        return("0" + n);
+    }
+    return("" + n);
+}
+
+func string hex2(float v){
+    var list call hx = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
+    var int call n = floor(v + 0.5);
+    if [n < 0]{
+        n = 0;
+    }
+    if [n > 255]{
+        n = 255;
+    }
+    var int call hi = floor(n / 16);
+    return(hx[hi + 1] + hx[n - hi * 16 + 1]);
+}
+
+func string lightHex(){
+    return("#" + hex2(lightR) + hex2(lightG) + hex2(lightB));
+}
+
+// 시각 (시 + 분 / 60) → 빛: 밤 (짙은 남색) → 5 시부터 밝아져 6 시 반에 아침 노을 → 9 시 ~ 16 시 반은 그대로 → 18 시 반 저녁 노을 → 20 시부터 밤
+func light(float h){
+    var list call kt = [0, 5, 6.5, 9, 16.5, 18.5, 20, 24];
+    var list call kr = [16, 16, 255, 255, 255, 255, 16, 16];
+    var list call kg = [24, 24, 200, 255, 255, 120, 24, 24];
+    var list call kb = [64, 64, 150, 255, 255, 50, 64, 64];
+    var list call ka = [115, 115, 45, 0, 0, 70, 115, 115];
+    var int call i = 1;
+    loop [i <= 7]{
+        if [h >= kt[i]] and [h < kt[i + 1]]{
+            var float call f = (h - kt[i]) / (kt[i + 1] - kt[i]);
+            lightR = kr[i] + (kr[i + 1] - kr[i]) * f;
+            lightG = kg[i] + (kg[i + 1] - kg[i]) * f;
+            lightB = kb[i] + (kb[i + 1] - kb[i]) * f;
+            lightA = ka[i] + (ka[i + 1] - ka[i]) * f;
+        }
+        i = i + 1;
+    }
+}
+
+// "3월 1일 (일) 09:00 · 아침" — 틀: lang[3795] ({m} · {d} · {w}) · 요일 lang[3780 + gWeek] · 시간대 lang[3787 + timeBand]
+func string text(){
+    var string call s = replaceStr(replaceStr(replaceStr(lang[3795], "{m}", "" + gMonth), "{d}", "" + gDay), "{w}", lang[3780 + gWeek]);
+    return(s + "  " + two(gHour) + ":" + two(gMin) + "  ·  " + lang[3787 + timeBand]);
+}

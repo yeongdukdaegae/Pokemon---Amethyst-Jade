@@ -1,0 +1,358 @@
+Lib id abilityCore;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use battleCore call bc;
+Use Magellan call mag;
+Use soundMaster call sou;
+
+// 특성: 이름 = lang[1500 + 특성 번호] (본가 번호) · 포켓몬 데이터 [16] 에 번호로 들어 있음 (0 = 없음)
+//   pop       특성이 발동할 때 화면 가장자리에서 밀려 나오는 표시 (상대 = 왼쪽 · 내 포켓몬 = 오른쪽 · 배틀 화면 가운데 높이)
+//   atkMul    쓰는 쪽 특성의 데미지 배율 · defMul 맞는 쪽 특성 · 날씨의 배율 · blockKind 기술을 막거나 흡수하는 특성
+//   changeStage 랭크 변화 (단순 · 심술꾸러기 · 괴력집게 · 부풀린가슴 · 날카로운눈 반영 · 메시지까지)
+
+var public list call lang;
+var public string call oppPreT;   // 상대를 부르는 틀 ("야생 {poke}" · 트레이너 배틀은 "상대 {poke}") — battleManager.jb 가 넣음
+var public list call sMist;   // 흰안개: [내 쪽, 상대 쪽] 남은 턴 (battleManager.jb)
+var public list call myStage;
+var public list call oppStage;
+var public int call bossOn;   // 1 = 상대가 레이드 보스 → 상대의 랭크는 바뀌지 않음 (lib/bossCore.jbl)
+var public int call myAb;
+var public int call oppAb;
+var public string call myName;
+var public string call nowPokeName;
+var public float call msgS;
+var public float call msgW;
+var public float call battleL;
+var public float call battleR;
+var public float call battleB;
+var public float call battleT;
+
+var int call popOn;      // 특성 표시가 떠 있음
+var float call popX0;    // 떠 있는 표시가 들어갈 자리 (화면 밖)
+var float call popY;
+var float call popH;
+
+// 특성 표시를 띄움: 화면 가장자리에서 밀려 나와 다 나올 때까지 기다린 뒤 돌아옴 (그대로 떠 있음)
+//   → 이어서 그 특성의 랭크 변화 · 메시지를 보여 주고, 다 끝나면 popEnd() 로 넣음 · 이미 떠 있던 표시는 바로 치움
+func pop(int side, string pk, int a){
+    if [popOn == 1]{
+        dis.removeObj("abpopa");
+        dis.removeObj("abpopb");
+        dis.removeObj("abpopbar");
+        dis.removeObj("abpop");
+        popOn = 0;
+    }
+    var float call w = (battleR - battleL) * 0.3;
+    var float call h = (battleT - battleB) * 0.15;
+    var float call y = (battleT + battleB) / 2;
+    var float call x0 = battleR + w / 2;
+    var float call x1 = battleR - w / 2;
+    var string call col = "#3878e0";
+    if [side == 2]{
+        x0 = battleL - w / 2;
+        x1 = battleL + w / 2;
+        col = "#d04848";
+    }
+    dis.setObject([x0, y], "abpop", [w, h], "#182028");
+    dis.setObjLayer("abpop", 20);
+    dis.setObjAlpha("abpop", 235);
+    dis.setObject([x0, y - h / 2 + h * 0.06], "abpopbar", [w, h * 0.12], col);
+    dis.setObjLayer("abpopbar", 21);
+    dis.setText([x0, y + h * 0.2], replaceStr(lang[1440], "{poke}", pk), "abpopa", h * 0.24, false, "#d8e0f0");
+    dis.setObjLayer("abpopa", 21);
+    dis.setText([x0, y - h * 0.12], lang[1500 + a], "abpopb", h * 0.36, false, "#ffffff");
+    dis.setObjLayer("abpopb", 21);
+    log("특성 발동: " + pk + " — " + lang[1500 + a]);
+    dis.setObjPos("abpop", [x1, y]) for 150;
+    dis.setObjPos("abpopbar", [x1, y - h / 2 + h * 0.06]) for 150;
+    dis.setObjPos("abpopa", [x1, y + h * 0.2]) for 150;
+    dis.setObjPos("abpopb", [x1, y - h * 0.12]) for 150;
+    wait(200);   // 완전히 나올 때까지
+    popOn = 1;
+    popX0 = x0;
+    popY = y;
+    popH = h;
+}
+
+// 떠 있는 특성 표시를 다시 화면 밖으로 넣고 지움 (떠 있지 않으면 아무 일도 없음)
+func popEnd(){
+    if [popOn == 1]{
+        dis.setObjPos("abpop", [popX0, popY]) for 150;
+        dis.setObjPos("abpopbar", [popX0, popY - popH / 2 + popH * 0.06]) for 150;
+        dis.setObjPos("abpopa", [popX0, popY + popH * 0.2]) for 150;
+        dis.setObjPos("abpopb", [popX0, popY - popH * 0.12]) for 150;
+        wait(170);
+        dis.removeObj("abpopa");
+        dis.removeObj("abpopb");
+        dis.removeObj("abpopbar");
+        dis.removeObj("abpop");
+        popOn = 0;
+    }
+}
+
+// 쓰는 쪽 특성의 데미지 배율 (1 = 영향 없음)
+func float atkMul(int a, int moveId, int mType, int mCat, int pw, int hp, int maxHp, int statused, int k, int stab, int gRel, int flashOn, int sheer, int weather){
+    var float call m = 1;
+    if [hp * 3 <= maxHp]{   // 심록 · 맹화 · 급류 · 벌레의알림: 체력 1/3 이하에서 그 타입 기술 1.5 배
+        if ([a == 65] and [mType == 4]) or ([a == 66] and [mType == 2]) or ([a == 67] and [mType == 3]) or ([a == 68] and [mType == 12]){
+            m = m * 1.5;
+        }
+    }
+    if [a == 89] and [bc.hasFlag(moveId, 2) == 1]{   // 철주먹
+        m = m * 1.2;
+    }
+    if [a == 101] and [pw <= 60]{   // 테크니션
+        m = m * 1.5;
+    }
+    if [a == 292] and [bc.hasFlag(moveId, 32) == 1]{   // 예리함
+        m = m * 1.5;
+    }
+    if [a == 173] and [bc.hasFlag(moveId, 4) == 1]{   // 옹골찬턱
+        m = m * 1.5;
+    }
+    if [a == 178] and [bc.hasFlag(moveId, 16) == 1]{   // 메가런처
+        m = m * 1.5;
+    }
+    if [a == 181] and [bc.hasFlag(moveId, 1) == 1]{   // 단단한발톱
+        m = m * 1.3;
+    }
+    if [a == 120] and [bc.drainOf(moveId) < 0]{   // 이판사판
+        m = m * 1.2;
+    }
+    if [a == 125] and [sheer == 1]{   // 우격다짐
+        m = m * 1.3;
+    }
+    if [a == 91] and [stab == 1]{   // 적응력: 자속 2 배 (1.5 → 2)
+        m = m * 4 / 3;
+    }
+    if [a == 62] and [statused == 1] and [mCat == 0]{   // 근성
+        m = m * 1.5;
+    }
+    if ([a == 37] or [a == 74]) and [mCat == 0]{   // 천하장사 · 순수한힘
+        m = m * 2;
+    }
+    if [a == 79] and [gRel == 1]{   // 투쟁심: 같은 성별 1.25 배 · 다른 성별 0.75 배
+        m = m * 1.25;
+    }
+    if [a == 79] and [gRel == 2]{
+        m = m * 0.75;
+    }
+    if [a == 148] and [k == 2]{   // 애널라이즈: 나중에 움직이면
+        m = m * 1.3;
+    }
+    if [a == 159] and [weather == 3] and ([mType == 9] or [mType == 13] or [mType == 17]){   // 모래의힘
+        m = m * 1.3;
+    }
+    if [a == 94] and [weather == 1] and [mCat == 1]{   // 선파워
+        m = m * 1.5;
+    }
+    if [a == 18] and [flashOn == 1] and [mType == 2]{   // 타오르는불꽃 (불꽃 기술을 받은 뒤)
+        m = m * 1.5;
+    }
+    return(m);
+}
+
+// 날씨의 데미지 배율: 1 쾌청 (불 1.5 · 물 0.5) · 2 비 (물 1.5 · 불 0.5)
+func float weatherMul(int weather, int mType){
+    if [weather == 1] and [mType == 2]{
+        return(1.5);
+    }
+    if [weather == 1] and [mType == 3]{
+        return(0.5);
+    }
+    if [weather == 2] and [mType == 3]{
+        return(1.5);
+    }
+    if [weather == 2] and [mType == 2]{
+        return(0.5);
+    }
+    return(1);
+}
+
+// 맞는 쪽 특성 · 날씨의 데미지 배율
+func float defMul(int a, int mType, int mCat, int contact, int full, int statused, int t1, int t2, int weather){
+    var float call m = 1;
+    if [a == 47] and ([mType == 2] or [mType == 6]){   // 두꺼운지방
+        m = m * 0.5;
+    }
+    if [a == 85] and [mType == 2]{   // 내열
+        m = m * 0.5;
+    }
+    if [a == 136] and [full == 1]{   // 멀티스케일
+        m = m * 0.5;
+    }
+    if [a == 218] and [contact == 1]{   // 복슬복슬
+        m = m * 0.5;
+    }
+    if [a == 218] and [mType == 2]{
+        m = m * 2;
+    }
+    if [a == 63] and [statused == 1] and [mCat == 0]{   // 이상한비늘: 방어 1.5 배
+        m = m / 1.5;
+    }
+    if [weather == 3] and [mCat == 1] and ([t1 == 13] or [t2 == 13]){   // 모래바람: 바위 타입 특방 1.5 배
+        m = m / 1.5;
+    }
+    if [weather == 4] and [mCat == 0] and ([t1 == 6] or [t2 == 6]){   // 눈: 얼음 타입 방어 1.5 배
+        m = m / 1.5;
+    }
+    return(m);
+}
+
+// 기술을 막거나 흡수하는 특성: 0 없음 · 1 무효 · 2 체력 1/4 회복 · 3 특공 +1 · 4 타오르는불꽃 · 5 공격 +1 · 6 스피드 +1
+func int blockKind(int a, int moveId, int mType){
+    if [a == 26] and [mType == 9]{   // 부유
+        return(1);
+    }
+    if [a == 171] and [bc.hasFlag(moveId, 64) == 1]{   // 방탄
+        return(1);
+    }
+    if [a == 43] and [bc.hasFlag(moveId, 8) == 1]{   // 방음
+        return(1);
+    }
+    if ([a == 10] and [mType == 5]) or ([a == 11] and [mType == 3]) or ([a == 87] and [mType == 3]){   // 축전 · 저수 · 건조피부
+        return(2);
+    }
+    if ([a == 114] and [mType == 3]) or ([a == 31] and [mType == 5]){   // 마중물 · 피뢰침
+        return(3);
+    }
+    if [a == 18] and [mType == 2]{
+        return(4);
+    }
+    if [a == 157] and [mType == 4]{   // 초식
+        return(5);
+    }
+    if [a == 78] and [mType == 5]{   // 전기엔진
+        return(6);
+    }
+    return(0);
+}
+
+// 스피드 배율: 쓱쓱 (비) · 엽록소 (쾌청) · 모래헤치기 (모래바람) · 눈치우기 (눈) 2 배 · 속보 (상태 이상) 1.5 배
+func float spdMul(int a, int weather, int statused){
+    if ([a == 33] and [weather == 2]) or ([a == 34] and [weather == 1]) or ([a == 146] and [weather == 3]) or ([a == 202] and [weather == 4]){
+        return(2);
+    }
+    if [a == 95] and [statused == 1]{
+        return(1.5);
+    }
+    return(1);
+}
+
+// 그 상태 이상을 막는 특성: 면역 (독) · 리프가드 (쾌청) · 불면 · 의기양양 (잠듦) · 유연 (마비) · 수의베일 (화상) · 마그마의무장 (얼음)
+func int blocksAil(int a, int ail, int weather){
+    if [a == 17] and ([ail == 3] or [ail == 4]){
+        return(1);
+    }
+    if [a == 102] and [weather == 1]{
+        return(1);
+    }
+    if ([a == 15] or [a == 72]) and [ail == 5]{
+        return(1);
+    }
+    if [a == 7] and [ail == 2]{
+        return(1);
+    }
+    if [a == 41] and [ail == 1]{
+        return(1);
+    }
+    if [a == 40] and [ail == 6]{
+        return(1);
+    }
+    return(0);
+}
+
+// 랭크 변화 (메시지까지) → 실제로 바뀐 양
+//   side 1 = 내 포켓몬 · 2 = 상대 · statId 2 공격 … 8 회피 · byFoe 1 = 상대가 건 변화 · breaker 1 = 건 쪽이 틀깨기
+//   단순 = 2 배 · 심술꾸러기 = 반대로 · 괴력집게 (공격) · 부풀린가슴 (방어) · 날카로운눈 (명중) = 상대가 내리지 못함
+func int changeStage(int side, int statId, int ch, int byFoe, int breaker){
+    var list call st = myStage;
+    var int call a = myAb;
+    var string call nm = myName;
+    if [side == 2]{
+        st = oppStage;
+        a = oppAb;
+        nm = replaceStr(oppPreT, "{poke}", nowPokeName);
+    }
+    if [side == 2] and [bossOn == 1]{   // 레이드 보스: 랭크 변화가 통하지 않음
+        bc.setMsg("wildappeared", replaceStr(lang[7290], "{poke}", nm), msgS, msgW);
+        log(nm + " (보스) 랭크 변화 막음: " + lang[1320 + statId]);
+        bc.waitMsg(900);
+        return(0);
+    }
+    if [breaker == 1] and [byFoe == 1]{
+        a = 0;
+    }
+    if [a == 126]{
+        ch = 0 - ch;
+    }
+    if [a == 86]{
+        ch = ch * 2;
+    }
+    if [byFoe == 1] and [ch < 0]{
+        if [sMist[side] > 0]{   // 흰안개: 상대가 능력을 내리지 못함
+            bc.setMsg("wildappeared", replaceStr(lang[1463], "{poke}", nm), msgS, msgW);
+            bc.waitMsg(900);
+            return(0);
+        }
+        if ([a == 52] and [statId == 2]) or ([a == 145] and [statId == 3]) or ([a == 51] and [statId == 7]){
+            if [side == 2]{
+                pop(side, nowPokeName, a);
+            }
+            else{
+                pop(side, myName, a);
+            }
+            bc.setMsg("wildappeared", replaceStr(replaceStr(lang[1428], "{poke}", nm), "{stat}", lang[1320 + statId]), msgS, msgW);
+            bc.waitMsg(900);
+            return(0);
+        }
+    }
+    var int call was = st[statId];
+    var int call nw = was + ch;
+    if [nw > 6]{
+        nw = 6;
+    }
+    if [nw < -6]{
+        nw = -6;
+    }
+    st[statId] = nw;
+    var int call mi = 1336;
+    if [nw == was] and [ch < 0]{
+        mi = 1337;
+    }
+    if [nw - was == 1]{
+        mi = 1330;
+    }
+    if [nw - was == 2]{
+        mi = 1331;
+    }
+    if [nw - was >= 3]{
+        mi = 1332;
+    }
+    if [nw - was == -1]{
+        mi = 1333;
+    }
+    if [nw - was == -2]{
+        mi = 1334;
+    }
+    if [nw - was <= -3]{
+        mi = 1335;
+    }
+    if [side == 1]{
+        myStage = st;
+    }
+    else{
+        oppStage = st;
+    }
+    bc.setMsg("wildappeared", replaceStr(replaceStr(lang[mi], "{poke}", nm), "{stat}", lang[1320 + statId]), msgS, msgW);
+    log(nm + " " + lang[1320 + statId] + " 랭크 %was% → %nw%");
+    sou.setSpeaker("battlesfx");
+    if [nw > was]{
+        sou.playSfx("battlesfx", "statRise", 3000);
+    }
+    if [nw < was]{
+        sou.playSfx("battlesfx", "statFall", 3000);
+    }
+    wait(800);   // 랭크 메시지는 0.8 초 보여 주고 바로 다음으로
+    return(nw - was);
+}

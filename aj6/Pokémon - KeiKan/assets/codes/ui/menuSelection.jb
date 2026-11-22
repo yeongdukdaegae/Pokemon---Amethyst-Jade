@@ -1,0 +1,84 @@
+Use jawbreaker call jaw;
+use soundMaster call sou;
+Use Magellan call mag;
+use DisPlayer call dis;
+
+// 메뉴 고르기: isUi 가 1 인 동안 방향키로 selectedBox ([가로 칸, 세로 칸]) 를 옮김 — selectUi (8 x 8 · [세로, 가로] · 0 = 없는 칸) 에서 값이 있는 칸으로만
+//   오른쪽 · 아래: 다음 칸이 없으면 (끝이거나 0) 첫 칸으로 · 왼쪽 · 위: 앞 칸이 없으면 그 줄에서 값이 있는 마지막 칸으로
+
+run{
+    sou.setSpeaker("ui");
+    loop[isUi == 1]{
+    if [isKeyInput("right")]{
+        var int call nr = 1;
+        if [selectedBox[1] < 8]{
+            if [selectUi[selectedBox[2], selectedBox[1] + 1] != 0]{
+                nr = selectedBox[1] + 1;
+            }
+        }
+        selectedBox[1] = nr;
+        log("%selectedBox%");
+        sou.playSfx("ui", "choose", 2000);
+        loop [isKeyInput("right")] for 300{ dis.waitF(1); }   // 짧게 누르면 한 칸 · 누르고 있으면 0.3초마다 한 칸
+    }
+    if [isKeyInput("left")]{
+        var int call nl = 0;
+        if [selectedBox[1] > 1]{
+            if [selectUi[selectedBox[2], selectedBox[1] - 1] != 0]{
+                nl = selectedBox[1] - 1;
+            }
+        }
+        if [nl == 0]{   // 그 줄의 마지막 칸으로
+            nl = 1;
+            var int call kl = 8;
+            loop [kl >= 2]{
+                if [selectUi[selectedBox[2], kl] != 0]{
+                    nl = kl;
+                    kl = 0;
+                }
+                kl = kl - 1;
+            }
+        }
+        selectedBox[1] = nl;
+        log("%selectedBox%");
+        sou.playSfx("ui", "choose", 2000);
+        loop [isKeyInput("left")] for 300{ dis.waitF(1); }
+    }
+    if [isKeyInput("down")]{
+        var int call nd = 1;
+        if [selectedBox[2] < 8]{
+            if [selectUi[selectedBox[2] + 1, selectedBox[1]] != 0]{
+                nd = selectedBox[2] + 1;
+            }
+        }
+        selectedBox[2] = nd;
+        log("%selectedBox%");
+        sou.playSfx("ui", "choose", 2000);
+        loop [isKeyInput("down")] for 300{ dis.waitF(1); }
+    }
+    if [isKeyInput("up")]{
+        var int call nu = 0;
+        if [selectedBox[2] > 1]{
+            if [selectUi[selectedBox[2] - 1, selectedBox[1]] != 0]{
+                nu = selectedBox[2] - 1;
+            }
+        }
+        if [nu == 0]{   // 그 열의 마지막 칸으로
+            nu = 1;
+            var int call ku = 8;
+            loop [ku >= 2]{
+                if [selectUi[ku, selectedBox[1]] != 0]{
+                    nu = ku;
+                    ku = 0;
+                }
+                ku = ku - 1;
+            }
+        }
+        selectedBox[2] = nu;
+        log("%selectedBox%");
+        sou.playSfx("ui", "choose", 2000);
+        loop [isKeyInput("up")] for 300{ dis.waitF(1); }
+    }
+    dis.waitF(1);
+}
+}

@@ -1,0 +1,751 @@
+Lib id pokeGen;
+Use jawbreaker call jaw;
+
+// 내 포켓몬 데이터 (compound 한 마리):
+//   [ 1 id, 2 레벨, 3 체력 개체값, 4 공격 개체값, 5 방어 개체값, 6 특공 개체값, 7 특방 개체값, 8 스피드 개체값,
+//     9 체력 노력치, 10 공격 노력치, 11 방어 노력치, 12 특공 노력치, 13 특방 노력치, 14 스피드 노력치,
+//     15 성별 (0 수컷 · 1 암컷 · 2 무성), 16 특성 (지금은 ""), 17 이름 ("" = 기본 이름),
+//     18 성격 (0 ~ 24 · 본가 순서 · 0 = 노력 — natUp · natDown · 이름 lang[7420 + 성격]), 19 어버이, 20 이로치 (0 · 1), 21 지닌 도구 (0 = 없음),
+//     22 기술 [기술 id, …] (최대 4 개 · 처음엔 그 레벨까지의 자력기 중 마지막 4 개),
+//     23 남은 PP [기술마다 · 22 번과 같은 순서] (처음엔 최대 PP),
+//     24 포인트업 먹인 횟수 [기술마다 0 ~ 3] — 최대 PP = 기본 PP (기술 데이터 7 번째) × (5 + 횟수) / 5 (소수점 버림),
+//     25 남은 체력 (처음엔 최대 체력 · 배틀이 끝나면 그대로 남음),
+//     26 누적 경험치 (처음엔 그 레벨이 되는 데 필요한 경험치),
+//     27 상태 이상 (0 없음 · 1 화상 · 2 마비 · 3 독 · 4 맹독 · 5 잠듦 · 6 얼음),
+//     28 숨겨진 특성 여부 (0 · 1) — 특성 번호는 [16] (본가 번호 · 0 = 없음),
+//     29 모습 (폼), 30 볼 (900 = 스티커 볼 · 없으면 0), 31 친밀도 (0 ~ 255 · 없으면 70 — addFriend 가 처음 바꿀 때 채움) ]
+//   개체값 = 0 ~ 31 무작위 · 노력치 = 0
+//   성별은 keidex 의 수컷 · 암컷 비율 ([8] · [9]) 로 정함
+
+var public compound call keidex;
+var public compound call movedex;   // moveManager.jb 의 기술 데이터 (PP = 7 번째)
+var public compound call learnset;
+var public list call learnsetIds;
+var public compound call myParty;
+var public int call timeBand;   // 시간대 (timeManager.jb): 1 아침 · 2 낮 · 3 저녁 · 4 밤
+
+// 친밀도 ([31] · 기본 70): 레벨업 +5 (100 이상 +4 · 160 이상 +3 · battleManager.jb) · 128 걸음마다 +1 (prtgRoom.jb) · 최대 255
+func int friendOf(int idx){
+    var compound call pk = myParty[idx];
+    if [pk.length >= 31]{
+        return(pk[31]);
+    }
+    return(70);
+}
+func addFriend(int idx, int n){
+    var compound call pk = myParty[idx];
+    loop [pk.length < 31]{
+        if [pk.length < 30]{
+            pk.add(0);
+        }
+        else{
+            pk.add(70);
+        }
+    }
+    var int call v = pk[31] + n;
+    if [v > 255]{
+        v = 255;
+    }
+    if [v < 0]{
+        v = 0;
+    }
+    pk[31] = v;
+    myParty[idx] = pk;
+}
+// 레벨업할 때의 친밀도 오름 (지금 친밀도 v)
+func int friendLvUp(int v){
+    if [v >= 160]{
+        return(3);
+    }
+    if [v >= 100]{
+        return(4);
+    }
+    return(5);
+}
+// 내 포켓몬 idx 번이 타입 t 의 기술을 아는지 (1 · 0)
+func int knowsType(int idx, int t){
+    var compound call pk = myParty[idx];
+    var compound call mv = pk[22];
+    var int call i = 1;
+    loop [i <= mv.length]{
+        if [movedex[mv[i]][6] == t]{
+            return(1);
+        }
+        i = i + 1;
+    }
+    return(0);
+}
+// 레벨업 진화 (배틀에서 레벨이 오른 뒤 · lib/evoCore.jbl): 진화 후 id (0 = 안 함)
+//   이브이 (179): 친밀도 160 이상 → 페어리 기술을 알면 님피아 (187) · 아니면 밤 (시간대 4) 블래키 (184) · 그 밖 에브이 (183)
+//   그 밖: evoTo · evoLv 의 레벨 진화
+func int levelEvoTo(int idx){
+    var compound call pk = myParty[idx];
+    var int call id = pk[1];
+    if [pk[21] == 229]{   // 변함없는돌: 지닌 동안에는 레벨 · 친밀도로 진화하지 않음 (진화의 돌은 그대로 씀)
+        return(0);
+    }
+    if [id == 84]{   // 피츄: 친밀도 160 이상 → 피카츄
+        if [friendOf(idx) >= 160]{
+            return(85);
+        }
+        return(0);
+    }
+    if [id == 179]{
+        if [friendOf(idx) >= 160]{
+            if [knowsType(idx, 18) == 1]{
+                return(187);
+            }
+            if [timeBand == 4]{
+                return(184);
+            }
+            return(183);
+        }
+        return(0);
+    }
+    var int call t = evoTo(id);
+    if [t != 0] and [pk[2] >= evoLv(id)]{
+        return(t);
+    }
+    return(0);
+}
+// 진화 도구 (가방에서 포켓몬에게 씀): 82 불꽃의돌 · 83 천둥의돌 · 84 물의돌 · 85 리프의돌 · 849 얼음의돌 · 252 업그레이드 · 324 괴상한패치
+//   업그레이드 · 괴상한패치는 본가에서는 지니고 통신 교환 — 이 게임은 교환이 없어 돌처럼 씀
+func int isStone(int item){
+    if [item >= 82] and [item <= 85]{
+        return(1);
+    }
+    if [item == 849] or [item == 252] or [item == 324]{
+        return(1);
+    }
+    return(0);
+}
+// 돌 진화: 포켓몬 id 에 도구 item 을 쓰면 진화 후 id (0 = 효과 없음) — 이브이: 물 샤미드 · 천둥 쥬피썬더 · 불꽃 부스터 · 리프 리피아 · 얼음 글레이시아
+func int stoneEvoTo(int id, int item){
+    if [id == 85] and [item == 83]{   // 피카츄 + 천둥의돌 → 라이츄
+        return(86);
+    }
+    if [id == 81] and [item == 252]{   // 폴리곤 + 업그레이드 → 폴리곤2
+        return(82);
+    }
+    if [id == 82] and [item == 324]{   // 폴리곤2 + 괴상한패치 → 폴리곤Z
+        return(83);
+    }
+    if [id == 179]{
+        if [item == 84]{
+            return(180);
+        }
+        if [item == 83]{
+            return(181);
+        }
+        if [item == 82]{
+            return(182);
+        }
+        if [item == 85]{
+            return(185);
+        }
+        if [item == 849]{
+            return(186);
+        }
+    }
+    return(0);
+}
+
+// 그 레벨까지 배운 자력기 중 마지막 4 개 (공식 게임처럼 · 같은 기술은 한 번만) — 자력기가 없으면 []
+//   compound 로 돌려줌 — 리포트(JSON)에서 읽은 기술 칸도 compound 라 어디서 만들든 같은 형식
+func compound movesAt(int id, int level){
+    var compound call out = [];
+    if [learnsetIds.find(id) == 0]{
+        return(out);
+    }
+    var list call ls = learnset[id];
+    var int call i = 1;
+    loop [i < ls.length]{
+        if [ls[i] <= level] and [out.find(ls[i + 1]) == 0]{
+            out.add(ls[i + 1]);
+            if [out.length > 4]{
+                out.remove(1);
+            }
+        }
+        i = i + 2;
+    }
+    return(out);
+}
+
+func int iv(){
+    return(floor(jaw.random(0, 32)));
+}
+
+func compound newPoke(int id, int level, int boy){
+    var int call male = 1;
+    var int call female = 1;
+    var int call i = 1;
+    loop [i <= keidex.length]{
+        if [keidex[i][1] == id]{
+            male = keidex[i][8];
+            female = keidex[i][9];
+        }
+        i = i + 1;
+    }
+    var int call gender = 2;
+    if [male + female > 0]{
+        gender = 1;
+        if [jaw.random(0, male + female) < male]{
+            gender = 0;
+        }
+    }
+    var string call parent = "지현";
+    if [boy == 1]{
+        parent = "재희";
+    }
+    var compound call mv = movesAt(id, level);
+    var compound call pp = [];   // 남은 PP = 처음엔 최대
+    var compound call ppu = [];  // 포인트업 횟수 = 처음엔 0
+    var int call k = 1;
+    loop [k <= mv.length]{
+        pp.add(movedex[mv[k]][7]);
+        ppu.add(0);
+        k = k + 1;
+    }
+    var compound call p = [id, level, iv(), iv(), iv(), iv(), iv(), iv(), 0, 0, 0, 0, 0, 0, gender, "", "", floor(jaw.random(0, 25)), parent, 0, 0, mv, pp, ppu];   // 18: 성격 (무작위 25 가지)
+    p.add(calcStat(baseStat(id, 1), p[3], 0, level, 1));   // 25: 남은 체력 = 최대 체력
+    p.add(expAt(growth(id), level));                       // 26: 누적 경험치
+    p.add(0);                                              // 27: 상태 이상 없음
+    p[16] = rollAbility(id);                               // 16: 특성 (보통 특성 중 무작위)
+    p.add(0);                                              // 28: 숨겨진 특성 아님
+    var int call form = 0;                                 // 29: 모습 (폼) — 배쓰나이 143: 0 적색근 · 1 청색근 (무작위) · 그 밖은 0
+    if [id == 143]{
+        form = floor(jaw.random(0, 2));
+        if [form == 1] and [p[16] == 120]{   // 청색근: 이판사판 대신 돌머리
+            p[16] = 69;
+        }
+    }
+    p.add(form);
+    return(p);
+}
+
+// 정해진 구성의 포켓몬 (시험용 엔트리 등): 개체값 모두 31 · 노력치 · 특성 · 기술 4 개를 정해서 만듦
+func compound makeSet(int id, int level, int boy, int ability, int m1, int m2, int m3, int m4, int evH, int evA, int evB, int evC, int evD, int evS){
+    var compound call p = newPoke(id, level, boy);
+    var int call k = 3;
+    loop [k <= 8]{
+        p[k] = 31;
+        k = k + 1;
+    }
+    p[9] = evH;
+    p[10] = evA;
+    p[11] = evB;
+    p[12] = evC;
+    p[13] = evD;
+    p[14] = evS;
+    p[16] = ability;
+    p[18] = 0;   // 정해 둔 구성 (트레이너): 성격 보정 없음 (노력)
+    var compound call mv = [];
+    mv.add(m1);
+    mv.add(m2);
+    mv.add(m3);
+    mv.add(m4);
+    var compound call pp = [];
+    var compound call ppu = [];
+    k = 1;
+    loop [k <= 4]{
+        pp.add(movedex[mv[k]][7]);
+        ppu.add(0);
+        k = k + 1;
+    }
+    p[22] = mv;
+    p[23] = pp;
+    p[24] = ppu;
+    p[25] = calcStat(baseStat(id, 1), 31, evH, level, 1);
+    return(p);
+}
+
+// 스타팅 포켓몬: newPoke 와 같고, 6 개 능력 중 무작위 3 개의 개체값을 31 로 (최소 3 개가 31)
+func compound newStarter(int id, int level, int boy){
+    var compound call p = newPoke(id, level, boy);
+    var list call left = [1, 2, 3, 4, 5, 6];   // 아직 고르지 않은 능력
+    var int call n = 0;
+    loop [n < 3]{
+        var int call r = floor(jaw.random(0, left.length)) + 1;
+        p[2 + left[r]] = 31;   // 개체값 = [3] ~ [8]
+        left.remove(r);
+        n = n + 1;
+    }
+    p[25] = calcStat(baseStat(id, 1), p[3], 0, level, 1);   // 체력 개체값이 바뀌었을 수 있음
+    return(p);
+}
+
+// 특성: keidex 항목 [15] 특성 1 · [16] 특성 2 (없으면 0) 중 무작위 — 숨겨진 특성 ([17]) 은 여기서 나오지 않음
+func int rollAbility(int id){
+    var int call i = 1;
+    loop [i <= keidex.length]{
+        if [keidex[i][1] == id]{
+            if [keidex[i][16] > 0] and [jaw.random(0, 2) < 1]{
+                return(keidex[i][16]);
+            }
+            return(keidex[i][15]);
+        }
+        i = i + 1;
+    }
+    return(0);
+}
+
+// 기초 경험치 · 성장 속도: keidex 항목 [13] · [14]
+// 진화가 남았는지 (진화의휘석): 최종 진화가 아닌 포켓몬의 도감 번호 목록에 있으면 1
+func int canEvolve(int id){
+    var list call nfe = [1, 2, 4, 5, 7, 8, 10, 12, 14, 15, 67, 68, 74, 75, 77, 78, 88, 89, 91, 93, 94, 95, 97, 98, 101, 102, 104, 105, 107, 108, 112, 113, 117, 120, 121, 123, 124, 126, 127, 131, 134, 139, 140, 145, 146, 148, 149, 151, 154, 156, 157, 160, 161, 163, 165, 167, 175, 177, 179, 81, 82, 84, 85, 72, 151, 51, 52];
+    if [nfe.find(id) != 0]{
+        return(1);
+    }
+    return(0);
+}
+// 레벨 진화 (4세대 방식: 배틀에서 레벨이 오른 뒤 · 배틀이 끝나면): [진화 전, 진화 후, 레벨, …]
+//   통신 교환 · 돌 · 장소 · 기술 조건 진화 (데구리 · 고우스트 · 암트르 · 롱스톤 · 스라크 · 레어코일 · 메꾸리 · 킬리아→엘레이드) 는 아직 없음
+//   오리지널 포켓몬의 레벨 (pokeDataManager.jb 의 evolution 과 같게): 묘링 14 · 묘힛 · 한달 15 · 스타팅 최종 34 / 노로키 28 / 꿈벅 21 / 앗치 9 · 아크치 29 / 헤렘 23 · 텔렘 37
+func int evoTo(int id){
+    var list call ev = [1, 2, 14, 2, 3, 34, 4, 5, 15, 5, 6, 34, 7, 8, 15, 8, 9, 34, 10, 11, 28, 12, 13, 21, 14, 15, 9, 15, 16, 29, 67, 68, 20, 68, 69, 30, 74, 75, 25, 77, 78, 14, 78, 79, 34, 88, 89, 25, 94, 95, 21, 95, 96, 32, 97, 98, 25, 101, 102, 16, 102, 103, 32, 104, 105, 16, 105, 106, 36, 107, 108, 16, 108, 109, 36, 112, 113, 30, 113, 114, 55, 117, 118, 20, 120, 121, 16, 121, 122, 32, 123, 124, 14, 124, 125, 36, 126, 127, 18, 127, 128, 30, 131, 132, 25, 134, 135, 40, 139, 140, 30, 145, 146, 24, 146, 147, 48, 148, 149, 33, 154, 155, 39, 156, 157, 30, 157, 158, 55, 160, 161, 38, 161, 162, 48, 163, 164, 30, 165, 166, 22, 167, 168, 20, 175, 176, 31, 177, 178, 34, 72, 73, 10, 51, 52, 23, 52, 53, 37];
+    var int call q = 1;
+    loop [q < ev.length]{
+        if [ev[q] == id]{
+            return(ev[q + 1]);
+        }
+        q = q + 3;
+    }
+    return(0);
+}
+func int evoLv(int id){
+    var list call ev = [1, 2, 14, 2, 3, 34, 4, 5, 15, 5, 6, 34, 7, 8, 15, 8, 9, 34, 10, 11, 28, 12, 13, 21, 14, 15, 9, 15, 16, 29, 67, 68, 20, 68, 69, 30, 74, 75, 25, 77, 78, 14, 78, 79, 34, 88, 89, 25, 94, 95, 21, 95, 96, 32, 97, 98, 25, 101, 102, 16, 102, 103, 32, 104, 105, 16, 105, 106, 36, 107, 108, 16, 108, 109, 36, 112, 113, 30, 113, 114, 55, 117, 118, 20, 120, 121, 16, 121, 122, 32, 123, 124, 14, 124, 125, 36, 126, 127, 18, 127, 128, 30, 131, 132, 25, 134, 135, 40, 139, 140, 30, 145, 146, 24, 146, 147, 48, 148, 149, 33, 154, 155, 39, 156, 157, 30, 157, 158, 55, 160, 161, 38, 161, 162, 48, 163, 164, 30, 165, 166, 22, 167, 168, 20, 175, 176, 31, 177, 178, 34, 72, 73, 10, 51, 52, 23, 52, 53, 37];
+    var int call q = 1;
+    loop [q < ev.length]{
+        if [ev[q] == id]{
+            return(ev[q + 2]);
+        }
+        q = q + 3;
+    }
+    return(0);
+}
+// 특성 칸: k = 1 보통 1 · 2 보통 2 (없으면 0) — keidex 항목 [15] · [16]
+func int abilityAt(int id, int k){
+    var int call i = 1;
+    loop [i <= keidex.length]{
+        if [keidex[i][1] == id]{
+            return(keidex[i][14 + k]);
+        }
+        i = i + 1;
+    }
+    return(0);
+}
+// 야생 포켓몬이 지니고 나오는 도구 (본가 확률 · 블랙 · 화이트 기준 · 그 세대에 없는 포켓몬은 울트라썬 · 울트라문) — 0 = 없음
+//   주사위 0 ~ 99: 첫 도구 확률만큼 → 첫 도구 · 그다음 두 번째 도구 확률만큼 → 두 번째 도구
+func int wildItem(int id){
+    var int call r = floor(jaw.random(0, 100));
+    if [id == 71]{   // mimikyu-disguised
+        if [r < 5]{
+            return(150);
+        }
+        return(0);
+    }
+    if [id == 72]{   // kricketot
+        if [r < 5]{
+            return(277);
+        }
+        return(0);
+    }
+    if [id == 73]{   // kricketune
+        if [r < 5]{
+            return(277);
+        }
+        return(0);
+    }
+    if [id == 74]{   // geodude
+        if [r < 5]{
+            return(229);
+        }
+        return(0);
+    }
+    if [id == 75]{   // graveler
+        if [r < 5]{
+            return(229);
+        }
+        return(0);
+    }
+    if [id == 76]{   // golem
+        if [r < 5]{
+            return(229);
+        }
+        return(0);
+    }
+    if [id == 77]{   // starly
+        if [r < 5]{
+            return(188);
+        }
+        return(0);
+    }
+    if [id == 78]{   // staravia
+        if [r < 5]{
+            return(188);
+        }
+        return(0);
+    }
+    if [id == 79]{   // staraptor
+        if [r < 5]{
+            return(188);
+        }
+        return(0);
+    }
+    if [id == 84]{   // pichu
+        if [r < 50]{
+            return(155);
+        }
+        return(0);
+    }
+    if [id == 85]{   // pikachu
+        if [r < 50]{
+            return(155);
+        }
+        if [r < 51]{
+            return(236);
+        }
+        return(0);
+    }
+    if [id == 86]{   // raichu
+        if [r < 50]{
+            return(155);
+        }
+        return(0);
+    }
+    if [id == 92]{   // steelix
+        if [r < 5]{
+            return(233);
+        }
+        return(0);
+    }
+    if [id == 97]{   // roggenrola
+        if [r < 50]{
+            return(229);
+        }
+        if [r < 55]{
+            return(238);
+        }
+        return(0);
+    }
+    if [id == 98]{   // boldore
+        if [r < 50]{
+            return(229);
+        }
+        if [r < 55]{
+            return(238);
+        }
+        return(0);
+    }
+    if [id == 99]{   // gigalith
+        if [r < 50]{
+            return(229);
+        }
+        if [r < 55]{
+            return(238);
+        }
+        return(0);
+    }
+    if [id == 111]{   // snorlax
+        if [r < 100]{
+            return(234);
+        }
+        return(0);
+    }
+    if [id == 112]{   // dratini
+        if [r < 5]{
+            return(235);
+        }
+        return(0);
+    }
+    if [id == 113]{   // dragonair
+        if [r < 5]{
+            return(235);
+        }
+        return(0);
+    }
+    if [id == 114]{   // dragonite
+        if [r < 5]{
+            return(235);
+        }
+        return(0);
+    }
+    if [id == 115]{   // sableye
+        if [r < 5]{
+            return(265);
+        }
+        return(0);
+    }
+    if [id == 116]{   // nosepass
+        if [r < 5]{
+            return(238);
+        }
+        return(0);
+    }
+    if [id == 134]{   // ferroseed
+        if [r < 5]{
+            return(288);
+        }
+        return(0);
+    }
+    if [id == 135]{   // ferrothorn
+        if [r < 5]{
+            return(288);
+        }
+        return(0);
+    }
+    if [id == 139]{   // magnemite
+        if [r < 5]{
+            return(233);
+        }
+        return(0);
+    }
+    if [id == 140]{   // magneton
+        if [r < 5]{
+            return(233);
+        }
+        return(0);
+    }
+    if [id == 141]{   // magnezone
+        if [r < 5]{
+            return(233);
+        }
+        return(0);
+    }
+    if [id == 145]{   // gible
+        if [r < 5]{
+            return(197);
+        }
+        return(0);
+    }
+    if [id == 146]{   // gabite
+        if [r < 5]{
+            return(197);
+        }
+        return(0);
+    }
+    if [id == 147]{   // garchomp
+        if [r < 5]{
+            return(197);
+        }
+        return(0);
+    }
+    if [id == 159]{   // mawile
+        if [r < 5]{
+            return(184);
+        }
+        return(0);
+    }
+    if [id == 167]{   // zigzagoon
+        if [r < 5]{
+            return(155);
+        }
+        return(0);
+    }
+    if [id == 168]{   // linoone
+        if [r < 50]{
+            return(155);
+        }
+        if [r < 55]{
+            return(158);
+        }
+        return(0);
+    }
+    if [id == 177]{   // fomantis
+        if [r < 5]{
+            return(239);
+        }
+        return(0);
+    }
+    if [id == 178]{   // lurantis
+        if [r < 5]{
+            return(239);
+        }
+        return(0);
+    }
+    return(0);
+}
+// 레벨캡 (하드캡): 배지 수 b (0 ~ 8) · 리그를 이기면 9 → 100
+func int levelCap(int b){
+    var list call caps = [11, 13, 20, 26, 33, 37, 42, 46, 50, 100];
+    if [b < 0]{
+        return(11);
+    }
+    if [b > 9]{
+        return(100);
+    }
+    return(caps[b + 1]);
+}
+// 포획률: keidex 항목 [10]
+func int catchRate(int id){
+    var int call i = 1;
+    loop [i <= keidex.length]{
+        if [keidex[i][1] == id]{
+            return(keidex[i][10]);
+        }
+        i = i + 1;
+    }
+    return(45);
+}
+func int baseExp(int id){
+    var int call i = 1;
+    loop [i <= keidex.length]{
+        if [keidex[i][1] == id]{
+            return(keidex[i][13]);
+        }
+        i = i + 1;
+    }
+    return(0);
+}
+func int growth(int id){
+    var int call i = 1;
+    loop [i <= keidex.length]{
+        if [keidex[i][1] == id]{
+            return(keidex[i][14]);
+        }
+        i = i + 1;
+    }
+    return(0);
+}
+
+// 그 레벨이 되는 데 필요한 누적 경험치 (본가 공식) — 성장 속도 0 보통 빠름 · 1 보통 느림 · 2 빠름 · 3 느림
+func int expAt(int g, int level){
+    if [level <= 1]{
+        return(0);
+    }
+    var float call n = level;
+    if [g == 1]{
+        return(floor(1.2 * n * n * n - 15 * n * n + 100 * n - 140));
+    }
+    if [g == 2]{
+        return(floor(0.8 * n * n * n));
+    }
+    if [g == 3]{
+        return(floor(1.25 * n * n * n));
+    }
+    return(floor(n * n * n));
+}
+
+// 얻는 경험치 (야생 · 본가 7세대 이후 공식): [ 기초 경험치 × 상대 레벨 / 5 × { (2 × 상대 레벨 + 10) / (상대 레벨 + 내 레벨 + 10) } ^ 2.5 ] + 1
+func int expGain(int base, int foeLevel, int myLevel){
+    return(floor(base * foeLevel / 5.0 * pow((2.0 * foeLevel + 10) / (foeLevel + myLevel + 10), 2.5) * 0.85) + 1);   // 본가 식의 85 % (15 % 줄임)
+}
+
+// 경험치 바 비율 (0 ~ 1): 지금 레벨에서 다음 레벨까지 얼마나 찼는지
+func float expRatio(int g, int level, int exp){
+    if [level >= 100]{
+        return(0);
+    }
+    var float call a = expAt(g, level);
+    var float call b = expAt(g, level + 1);
+    var float call r = (exp - a) / (b - a);
+    if [r < 0]{
+        r = 0;
+    }
+    if [r > 1]{
+        r = 1;
+    }
+    return(r);
+}
+
+// 종족값: keidex 에서 id 인 포켓몬의 k 번째 능력 (1 체력 · 2 공격 · 3 방어 · 4 특공 · 5 특방 · 6 스피드)
+//   keidex 항목 = [pokeID, h, a, b, c, d, s, …] → k 번째 능력은 [k + 1]
+func int baseStat(int id, int k){
+    var int call i = 1;
+    loop [i <= keidex.length]{
+        if [keidex[i][1] == id]{
+            return(keidex[i][k + 1]);
+        }
+        i = i + 1;
+    }
+    return(0);
+}
+
+// 실능치 (k: 1 체력 · 2~6 그 외)
+//   체력   = [ { (종족값 × 2) + 개체값 + (노력치 / 4) + 100 } × 레벨 / 100 ] + 10
+//   그 외  = [ { (종족값 × 2) + 개체값 + (노력치 / 4) } × 레벨 / 100 + 5 ] × 성격 보정 (지금은 1 = 노력)
+//   [ ] · 노력치 / 4 는 소수점 버림
+// 성격 (본가 순서 0 ~ 24): 올리는 능력 = 성격 / 5 · 내리는 능력 = 성격 % 5 (순서 [공격, 방어, 스피드, 특수공격, 특수방어]) · 같으면 보정 없음
+//   natUp · natDown: 이 화면의 능력 번호 (2 공격 · 3 방어 · 4 특공 · 5 특방 · 6 스피드 · 0 = 없음)
+func int natUp(int n){
+    var list call ord = [2, 3, 6, 4, 5];
+    var int call u = floor(n / 5);
+    var int call d = n - floor(n / 5) * 5;
+    if [u == d] or [n < 0] or [n > 24]{
+        return(0);
+    }
+    return(ord[u + 1]);
+}
+func int natDown(int n){
+    var list call ord = [2, 3, 6, 4, 5];
+    var int call u = floor(n / 5);
+    var int call d = n - floor(n / 5) * 5;
+    if [u == d] or [n < 0] or [n > 24]{
+        return(0);
+    }
+    return(ord[d + 1]);
+}
+// 성격까지 넣은 실능치 (nat = 포켓몬 데이터 [18])
+func int calcStatN(int base, int iv, int ev, int level, int k, int nat){
+    if [k == 1]{
+        return(calcStat(base, iv, ev, level, 1));
+    }
+    var float call mul = 1;
+    if [natUp(nat) == k]{
+        mul = 1.1;
+    }
+    if [natDown(nat) == k]{
+        mul = 0.9;
+    }
+    return(floor((floor((base * 2 + iv + floor(ev / 4)) * level / 100) + 5) * mul));
+}
+
+func int calcStat(int base, int iv, int ev, int level, int k){
+    if [k == 1]{
+        return(floor((base * 2 + iv + floor(ev / 4) + 100) * level / 100) + 10);
+    }
+    var float call nature = 1;
+    return(floor((floor((base * 2 + iv + floor(ev / 4)) * level / 100) + 5) * nature));
+}
+
+// 확률: 1 ~ range 사이 무작위 정수보다 fool 이 크면 1, 아니면 0
+//   예: pg.random(100, 기술[4]) → 명중하면 1 (명중률 101 = 반드시 1)
+func int random(int range, int fool){
+    var int call r = floor(jaw.random(1, range + 1));   // 1 ~ range (jaw.random(a, b) = 기본 무작위: a 이상 b 미만의 실수)
+    if [fool > r]{
+        return(1);
+    }
+    return(0);
+}
+
+// 최대 PP: 기본 PP × (5 + 포인트업 횟수) / 5 (소수점 버림) — 포인트업 3 번이면 1.6 배
+func int maxPP(int moveId, int ups){
+    return(floor(movedex[moveId][7] * (5 + ups) / 5));
+}
+
+// 포켓몬 타입: k = 1 (첫째) · 2 (둘째, 없으면 0) — keidex 항목 [11] · [12]
+func int speciesType(int id, int k){
+    var int call i = 1;
+    loop [i <= keidex.length]{
+        if [keidex[i][1] == id]{
+            return(keidex[i][10 + k]);
+        }
+        i = i + 1;
+    }
+    return(0);
+}
+
+// 타입 이름: lang[30 + 타입 번호] (번호는 pokeDataManager.jb 참고)
+func string typeName(int t){
+    return(lang[30 + t]);
+}
+
+// 이름: 별명이 "" 면 도감 이름 (lang[50 + id])
+func string pokeName(int id, string nick){
+    if [nick != ""]{
+        return(nick);
+    }
+    return(lang[50 + id]);
+}
+
+var public list call lang;

@@ -1,0 +1,39 @@
+// 리포트 작성: 지금 상태를 리포트 파일로 (setup 할 때마다 한 번 저장) — 플레이어(prtg)가 만들어진 뒤에 부를 것
+//   리포트 형식: ["keikan", 2, usingLang, isBoy, place, x, y, 내 포켓몬들, PC 의 포켓몬들, [월, 일, 요일, 시, 분], 가방, 주운 필드 도구, 소지금, 이야기, 스타팅, 배지, 이긴 트레이너, PC 활성화, PC 박스 수, 유풍체육관 상태]  (loadManager.jb 와 같아야 함)
+//   내 포켓몬들 = [포켓몬, 포켓몬, …] · 포켓몬 하나의 형식은 lib/pokeGen.jbl
+Use jawbreaker call jaw;
+Use pokeGen call pg;
+
+var public compound call myParty;
+var public int call money;        // 소지금 (리포트 13 번째 칸)
+var public list call fiTaken;     // 주운 필드 도구 (리포트 12 번째 칸 · lib/fieldItem.jbl)
+var public compound call pcBox;
+var public int call story;     // 이야기 진행 (리포트 14 번째 칸 · lib/storyCore.jbl)
+var public int call badges;
+var public list call trDone;   // 이긴 트레이너 (17 번째 칸)    // 배지 수 (16 번째 칸 · 레벨캡)
+var public int call pcOn;      // PC 계정 활성화 (18 번째 칸 · lib/pcCore.jbl)
+var public int call pcBoxN;    // PC 박스 수 (19 번째 칸)
+var public int call gyIn;      // 유풍체육관 안 (20 번째 칸 · lib/gymFly.jbl): [1, 글라이더, 나는 중, 양력, 부스터, 찌르꼬 1 ~ 4, 바람, 방향 x, 방향 y, 들어온 뒤 대사 전] · 체육관 밖이면 [0]
+var public int call gyGlide;
+var public int call gyFly;
+var public float call gyLift;
+var public int call gyBoost;
+var public list call gyOn;
+var public int call gyWd;
+var public float call gyDx;
+var public float call gyDy;
+var public int call gyMsg;
+var public int call stPick;    // 고른 스타팅 (15 번째 칸)   // PC 에 맡긴 포켓몬들 (리포트 9 번째 칸)
+
+run{
+    // 내 포켓몬이 없어도 그대로 씀 (처음에는 포켓몬 없음)
+    var compound call gySave = [0];
+    if [gyIn == 1] and [place == 12]{
+        gySave = [1, gyGlide, gyFly, gyLift, gyBoost, gyOn[1], gyOn[2], gyOn[3], gyOn[4], gyWd, gyDx, gyDy, gyMsg];
+    }
+    saveData = ["keikan", 2, usingLang, isBoy, place, obj.prtg.Xpos, obj.prtg.Ypos, myParty, pcBox, [gMonth, gDay, gWeek, gHour, gMin], bag, fiTaken, money, story, stPick, badges, trDone, pcOn, pcBoxN, gySave];
+    setJson("save", saveData);
+    genJson("data/save/save.json", "save");
+    hasSave = 1;
+    log("리포트 작성: %saveData%");
+}

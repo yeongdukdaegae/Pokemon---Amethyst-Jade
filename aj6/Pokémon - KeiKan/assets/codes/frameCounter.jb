@@ -1,0 +1,22 @@
+Use jawbreaker call jaw;
+use DisPlayer call dis;
+
+var float call frame;
+var float call fps;
+
+run{
+    loop{
+        dis.waitF(1);
+        frame = frame + 1;
+        
+    }
+}
+run{
+    loop{
+        wait(1000);
+        fps = frame;
+        frame = 0;
+        log("%fps%");
+    }
+    
+}

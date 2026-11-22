@@ -1,0 +1,4 @@
+// Jawbreaker 프로젝트 파일 — 이 파일이 있는 폴더가 프로젝트 최상위입니다.
+jbs 1
+name = Pokémon - KeiKan
+main = main.jb

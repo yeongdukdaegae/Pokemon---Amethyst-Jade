@@ -1,0 +1,230 @@
+Lib id storyCore;
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Magellan call mag;
+Use Canvas call can;
+Use soundMaster call sou;
+Use fieldTalk call ft;
+Use fieldNpc call fn;
+Use pokeGen call pg;
+Use bagCore call bg;
+Use moveUi call mu;
+
+// 이야기: 연구소에서 첫 포켓몬 받기 (story — 리포트 14 번째 칸 · 고른 스타팅 stPick 은 15 번째 칸)
+//   0 = 처음 (라이벌이 연구소 문 왼쪽 앞에서 기다림 · 문 앞에 가면 말을 걸고 자동문이 열려 둘이 들어감 — prtgRoom.jb)
+//   1 = 연구소에 막 들어옴 (둘이 탁자 앞으로 걸어가 박사 현정의 설명 → 라이벌 "네가 먼저 골라")
+//   2 = 고르는 중 (연구소 안을 걸어 다니며 탁자 위의 스타팅에 Z — chooseStarter)
+//   3 = 고름 (둘이 연구소 밖으로 → 라이벌 "저 도로 끝에서 배틀하자" → 1번도로 쪽으로 뛰어감)
+//   4 = 라이벌이 떠남 (지금은 여기까지)
+//   라이벌: 주인공이 남자면 지현 (lang 3767) · 여자면 재휘 (3768) — 라이벌은 주인공에게 유리한 스타팅을 고름 (풀 → 불 · 불 → 물 · 물 → 풀)
+
+var public int call story;
+var public int call stPick;
+var public int call storyGo;      // 1 = 스타팅을 골랐음 → prtgRoom.jb 가 연구소 밖으로 데리고 나감
+var public bit call isBoy;
+var public compound call myParty;
+var public compound call bag;
+var public list call lang;
+var public int call ftResult;
+var public list call npPoke;
+
+func string rivalName(){
+    if [isBoy == 1]{
+        return(lang[3767]);
+    }
+    return(lang[3768]);
+}
+
+// 주인공이 남자 (라이벌 지현) 면 지현의 대사 번호 · 여자 (라이벌 재휘) 면 그 다음 번호
+func int rivalLine(int boyLine){
+    if [isBoy == 1]{
+        return(boyLine);
+    }
+    return(boyLine + 1);
+}
+
+func int rivalPick(int p){
+    if [p == 1]{
+        return(4);
+    }
+    if [p == 4]{
+        return(7);
+    }
+    return(1);
+}
+
+// 스타팅 id → 탁자 위의 사람 번호 (fieldNpc 5 · 6 · 7)
+func int npcOf(int p){
+    if [p == 1]{
+        return(5);
+    }
+    if [p == 4]{
+        return(6);
+    }
+    return(7);
+}
+
+// 연구소 자동문 (문 밖 · 두 칸 [73, 20] · [74, 20] = 세계 x 440 ~ 472 · y 832): 문 그림 두 장이 양옆으로 좁아지며 열림 (어두운 안쪽이 보임)
+func doorOpen(){
+    dis.setObject([456, 832], "ldbg", [32, 16], "#1f2a3a");
+    dis.setObjLayer("ldbg", -997);
+    dis.setObject([448, 832], "ldl", [16, 16], "#ffffff");
+    mag.setObjTexture("ldl", "labDoorL", [0, 0], [16, 16]);
+    dis.setObjLayer("ldl", -996);
+    dis.setObject([464, 832], "ldr", [16, 16], "#ffffff");
+    mag.setObjTexture("ldr", "labDoorR", [0, 0], [16, 16]);
+    dis.setObjLayer("ldr", -996);
+    var int call f = 1;
+    loop [f <= 15]{
+        var float call w = 16 * (1 - 0.85 * f / 15.0);
+        dis.setObjScale("ldl", [w, 16]);
+        dis.setObjPos("ldl", [440 + w / 2, 832]);
+        dis.setObjScale("ldr", [w, 16]);
+        dis.setObjPos("ldr", [472 - w / 2, 832]);
+        dis.waitF(1);
+        f = f + 1;
+    }
+}
+
+func doorRemove(){
+    dis.removeObj("ldbg");
+    dis.removeObj("ldl");
+    dis.removeObj("ldr");
+}
+
+// 스타팅을 보여 주는 작은 상자 (대화 상자 위 가운데): 이름 + 타입 (흰 테두리 정사각형)
+func panel(int p){
+    var float call w = 260;
+    var float call h = 70;
+    var float call x = 0;
+    var float call y = 1440 / 11 - 360 + 1440 / 6.4 / 2 + h / 2 + 14;
+    if [dis.idWidthmode == 0]{
+        w = 220;
+        h = 60;
+        y = dis.displayY / 11 + dis.displayY / 6.4 / 2 + h / 2 + 10;
+    }
+    dis.setObject([x, y], "stpbd", [w, h], "#9fbfff");
+    dis.setObject([x, y], "stp", [w - 8, h - 8], "#2f5f9f");
+    dis.setText([x - w / 2 + h * 0.3, y - h * 0.04], lang[50 + p], "stpn", h * 0.4, false, "#ffffff");
+    dis.setTextNudge("stpn", "left");
+    can.setUi("stpbd");
+    can.setUi("stp");
+    can.setUi("stpn");
+    dis.setObjLayer("stpbd", 86);
+    dis.setObjLayer("stp", 87);
+    dis.setObjLayer("stpn", 88);
+    var float call s = h * 0.62;
+    var int call k = 1;
+    loop [k <= 2]{
+        var int call t = pg.speciesType(p, k);
+        var float call tx = x + w / 2 - h * 0.2 - s / 2 - (2 - k) * (s + 6);
+        if [pg.speciesType(p, 2) == 0]{
+            tx = x + w / 2 - h * 0.2 - s / 2;
+        }
+        dis.setObject([tx, y], "stpt%k%", [s, s], "#ffffff");
+        dis.setObject([tx, y], "stpt%k%in", [s - 6, s - 6], mu.typeCol(t));
+        dis.setObject([tx, y], "stpt%k%ic", [s * 0.72, s * 0.72], "#ffffff");
+        mag.setObjTexture("stpt%k%ic", "type_%t%", [0, 0], [96, 96]);
+        can.setUi("stpt%k%");
+        can.setUi("stpt%k%in");
+        can.setUi("stpt%k%ic");
+        dis.setObjLayer("stpt%k%", 88);
+        dis.setObjLayer("stpt%k%in", 89);
+        dis.setObjLayer("stpt%k%ic", 90);
+        if [t == 0]{
+            dis.setObjAlpha("stpt%k%", 0);
+            dis.setObjAlpha("stpt%k%in", 0);
+            dis.setObjAlpha("stpt%k%ic", 0);
+        }
+        k = k + 1;
+    }
+}
+
+func panelHide(){
+    dis.removeObj("stpbd");
+    dis.removeObj("stp");
+    dis.removeObj("stpn");
+    var int call k = 1;
+    loop [k <= 2]{
+        dis.removeObj("stpt%k%");
+        dis.removeObj("stpt%k%in");
+        dis.removeObj("stpt%k%ic");
+        k = k + 1;
+    }
+}
+
+// 탁자 위의 스타팅 (사람 k 번) 에 Z: 이름 · 타입을 보여 주고 → 한 번 더 Z 면 "이 스타팅으로 선택하시겠습니까?" (예 / 아니오)
+//   예: "잘해보자! (이름)" · 스티커가 붙은 몬스터볼이 가방에서 없어지고 그 볼이 스타팅의 볼 ([30] = 900)
+//       → 라이벌 "그럼 나는..." 하고 유리한 스타팅을 고름 → 라이벌의 말 → storyGo = 1 (prtgRoom.jb 가 밖으로 데리고 나감)
+func chooseStarter(int k){
+    var int call p = npPoke[k];
+    panel(p);
+    var string call tn = pg.typeName(pg.speciesType(p, 1));
+    if [pg.speciesType(p, 2) != 0]{
+        tn = tn + " · " + pg.typeName(pg.speciesType(p, 2));
+    }
+    ft.open("");
+    ft.say(replaceStr(replaceStr(lang[7207], "{poke}", lang[50 + p]), "{type}", tn));
+    ft.type(lang[7208]);
+    ft.yesNo(lang[1456], lang[1457]);
+    if [ftResult == 1]{
+        var compound call st = pg.newStarter(p, 5, isBoy);
+        st.add(900);   // 30: 볼 — 스티커가 붙은 몬스터볼
+        myParty.add(st);
+        bg.take(900, 1);
+        stPick = p;
+        fn.hideOne(k);
+        log("스타팅: " + lang[50 + p] + " Lv.5");
+        ft.say(replaceStr(lang[7209], "{poke}", lang[50 + p]));
+        ft.close();
+        panelHide();
+        var int call rp = rivalPick(p);
+        var int call rk = npcOf(rp);
+        fn.face(10, 1);
+        ft.open(rivalName());
+        ft.say(lang[7210]);
+        fn.hideOne(rk);
+        log("라이벌의 스타팅: " + lang[50 + rp]);
+        ft.say(lang[rivalLine(7211)]);
+        ft.close();
+        // 박사가 몬스터볼 10 개를 줌 (가방에 있으면 개수만 늘림)
+        ft.open(lang[7215]);
+        ft.say(lang[7238]);
+        ft.close();
+        var int call gotB = 0;
+        var int call bi = 1;
+        loop [bi <= bag.length]{
+            var compound call be = bag[bi];
+            if [be[1] == 4]{
+                be[2] = be[2] + 10;
+                bag[bi] = be;
+                gotB = 1;
+            }
+            bi = bi + 1;
+        }
+        if [gotB == 0]{
+            var compound call nb = [4, 10];
+            bag.add(nb);
+        }
+        log("몬스터볼 10 개를 받음");
+        ft.open("");
+        ft.say(replaceStr(replaceStr(lang[7239], "{item}", lang[3004]), "{n}", "10"));
+        ft.close();
+        // 박사가 PC 계정이 적힌 종이 (계정 메모 · 도구 901) 를 줌 → 포켓몬센터 구석의 PC 에서 활성화 (lib/pcCore.jbl)
+        ft.open(lang[7215]);
+        ft.say(lang[7385]);
+        ft.close();
+        var compound call nb2 = [901, 1];
+        bag.add(nb2);
+        log("계정 메모를 받음");
+        ft.open("");
+        ft.say(replaceStr(replaceStr(lang[7239], "{item}", lang[3901]), "{n}", "1"));
+        ft.close();
+        story = 3;
+        storyGo = 1;
+    }
+    else{
+        ft.close();
+        panelHide();
+    }
+}

@@ -1,0 +1,19 @@
+Lib id keyIn;
+Use jawbreaker call jaw;
+
+// 결정 · 취소 키: Z = 스페이스 · X = Esc 도 같은 입력 (눌려 있으면 1)
+//   게임의 모든 코드는 isKeyInput("z") · ("x") 대신 ky.z() · ky.x() 를 씀
+
+func int z(){
+    if [isKeyInput("z")] or [isKeyInput("space")]{
+        return(1);
+    }
+    return(0);
+}
+
+func int x(){
+    if [isKeyInput("x")] or [isKeyInput("esc")]{
+        return(1);
+    }
+    return(0);
+}

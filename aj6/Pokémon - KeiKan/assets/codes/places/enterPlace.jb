@@ -1,0 +1,11 @@
+// 장소 번호(place) → 그 장소 파일로 넘어감 (이어하기 · 장소 이동에서 씀)
+//   장소를 추가하면 여기에 한 줄씩 (sendto 경로는 따옴표 안의 상수여야 함)
+Use jawbreaker call jaw;
+
+run{
+    if [place == 0]{
+        sendto("assets/codes/places/prtgRoom.jb");
+    }
+    log("알 수 없는 장소 번호: %place% — 처음 방으로 갑니다");
+    sendto("assets/codes/places/prtgRoom.jb");
+}

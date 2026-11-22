@@ -1,0 +1,46 @@
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Canvas call can;
+
+run{
+    dis.BelongObj("consolebar");
+    if [dis.idWidthmode == 1]{
+        log("noconsole:(");
+        sendto("assets/codes/ui/dummy.jb");
+    }
+    else if [dis.idWidthmode == 0]{
+        can.obj.setExistableScene("*", "");
+        dis.setupObject();
+        dis.setObjCyl([250, -dis.displayY/4 + 100], "aButton", 80, "#dfdfdf");
+        setup("assets/codes/ui/consoleBarButton/aButton.jb");
+        dis.setObjCyl([250, -dis.displayY/4 - 100], "bButton", 80, "#dfdfdf");
+        can.setasButton("bButton");
+        setup("assets/codes/ui/consoleBarButton/bButton.jb");
+        dis.setText([255, -dis.displayY/4 + 85], "Z", "buttonTextA", 64, false, "#ffffff");
+        can.obj.setExistableScene("*", "buttonTextA");
+        dis.setText([255, -dis.displayY/4 - 115], "X", "buttonTextB", 64, false, "#ffffff");
+        can.obj.setExistableScene("*", "buttonTextB");
+        dis.setObjLayer("aButton", 3);
+        dis.setObjLayer("bButton", 3);
+        dis.setObjLayer("buttonTextA", 4);
+        dis.setObjLayer("buttonTextB", 4);
+        dis.setObject([-180, -dis.displayY/4 + 80], "upButton", [160, 80], "#dfdfdf");
+        dis.setObject([-260, -dis.displayY/4 - 80], "downButton", [160, 80], "#dfdfdf");
+        dis.setObject([-300, -dis.displayY/4 + 40], "leftButton", [80, 160], "#dfdfdf");
+        dis.setObject([-140, -dis.displayY/4 - 40], "rightButton", [80, 160], "#dfdfdf");
+        dis.setObjLayer("upButton", 3);
+        dis.setObjLayer("downButton", 3);
+        dis.setObjLayer("leftButton", 3);
+        dis.setObjLayer("rightButton", 3);
+        dis.setParent() ("upButton") as ("consolebar");
+        dis.setParent() ("downButton") as ("consolebar");
+        dis.setParent() ("leftButton") as ("consolebar");
+        dis.setParent() ("rightButton") as ("consolebar");
+        setup("assets/codes/ui/consoleBarButton/downButton.jb");
+        setup("assets/codes/ui/consoleBarButton/leftButton.jb");
+        setup("assets/codes/ui/consoleBarButton/rightButton.jb");
+        setup("assets/codes/ui/consoleBarButton/upButton.jb");
+        can.setUi("consolebar");
+        dis.setObjLayer("consolebar", 2);
+    }
+}

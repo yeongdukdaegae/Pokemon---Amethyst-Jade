@@ -1,0 +1,163 @@
+Use jawbreaker call jaw;
+Use uiBoxGen call ug;
+Use pokeGen call pg;
+Use Canvas call can;
+Use DisPlayer call dis;
+Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+use Magellan call mag;
+
+var public matrix[8, 8] call selectUi;
+var public list call selectedBox;
+var matrix[2, 1] call selectCoordx; 
+var matrix[2, 1] call selectCoordY;
+var public bit call isUi;
+var public bit call isBoy;
+var public compound call myParty;   // 내 포켓몬들 (새 게임: 없음)
+
+run{
+    isUi = 0;
+    selectedBox = [1, 1];
+    selectUi = [1, 0, 0, 0, 0, 0, 0, 0 | 2, 0, 0, 0, 0, 0, 0, 0 | 0, 0, 0, 0, 0, 0, 0, 0 | 0, 0, 0, 0, 0, 0, 0, 0 | 0, 0, 0, 0, 0, 0, 0, 0 | 0, 0, 0, 0, 0, 0, 0, 0 | 0, 0, 0, 0, 0, 0, 0, 0 | 0, 0, 0, 0, 0, 0, 0, 0]; 
+    if [dis.idWidthmode == 1]{
+        dis.setupObject();
+     //   dis.setObject([0, 0], "curtain", [dis.displayX, dis.displayY], "#000000");
+    //    dis.setObjLayer("curtain", 15);
+        selectCoordx = [-225 | -225];
+        selectCoordY = [-60 | -180];
+        ug.GenUiBox(0, 0, 800, 600, "bsmain", "");
+        ug.GenUiBox(0, -60, 400, 100, "bseng", "English");
+        dis.ascendObjLayer("bseng", 4);
+        ug.GenUiBox(0, -180, 400, 100, "bskor", "한국어");
+        dis.ascendObjLayer("bskor", 4);
+        dis.setText([0, 220], lang[3], "bslang", 30, false, "#ffffff");
+        dis.setObjLayer("bslang", 10);
+        setup("assets/codes/ui/menuSelection.jb");
+        mag.importFile("assets/textures/ui/1/select.png") save as ("select");
+        dis.setObject([-225, -60], "select", [26, 30], "#ffffff");
+        mag.setObjTexture("select", "select", [0, 0], [208, 240]);
+        dis.setObjLayer("select", 11);
+    //    dis.setObjAlpha("curtain", 0) for 2000;
+    //    wait(2000);
+    //    dis.disableObj("curtain");
+        isUi = 1;
+        loop{
+            if [selectedBox[2] == 1]{
+                usingLang = 0;
+            }
+            else if [selectedBox[2] == 2]{
+                usingLang = 1;
+            }
+            dis.moveObj("select") to [selectCoordx[selectedBox[2], selectedBox[1]], selectCoordY[selectedBox[2], selectedBox[1]]];
+            dis.setTxtContent("bslang", lang[3]);
+            dis.waitF(1);
+            if [ky.z()]{
+                dis.setTxtContent("bslang", lang[6]);
+                dis.setTxtContent("bsengcontent", lang[7]);
+                dis.setTxtContent("bskorcontent", lang[8]);
+                wait(1000);
+                loop{
+                    dis.moveObj("select") to [selectCoordx[selectedBox[2], selectedBox[1]], selectCoordY[selectedBox[2], selectedBox[1]]];
+                    dis.waitF(1);
+                    if [ky.z()]{
+                        if [selectedBox[2] == 1]{
+                            isBoy = 1;
+                        }
+                        else{
+                            isBoy = 0;
+                        }
+                        myParty = [];   // 처음에는 포켓몬 없음 (파트너는 나중에)
+                        log("내 포켓몬: %myParty%");
+                        isUi = 0;
+                        selectedBox = [1, 1];
+                        dis.setObject([0, 0], "curtain", [dis.displayX, dis.displayY * 2], "#ffffff");
+                        dis.setObjAlpha("curtain", 0);
+                        dis.setObjLayer("curtain", 20);
+                        dis.setObjAlpha("curtain", 255) for 2000;
+                        wait(2000);
+                        dis.removeObj("select");
+                        dis.removeObj("bslang");
+                        dis.removeObj("bsmain");
+                        dis.removeObj("bsmainpadding");
+                        dis.removeObj("bsmaincontent");
+                        dis.removeObj("bseng");
+                        dis.removeObj("bsengpadding");
+                        dis.removeObj("bsengcontent");
+                        dis.removeObj("bskor");
+                        dis.removeObj("bskorpadding");
+                        dis.removeObj("bskorcontent");
+                        sendto("assets/codes/places/prtgRoom.jb");
+                    }
+                }
+            }
+        }
+    }
+    else{
+        dis.setupObject();
+    //    dis.setObject([0, dis.displayY/2], "curtain", [dis.displayX, dis.displayY], "#000000");
+     //   dis.setObjLayer("curtain", 15);
+        selectCoordx = [-275 | -275];
+        selectCoordY = [dis.displayY / 3 - 150 | dis.displayY / 6 - 30];
+        ug.GenUiBox(0, dis.displayY / 4, 600, 400, "bsmain", "");
+        ug.GenUiBox(0, dis.displayY / 3 - 150, 500, 80, "bseng", "English");
+        dis.ascendObjLayer("bseng", 4);
+        ug.GenUiBox(0, dis.displayY / 6 - 30, 500, 80, "bskor", "한국어");
+        dis.ascendObjLayer("bskor", 4);
+        dis.setText([0, dis.displayY / 3], lang[3], "bslang", 20, false, "#ffffff");
+        dis.setObjLayer("bslang", 10);
+        setup("assets/codes/ui/menuSelection.jb");
+        mag.importFile("assets/textures/ui/1/select.png") save as ("select");
+        dis.setObject([-275, -60], "select", [26, 30], "#ffffff");
+        mag.setObjTexture("select", "select", [0, 0], [208, 240]);
+        dis.setObjLayer("select", 11);
+      //  dis.setObjAlpha("curtain", 0) for 1000;
+   //     wait(1000);
+    //    dis.disableObj("curtain");
+        isUi = 1;
+        loop{
+            if [selectedBox[2] == 1]{
+                usingLang = 0;
+            }
+            else if [selectedBox[2] == 2]{
+                usingLang = 1;
+            }
+            dis.moveObj("select") to [selectCoordx[selectedBox[2], selectedBox[1]], selectCoordY[selectedBox[2], selectedBox[1]]];
+            dis.setTxtContent("bslang", lang[3]);
+            dis.waitF(1);
+            if [ky.z()]{
+                dis.setTxtContent("bslang", lang[6]);
+                dis.setTxtContent("bsengcontent", lang[7]);
+                dis.setTxtContent("bskorcontent", lang[8]);
+                wait(1000);    
+                loop{
+                    dis.moveObj("select") to [selectCoordx[selectedBox[2], selectedBox[1]], selectCoordY[selectedBox[2], selectedBox[1]]];
+                    dis.waitF(1);
+                    if [ky.z()]{
+                        if [selectedBox[2] == 1]{
+                            isBoy = 1;
+                        }
+                        else{
+                            isBoy = 0;
+                        }
+                        myParty = [];   // 처음에는 포켓몬 없음 (파트너는 나중에)
+                        log("내 포켓몬: %myParty%");
+                        isUi = 0;
+                        dis.removeObj("select");
+                        dis.removeObj("bslang");
+                        dis.removeObj("bsmain");
+                        dis.removeObj("bsmainpadding");
+                        dis.removeObj("bsmaincontent");
+                        dis.removeObj("bseng");
+                        dis.removeObj("bsengpadding");
+                        dis.removeObj("bsengcontent");
+                        dis.removeObj("bskor");
+                        dis.removeObj("bskorpadding");
+                        dis.removeObj("bskorcontent");
+                        dis.setObject([0, 0], "curtain", [1000, 1000], "#ffffff");
+                        sendto("assets/codes/places/prtgRoom.jb");
+                    }
+                }
+            }
+        }
+    }
+    
+}

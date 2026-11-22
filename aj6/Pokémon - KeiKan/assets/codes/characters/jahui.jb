@@ -1,0 +1,67 @@
+Use jawbreaker call jaw;
+Use Canvas call can;
+Use DisPlayer call dis;
+Use Magellan call mag;
+Use colliders call col;
+
+var public float call speed;
+var public int call direction;
+var public int call gyFly;     // 유풍체육관 글라이더 (lib/gymFly.jbl): 1 나는 중 · 2 착지해서 미끄러짐 → 속도는 gyVx · gyVy (멈출 수 없음)
+var public float call gyVx;
+var public float call gyVy;
+
+run{
+    dis.BelongObj("prtg");
+    // 콜라이더는 플레이어(prtg) 자신에게 — [x, y] 는 콜라이더 가운데 (플레이어 위치 그대로)
+    // (예전: 없는 id "prtgcol" 로 만들어서 플레이어가 아닌 [0, 0] 에 보이지 않는 벽이 따로 생겼고, 플레이어는 콜라이더가 없어 벽을 통과함)
+    col.setCollider([obj.prtg.Xpos, obj.prtg.Ypos], [12, 12], "", 0, false);
+    // canMove 가 0 이어도 끝나지 않고 기다림 (예전: 배틀로 0 이 되면 이 반복이 끝나 버려서 배틀 뒤에 다시 못 움직임)
+    loop{
+        if [canMove == 0]{
+            col.setVelocityX("", 0);
+            col.setVelocityY("", 0);
+            loop [canMove == 0]{ dis.waitF(1); }
+        }
+        if [gyFly >= 1]{   // 글라이더: lib/gymFly.jbl 이 정한 속도 (멈출 수 없음) · 보는 쪽만 방향키로
+            col.setVelocityX("", gyVx);
+            col.setVelocityY("", gyVy);
+            if [isKeyInput("left")]{
+                direction = 1;
+            }
+            else if [isKeyInput("right")]{
+                direction = 2;
+            }
+            else if [isKeyInput("down")]{
+                direction = 3;
+            }
+            else if [isKeyInput("up")]{
+                direction = 4;
+            }
+        }
+        else{
+            if [isKeyInput("left")]{
+                col.setVelocityX("", -64 * speed);
+                direction = 1;
+            }
+            else if [isKeyInput("right")]{
+                col.setVelocityX("", 64 * speed);
+                direction = 2;
+            }
+            else{
+                col.setVelocityX("", 0);
+            }
+            if [isKeyInput("down")]{
+                col.setVelocityY("", -64 * speed);
+                direction = 3;
+            }
+            else if [isKeyInput("up")]{
+                col.setVelocityY("", 64 * speed);
+                direction = 4;
+            }
+            else{
+                col.setVelocityY("", 0);
+            }
+        }
+        dis.waitF(1);
+    }
+}

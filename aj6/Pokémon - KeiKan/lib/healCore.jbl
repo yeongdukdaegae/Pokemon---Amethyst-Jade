@@ -1,0 +1,145 @@
+Lib id healCore;
+Use jawbreaker call jaw;
+Use pokeGen call pg;
+
+// 회복류 도구 (본가 도구 번호 17 ~ 28) 의 효과 · 포켓몬센터의 회복
+//   17 상처약 HP +20 · 26 좋은상처약 +60 · 25 고급상처약 +120 · 24 풀회복약 HP 모두 · 23 회복약 HP 모두 + 상태 이상
+//   18 해독제 독 · 맹독 · 19 화상치료제 화상 · 20 얼음상태치료제 얼음 · 21 잠깨는약 잠듦 · 22 마비치료제 마비 · 27 만병통치제 상태 이상 모두
+//   28 기력의조각 기절한 포켓몬을 되살리고 HP 를 최대치의 절반까지
+//   기절한 포켓몬에게는 기력의조각 말고는 듣지 않음 · 효과가 없으면 도구를 쓰지 않음 (apply 가 0)
+//   상태 이상 번호 (포켓몬 데이터 27 번째): 0 없음 · 1 화상 · 2 마비 · 3 독 · 4 맹독 · 5 잠듦 · 6 얼음
+
+var public compound call myParty;
+var public int call hcAmount;   // 마지막 apply 가 회복한 HP
+
+// 필드 (가방) 에서 쓸 수 있는 도구인지
+func int usable(int id){
+    if [id >= 17] and [id <= 28]{
+        return(1);
+    }
+    if [id == 903] or [id == 904]{   // 체육관 상처약 · 체육관 기력의조각
+        return(1);
+    }
+    if [pg.isStone(id) == 1]{   // 진화의 돌 (fieldMenu.jb 가 진화로 처리)
+        return(1);
+    }
+    if [id == 79] or [id == 76] or [id == 77]{   // 벌레회피스프레이 · 실버스프레이 · 골드스프레이 (fieldMenu.jb 가 처리)
+        return(1);
+    }
+    return(0);
+}
+
+// 내 포켓몬 idx 번의 최대 HP
+func int maxHp(int idx){
+    var compound call pk = myParty[idx];
+    return(pg.calcStat(pg.baseStat(pk[1], 1), pk[3], pk[9], pk[2], 1));
+}
+
+// 도구 id 를 내 포켓몬 idx 번에게 씀 → 결과: 0 효과 없음 · 1 HP 회복 · 2 상태 이상 치료 · 3 되살림 · 4 HP 회복 + 상태 이상 치료
+func int apply(int id0, int idx){
+    var int call id = id0;
+    if [id0 == 903]{   // 체육관 상처약 = 상처약
+        id = 17;
+    }
+    if [id0 == 904]{   // 체육관 기력의조각 = 기력의조각
+        id = 28;
+    }
+    var compound call pk = myParty[idx];
+    var int call mx = maxHp(idx);
+    var int call hp = pk[25];
+    var int call st = pk[27];
+    hcAmount = 0;
+    if [id == 28]{   // 기력의조각
+        if [hp > 0]{
+            return(0);
+        }
+        pk[25] = floor(mx / 2);
+        pk[27] = 0;
+        myParty[idx] = pk;
+        hcAmount = pk[25];
+        return(3);
+    }
+    if [hp <= 0]{
+        return(0);
+    }
+    var int call amt = 0;
+    if [id == 17]{
+        amt = 20;
+    }
+    if [id == 26]{
+        amt = 60;
+    }
+    if [id == 25]{
+        amt = 120;
+    }
+    if [id == 24] or [id == 23]{
+        amt = mx;
+    }
+    var int call cured = 0;
+    if [st != 0]{
+        if [id == 23] or [id == 27]{
+            cured = 1;
+        }
+        if [id == 18]{
+            if [st == 3] or [st == 4]{
+                cured = 1;
+            }
+        }
+        if [id == 19] and [st == 1]{
+            cured = 1;
+        }
+        if [id == 20] and [st == 6]{
+            cured = 1;
+        }
+        if [id == 21] and [st == 5]{
+            cured = 1;
+        }
+        if [id == 22] and [st == 2]{
+            cured = 1;
+        }
+    }
+    var int call healed = 0;
+    if [amt > 0] and [hp < mx]{
+        healed = mx - hp;
+        if [healed > amt]{
+            healed = amt;
+        }
+    }
+    if [healed == 0] and [cured == 0]{
+        return(0);
+    }
+    pk[25] = hp + healed;
+    if [cured == 1]{
+        pk[27] = 0;
+    }
+    myParty[idx] = pk;
+    hcAmount = healed;
+    if [healed > 0] and [cured == 1]{
+        return(4);
+    }
+    if [healed > 0]{
+        return(1);
+    }
+    return(2);
+}
+
+// 포켓몬센터: 내 포켓몬 모두 HP · 상태 이상 · PP 를 처음처럼
+func healAll(){
+    var int call i = 1;
+    loop [i <= myParty.length]{
+        var compound call pk = myParty[i];
+        pk[25] = maxHp(i);
+        pk[27] = 0;
+        var compound call mv = pk[22];
+        var compound call pu = pk[24];
+        var compound call pp = [];
+        var int call j = 1;
+        loop [j <= mv.length]{
+            pp.add(pg.maxPP(mv[j], pu[j]));
+            j = j + 1;
+        }
+        pk[23] = pp;
+        myParty[i] = pk;
+        i = i + 1;
+    }
+}

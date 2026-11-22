@@ -1,0 +1,23 @@
+Lib id dialogGen;
+Use jawbreaker call jaw;
+Use uiBoxGen call uGen;
+Use DisPlayer call dis;
+Use Canvas call can;
+Use soundMaster call sou;
+
+// 대화 상자: 4 줄 (uuid%c1 ~ c4 · 글자 크기 = 상자 높이 / 6.2 · 줄 간격 = 높이 / 5) — 처음 내용은 위의 3 줄까지 받음 (4 번째 줄은 빈 채로 만듦)
+func GenDialogue(float x, float y, float scalex, float scaley, string uuid, string content1, string content2, string content3){
+    dis.setupObject();
+    uGen.GenUiBox(x, y, scalex, scaley, "%uuid%", "");
+    dis.setText([x - scalex / 2.2, y + scaley * 0.3], "%content1%", "%uuid%c1", scaley / 6.2, false, "#ffffff");
+    dis.setText([x - scalex / 2.2, y + scaley * 0.1], "%content2%", "%uuid%c2", scaley / 6.2, false, "#ffffff");
+    dis.setText([x - scalex / 2.2, y - scaley * 0.1], "%content3%", "%uuid%c3", scaley / 6.2, false, "#ffffff");
+    dis.setText([x - scalex / 2.2, y - scaley * 0.3], "", "%uuid%c4", scaley / 6.2, false, "#ffffff");
+    var int call i = 1;
+    loop [i <= 4]{
+        dis.setParent() ("%uuid%c%i%") as ("%uuid%");
+        dis.setTextNudge("%uuid%c%i%", "left");
+        dis.setObjLayer("%uuid%c%i%", 4);
+        i = i + 1;
+    }
+}

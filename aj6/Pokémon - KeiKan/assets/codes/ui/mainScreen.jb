@@ -1,0 +1,61 @@
+Use jawbreaker call jaw;
+Use Canvas call can;
+Use DisPlayer call dis;
+Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
+use soundMaster call sou;
+use Magellan call mag;
+
+var int call timer;
+
+run{
+    can.setUpScene();
+    can.BelongScene("mainScreen");
+    dis.setDisplay();
+    dis.setupObject();
+    sou.setSpeaker("main");
+    sou.playSfx("main", "opening", 67000);
+    dis.setRenderLimit(2000);
+    sou.setFadeout("main", 1000);
+    dis.setDisplayColor("#000000");
+    if(dis.idWidthmode == 1){
+        log("width");
+        dis.setObject([0, 0], "jawlogo", [491, 171], "#ffffff");
+        dis.setObjAlpha("jawlogo", 0);
+        mag.setObjTexture("jawlogo", "logo", [0, 0], [1964, 680]);
+        wait(1300);
+        dis.setObjAlpha("jawlogo", 255) for 300;
+        wait(3000);
+        dis.setObjAlpha("jawlogo", 0) for 300;
+        loop{
+            if ([ky.z()] or [timer == 5100]){
+                sou.break("main");
+                sendto("assets/codes/ui/titleScreen.jb");
+            }
+            wait(10);
+            timer = timer + 1;
+            log("%timer%");
+        }
+    }
+    else{
+        dis.setObject([0, -dis.displayY/4], "consolebar", [dis.displayX, dis.displayY/2], "#afafaf");
+        setup("assets/codes/ui/consoleBar.jb");
+        log("height");
+        dis.setObject([0, dis.displayY / 4], "jawlogo", [491, 171], "#ffffff");
+        dis.setObjAlpha("jawlogo", 0);
+        mag.setObjTexture("jawlogo", "logo", [0, 0], [1964, 680]);
+        dis.setObjScale("jawlogo", [491, 171]);
+        wait(1300);
+        dis.setObjAlpha("jawlogo", 255) for 300;
+        wait(3000);
+        dis.setObjAlpha("jawlogo", 0) for 300;
+        loop{
+            if ([ky.z()] or [timer == 5100]){
+                sou.break("main");
+                sendto("assets/codes/ui/titleScreen.jb");
+            }
+            wait(10);
+            timer = timer + 1;
+            log("%timer%");
+        }
+    }
+}
