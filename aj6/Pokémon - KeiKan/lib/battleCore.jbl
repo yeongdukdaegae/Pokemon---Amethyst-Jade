@@ -1806,28 +1806,28 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spSwirl(1, tx, ty, s, 8, 0.045, 26, 0, 0.08, "#ff7a20");
     }
     if [mv == 121]{   // 알폭탄: 크림빛 공 → 하얀 폭발
-        spBomb(ax, ay, tx, ty, s, "#fffef0", "#ffd870", 0.06, 22, 12, 0.3, 10, 0);
+        spBomb(ax, ay, tx, ty, s, "#fffef0", "#ffd870", 0.09, 22, 12, 0.3, 10, 0);
     }
     if [mv == 188]{   // 오물폭탄: 보랏빛 공 → 독 방울이 사방으로
-        spBomb(ax, ay, tx, ty, s, "#f0d8ff", "#9b3cff", 0.06, 22, 12, 0.3, 10, 7);
+        spBomb(ax, ay, tx, ty, s, "#f0d8ff", "#9b3cff", 0.09, 22, 12, 0.3, 10, 7);
     }
     if [mv == 402]{   // 씨폭탄: 초록빛 공 → 나뭇잎이 사방으로
-        spBomb(ax, ay, tx, ty, s, "#f0ffd8", "#5ac83a", 0.055, 20, 12, 0.28, 10, 3);
+        spBomb(ax, ay, tx, ty, s, "#f0ffd8", "#5ac83a", 0.0825, 20, 12, 0.28, 10, 3);
     }
     if [mv == 426]{   // 진흙폭탄: 흙빛 공 → 흙덩이가 사방으로
-        spBomb(ax, ay, tx, ty, s, "#f0dcc0", "#8a5a2a", 0.06, 22, 12, 0.3, 10, 6);
+        spBomb(ax, ay, tx, ty, s, "#f0dcc0", "#8a5a2a", 0.09, 22, 12, 0.3, 10, 6);
     }
     if [mv == 443]{   // 마그넷봄: 은빛 공 → 쇳빛 폭발 (빠르게)
-        spBomb(ax, ay, tx, ty, s, "#ffffff", "#a8bcd0", 0.05, 18, 9, 0.26, 10, 0);
+        spBomb(ax, ay, tx, ty, s, "#ffffff", "#a8bcd0", 0.075, 18, 9, 0.26, 10, 0);
     }
     if [mv == 491]{   // 애시드봄: 연보라 공 → 독 방울
-        spBomb(ax, ay, tx, ty, s, "#f4e4ff", "#c060ff", 0.05, 20, 12, 0.26, 8, 7);
+        spBomb(ax, ay, tx, ty, s, "#f4e4ff", "#c060ff", 0.075, 20, 12, 0.26, 8, 7);
     }
     if [mv == 903]{   // 시럽봄: 호박빛 공 → 끈끈한 방울
-        spBomb(ax, ay, tx, ty, s, "#fff0d0", "#ff8a2a", 0.06, 22, 13, 0.28, 10, 0);
+        spBomb(ax, ay, tx, ty, s, "#fff0d0", "#ff8a2a", 0.09, 22, 13, 0.28, 10, 0);
     }
     if [mv == 585]{   // 문포스: 큰 분홍 달빛 공을 오래 모음 → 반짝임이 크게 퍼짐
-        spBomb(ax, ay, tx, ty, s, "#fff4ff", "#ff7ad8", 0.08, 34, 12, 0.4, 14, 8);
+        spBomb(ax, ay, tx, ty, s, "#fff4ff", "#ff7ad8", 0.12, 34, 12, 0.4, 14, 8);
     }
     if [mv == 51]{   // 용해액: 독 방울이 포물선을 그리며
         spShower(7, ax, ay, tx, ty, s, 6, 0.045, 18, 3, 0.18, 0, 0, 0.05, "#c070ff");
