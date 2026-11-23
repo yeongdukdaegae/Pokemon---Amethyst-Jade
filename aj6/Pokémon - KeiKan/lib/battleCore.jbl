@@ -2232,7 +2232,7 @@ func spSlash(float tx, float ty, float s, string glow, float size, int hold, flo
     dis.removeObj("sfxb");
 }
 // ── 능력 상승 (육성기 · 2026-11-22): 쓰는 포켓몬 둘레에 오르는 능력의 색으로
-//   발밑에서 고리 (sfx17) 가 퍼지고 · 몸 뒤 빛 (sfxb · 그림 뒤 레이어 0) 이 깜빡이고 · 빛 알갱이 10 개 (sfx7 ~ sfx16) 가 아래에서 위로 오르고
+//   발판 가운데 (mybase · oppbase) 에서 고리 (sfx17) 가 퍼지고 · 몸 뒤 빛 (sfxb · 그림 뒤 레이어 0) 이 깜빡이고 · 빛 알갱이 10 개 (sfx7 ~ sfx16) 가 아래에서 위로 오르고
 //   위로 향한 꺾쇠 (^) 셋 (선분 둘씩 · sfx1 ~ sfx6) 이 차례로 솟아오름 (fr 프레임)
 //   c1 · c2 · c3 = 색 (능력마다: 공격 빨강 · 방어 주황 · 특공 보라 · 특방 초록 · 스피드 하늘 · 명중 노랑 · 회피 흰색)
 func spBoost(float ax, float ay, float s, string c1, string c2, string c3, int fr, int dir){
@@ -2261,7 +2261,13 @@ func spBoost(float ax, float ay, float s, string c1, string c2, string c3, int f
         dis.setObjAlpha("sfx%bi%", 0);
         bi = bi + 1;
     }
-    ringObj("sfx17", ax, ay - bh * 0.9, c1);
+    var float call rgx = obj.oppbase.Xpos;   // 발밑 고리 = 그 포켓몬의 발판 가운데 (포켓몬마다 그림 크기 · 자리가 달라도 발판에 맞음)
+    var float call rgy = obj.oppbase.Ypos;
+    if [abs(ax - obj.mypoke.Xpos) < 1] and [abs(ay - obj.mypoke.Ypos) < 1]{
+        rgx = obj.mybase.Xpos;
+        rgy = obj.mybase.Ypos;
+    }
+    ringObj("sfx17", rgx, rgy, c1);
     dis.setGlow("sfx17", c1, s * 0.06);
     dis.setObjLayer("sfx17", 2);
     pxCirc(ax, ay, "sfxb", bh, c1);
