@@ -311,6 +311,9 @@ func float sprScale(int id){
     if [id == 177]{
         return(0.75);
     }
+    if [id == 103]{   // 이상해꽃: 그림이 커 보여서 조금 줄임
+        return(0.82);
+    }
     return(1.0);
 }
 
