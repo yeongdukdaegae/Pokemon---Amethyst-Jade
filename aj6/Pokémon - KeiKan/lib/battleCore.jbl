@@ -2240,7 +2240,7 @@ func spBoost(float ax, float ay, float s, string c1, string c2, string c3, int f
     var float call bh = s * fxKa * 0.32;   // 몸 반쯤 높이
     var int call bi = 1;
     loop [bi <= 6]{   // 화살표 (fx_stat.png 1 번 · 오름) 여섯: 둘씩 같은 색
-        dis.setObject([ax, ay], "sfx%bi%", [s * fxKa * 0.11, s * fxKa * 0.11], "#ffffff");
+        dis.setObject([ax, ay], "sfx%bi%", [s * fxKa * 0.18, s * fxKa * 0.18], "#ffffff");
         if [dir < 0]{
             mag.setObjTexture("sfx%bi%", "fxstat", [16, 0], [32, 16]);   // 내림 화살표
         }
@@ -2248,7 +2248,7 @@ func spBoost(float ax, float ay, float s, string c1, string c2, string c3, int f
             mag.setObjTexture("sfx%bi%", "fxstat", [0, 0], [16, 16]);
         }
         dis.setObjColor("sfx%bi%", bc3[floor((bi - 1) / 2) + 1]);
-        dis.setGlow("sfx%bi%", bc3[floor((bi - 1) / 2) + 1], s * 0.04);
+        dis.setGlow("sfx%bi%", bc3[floor((bi - 1) / 2) + 1], s * 0.06);
         dis.setObjLayer("sfx%bi%", 2);
         dis.setObjAlpha("sfx%bi%", 0);
         bi = bi + 1;
