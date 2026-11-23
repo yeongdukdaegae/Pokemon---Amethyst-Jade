@@ -1,4 +1,5 @@
 # 배틀 그림 자리 흉내 (PC · battleManager.jb 와 같은 식) — 포켓몬마다 내 쪽 (뒷모습) · 상대 쪽 (앞모습) 을 발판 위에 그려 한 장으로
+#   쓰는 법: 게임 폴더 (aj6/Pokémon - KeiKan) 에서 python3 ../../fxsrc/battle_pos_sheet.py <출력.png> → 포켓몬마다 왼쪽 = 내 쪽 (뒷모습) · 오른쪽 = 상대 쪽 (앞모습) · 빨간 + = 발판 가운데
 import re, sys, os
 from PIL import Image, ImageDraw, ImageFont
 G='.'
