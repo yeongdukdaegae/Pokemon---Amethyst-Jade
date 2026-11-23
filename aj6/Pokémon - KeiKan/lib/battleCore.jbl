@@ -706,7 +706,7 @@ func moveFx(int mv, float ax, float ay, float tx, float ty, float s, string col)
 //   moveFx 가 먼저 여기를 봄 (있으면 이것 · 없으면 종류별 이펙트) · 오브젝트 sfx1 ~ sfx16 (끝나면 모두 지움)
 func int hasSp(int mv){
     var list call sp = [192, 411, 247, 53, 58, 85, 56, 412, 406, 315, 63, 416, 76, 451, 62, 61, 324, 430, 60, 820, 795, 796, 800, 711, 714, 888, 907, 905, 744, 705];   // 63 ~ 705 = 빔 기술 (spBeam)
-    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200, 352, 399, 805, 505, 396, 311, 408, 7, 8, 9, 418, 325, 4, 5, 146, 183, 223, 264, 309, 327, 359, 409, 612, 721, 817, 818, 857, 889, 24, 25, 26, 27, 67, 136, 167, 299, 490, 688, 813, 823, 853, 370, 123, 139, 499, 810, 108, 230, 225, 524, 77, 78, 79, 147, 178, 600, 750, 476, 528, 344, 413, 38, 36, 834];   // 타입 텍스쳐 (fx_type.png) 기술
+    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200, 352, 399, 805, 505, 396, 311, 408, 7, 8, 9, 418, 325, 4, 5, 146, 183, 223, 264, 309, 327, 359, 409, 612, 721, 817, 818, 857, 889, 24, 25, 26, 27, 67, 136, 167, 299, 490, 688, 813, 823, 853, 370, 123, 139, 499, 810, 108, 230, 225, 524, 77, 78, 79, 147, 178, 600, 750, 476, 528, 344, 38, 36, 834, 394];   // 타입 텍스쳐 (fx_type.png) 기술
     if [sp.find(mv) != 0]{
         return(1);
     }
@@ -1940,7 +1940,7 @@ func spDischarge(float ax, float ay, float s, int hold){
     dis.removeObj("sfxb");
 }
 // ── 돌격 (2026-11-22): 쓰는 포켓몬 그림이 fr 프레임 만에 맞는 쪽 바로 앞 (맞는 곳에서 0.18 s 앞) 까지 돌진 (dashGo) → 그 자리에서 이펙트 → fr2 프레임 동안 원래 자리로 돌아옴 (dashBack)
-//   발판 (mybase · oppbase) 은 그대로 · 인파이트 · 브레이브버드 · 이판사판태클 · 돌진 · 웨이브태클 · 볼트태클 · 와일드볼트
+//   발판 (mybase · oppbase) 은 그대로 · 인파이트 · 이판사판태클 · 돌진 · 볼트태클 · 와일드볼트 (spVoltCharge) · 플레어드라이브 · 웨이브태클 (spAuraDash) — 브레이브버드는 일단 뺌
 func dashGo(float ax, float ay, float tx, float ty, float s, int fr){
     dashId = "opppoke";
     if [abs(ax - obj.mypoke.Xpos) < 1] and [abs(ay - obj.mypoke.Ypos) < 1]{
@@ -2096,6 +2096,91 @@ func spVoltCharge(float ax, float ay, float tx, float ty, float s, int wrap, int
         spDischarge(ex, ey, s, 12);
     }
     fxKa = kA;
+    dashBack(8);
+}
+// ── 플레어드라이브 · 웨이브태클 (2026-11-22): 몸에 기운 (커다란 빛 덩이 sfxb) 과 알갱이 12 개 (sfx1 ~ sfx12 · 불꽃 = fx_type 1 번 · 물방울 = 2 번) 를 두르고 (wrap 프레임)
+//   알갱이는 몸 둘레를 돌며 (불꽃은 위로 타오르고 · 물은 빙글빙글 감김) 깜빡임 → 두른 채로 바로 돌격 (6 프레임 = 0.1 초) → 끝에서 터짐 (spBoom) → 돌아옴
+//   kind 1 = 불꽃 (플레어드라이브) · 2 = 물 (웨이브태클)
+func spAuraDash(float ax, float ay, float tx, float ty, float s, int wrap, int kind){
+    var float call ar = s * fxKa * 0.3;
+    var string call ain = "#ffe070";
+    var string call aout = "#ff5a10";
+    if [kind == 2]{
+        ain = "#e0f6ff";
+        aout = "#2a8cff";
+    }
+    pxCirc(ax, ay, "sfxb", ar, ain);
+    dis.setGlow("sfxb", aout, s * 0.25);
+    dis.setObjLayer("sfxb", 1);
+    dis.setObjAlpha("sfxb", 0);
+    var int call ai = 1;
+    loop [ai <= 12]{
+        pxTex(ax, ay, "sfx%ai%", s * fxKa * jaw.random(0.035, 0.055), kind);
+        dis.setGlow("sfx%ai%", aout, s * 0.05);
+        dis.setObjLayer("sfx%ai%", 2);
+        dis.setObjAlpha("sfx%ai%", 0);
+        dis.rotateObj("sfx%ai%", jaw.random(0, 360), 0);
+        ai = ai + 1;
+    }
+    dashId = "opppoke";
+    if [abs(ax - obj.mypoke.Xpos) < 1] and [abs(ay - obj.mypoke.Ypos) < 1]{
+        dashId = "mypoke";
+    }
+    dashX0 = ax;
+    dashY0 = ay;
+    var float call dl = max(1, sqrt((tx - ax) * (tx - ax) + (ty - ay) * (ty - ay)));
+    var float call ex = tx - (tx - ax) / dl * s * fxKt * 0.18;
+    var float call ey = ty - (ty - ay) / dl * s * fxKt * 0.18;
+    var int call dashFr = 6;
+    var int call af = 1;
+    loop [af <= wrap + dashFr]{
+        var float call cx = ax;
+        var float call cy = ay;
+        var float call asc = 1;
+        if [af > wrap]{   // 돌격
+            var float call dt = (af - wrap) / (dashFr * 1.0);
+            cx = ax + (ex - ax) * dt * dt;
+            cy = ay + (ey - ay) * dt * dt;
+            asc = (fxKa + (fxKt - fxKa) * dt * dt) / fxKa;
+            dis.setObjPos(dashId, [cx, cy]);
+        }
+        var float call ag = min(1, af / 10.0);
+        dis.setObjPos("sfxb", [cx, cy]);
+        var float call abr = ar * 2 * (0.5 + 0.5 * ag) * asc * (0.95 + 0.1 * sin(af * 50));
+        dis.setObjScale("sfxb", [abr, abr]);
+        dis.setObjAlpha("sfxb", floor(110 * ag + jaw.random(0, 40)));
+        ai = 1;
+        loop [ai <= 12]{
+            var float call aa = af * 14 + ai * 30;
+            var float call apx = 0;
+            var float call apy = 0;
+            if [kind == 1]{   // 불꽃: 몸 둘레 아래에서 위로 타오름 (12 프레임마다 다시 아래에서)
+                var float call au = (af * 1.0 + ai * 5) / 12.0;
+                au = au - floor(au);
+                apx = cx + sin(ai * 67 + af * 9) * ar * asc * 0.8;
+                apy = cy - ar * asc * 0.7 + au * ar * asc * 1.6;
+                dis.setObjAlpha("sfx%ai%", floor(255 * ag * min(1, (1 - au) * 3)));
+            }
+            else{   // 물: 몸 둘레를 빙글빙글 감김 (위아래로 물결)
+                apx = cx + cos(aa) * ar * asc * 0.95;
+                apy = cy + sin(aa) * ar * asc * 0.45 + sin(af * 20 + ai * 40) * ar * asc * 0.25;
+                dis.setObjAlpha("sfx%ai%", floor(235 * ag));
+            }
+            dis.setObjPos("sfx%ai%", [apx, apy]);
+            dis.rotateObj("sfx%ai%", 11, 0);
+            ai = ai + 1;
+        }
+        wait(16);
+        af = af + 1;
+    }
+    spClear(12);
+    dis.removeObj("sfxb");
+    if [kind == 1]{
+        spBoom(ex, ey, s * fxKt, "#fff0a0", "#ff4a10", 0.6, 10, 1, 16);
+    }
+    else{
+        spBoom(ex, ey, s * fxKt, "#e8f8ff", "#2a8cff", 0.6, 10, 2, 16);
+    }
     dashBack(8);
 }
 // ── 돌진 (2026-11-22): 공격하는 포켓몬 둘레에 기운 (sfx1 ~ sfx10) 이 맴돌며 진해짐 (20 프레임) → 몸 크기의 빛 덩이 (sfx11) 가 잔상 (sfx12 ~ sfx15) 을 남기며 7 프레임 만에 들이받음
@@ -2952,11 +3037,8 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     if [mv == 344]{   // 볼트태클: 와일드볼트보다 크고 밝게
         spVoltCharge(ax, ay, tx, ty, s, 26, 1);
     }
-    if [mv == 413]{   // 브레이브버드: 돌격 → 하늘색 빛이 크게 터짐
-        dashGo(ax, ay, tx, ty, s, 6);
-        spImpact(tx, ty, sT, 0, "#ffffff", 0.5, 2, 0);
-        dashHit(tx, ty, sT, "#ffffff", "#6ab8ff", 0.35);
-        dashBack(8);
+    if [mv == 394]{   // 플레어드라이브: 몸에 불꽃 기운을 두르고 (타오름) → 돌격 → 불꽃이 터짐
+        spAuraDash(ax, ay, tx, ty, s, 22, 1);
     }
     if [mv == 38]{   // 이판사판태클: 돌격 → 크게 쾅
         dashGo(ax, ay, tx, ty, s, 6);
@@ -2969,10 +3051,8 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spImpact(tx, ty, sT, 0, "#ffffff", 0.45, 2, 0);
         dashBack(8);
     }
-    if [mv == 834]{   // 웨이브태클: 돌격 → 물보라가 터짐
-        dashGo(ax, ay, tx, ty, s, 6);
-        spBoom(tx, ty, sT, "#e8f8ff", "#3a9cff", 0.5, 8, 2, 14);
-        dashBack(8);
+    if [mv == 834]{   // 웨이브태클: 몸에 물 기운을 두르고 (빙글빙글 감김) → 돌격 → 물보라가 터짐
+        spAuraDash(ax, ay, tx, ty, s, 22, 2);
     }
     if [mv == 370]{   // 인파이트: 돌격 → 주먹 · 발 · 충격이 연달아 → 돌아옴
         dashGo(ax, ay, tx, ty, s, 6);
