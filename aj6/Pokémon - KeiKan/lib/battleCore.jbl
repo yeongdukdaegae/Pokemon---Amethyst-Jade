@@ -2235,13 +2235,18 @@ func spSlash(float tx, float ty, float s, string glow, float size, int hold, flo
 //   발밑에서 고리 (sfx17) 가 퍼지고 · 몸 뒤 빛 (sfxb · 그림 뒤 레이어 0) 이 깜빡이고 · 빛 알갱이 10 개 (sfx7 ~ sfx16) 가 아래에서 위로 오르고
 //   위로 향한 꺾쇠 (^) 셋 (선분 둘씩 · sfx1 ~ sfx6) 이 차례로 솟아오름 (fr 프레임)
 //   c1 · c2 · c3 = 색 (능력마다: 공격 빨강 · 방어 주황 · 특공 보라 · 특방 초록 · 스피드 하늘 · 명중 노랑 · 회피 흰색)
-func spBoost(float ax, float ay, float s, string c1, string c2, string c3, int fr){
+func spBoost(float ax, float ay, float s, string c1, string c2, string c3, int fr, int dir){
     var list call bc3 = [c1, c2, c3];
     var float call bh = s * fxKa * 0.32;   // 몸 반쯤 높이
     var int call bi = 1;
     loop [bi <= 6]{   // 화살표 (fx_stat.png 1 번 · 오름) 여섯: 둘씩 같은 색
         dis.setObject([ax, ay], "sfx%bi%", [s * fxKa * 0.11, s * fxKa * 0.11], "#ffffff");
-        mag.setObjTexture("sfx%bi%", "fxstat", [0, 0], [16, 16]);
+        if [dir < 0]{
+            mag.setObjTexture("sfx%bi%", "fxstat", [16, 0], [32, 16]);   // 내림 화살표
+        }
+        else{
+            mag.setObjTexture("sfx%bi%", "fxstat", [0, 0], [16, 16]);
+        }
         dis.setObjColor("sfx%bi%", bc3[floor((bi - 1) / 2) + 1]);
         dis.setGlow("sfx%bi%", bc3[floor((bi - 1) / 2) + 1], s * 0.04);
         dis.setObjLayer("sfx%bi%", 2);
@@ -2280,7 +2285,11 @@ func spBoost(float ax, float ay, float s, string c1, string c2, string c3, int f
         loop [bk <= 6]{
             var float call bu = (bf - (bk - 1) * 4) / 18.0;
             if [bu > 0] and [bu <= 1]{
-                dis.setObjPos("sfx%bk%", [ax + sin(bk * 131) * s * fxKa * 0.22, ay - bh * 0.8 + bu * bh * 2.4]);
+                var float call bky = ay - bh * 0.8 + bu * bh * 2.4;
+                if [dir < 0]{
+                    bky = ay + bh * 1.4 - bu * bh * 2.4;   // 내림: 머리 위 → 몸 아래
+                }
+                dis.setObjPos("sfx%bk%", [ax + sin(bk * 131) * s * fxKa * 0.22, bky]);
                 dis.setObjAlpha("sfx%bk%", floor(255 * min(1, bu * 5) * min(1, (1 - bu) * 3)));
             }
             if [bu > 1]{
@@ -2293,7 +2302,11 @@ func spBoost(float ax, float ay, float s, string c1, string c2, string c3, int f
         loop [bi <= 16]{
             var float call pu = (bf * 1.0 + bi * 4) / 20.0;
             pu = pu - floor(pu);
-            dis.setObjPos("sfx%bi%", [ax + sin(bi * 73) * bh * 0.9, ay - bh * 0.9 + pu * bh * 2.2]);
+            var float call piy = ay - bh * 0.9 + pu * bh * 2.2;
+            if [dir < 0]{
+                piy = ay + bh * 1.3 - pu * bh * 2.2;   // 내림: 위에서 아래로
+            }
+            dis.setObjPos("sfx%bi%", [ax + sin(bi * 73) * bh * 0.9, piy]);
             dis.setObjAlpha("sfx%bi%", floor(255 * min(1, (1 - pu) * 3) * min(1, bf / 6.0) * bfade));
             bi = bi + 1;
         }
@@ -2497,8 +2510,8 @@ func spDracoMeteor(float ax, float ay, float tx, float ty, float s){
     spBurst(tx, ty, s, s * fxKt * 0.06, s * fxKt * 0.4, "#ffe0ff", "#9030ff", 14);
 }
 // ── 능력 변화 (2026-11-22): 랭크가 오르내릴 때 (lib/abilityCore.jbl 의 changeStage · 메시지를 보여 주는 0.8 초 = 48 프레임 동안)
-//   그 포켓몬 위에 화살표 (fx_stat.png · 1 오름 · 2 내림 · 능력과 상관없이 같음: 오름 빨강 · 내림 파랑) 여덟 개 (sfx1 ~ sfx8) 가 오르면 아래에서 위로 · 내리면 위에서 아래로 차례로 흐르고
-//   포켓몬 그림이 그 색으로 깜빡임 (덧씌움) · side 1 = 내 포켓몬 · 2 = 상대 · d = 변화량 (0 이면 이펙트 없이 기다리기만)
+//   육성기 이펙트 (spBoost: 몸 뒤 빛 · 발밑 고리 · 빛 알갱이 · 화살표) 를 그 포켓몬에 — 능력과 상관없이 같음: 오름 = 칼춤과 같은 빨강 · 내림 = 거꾸로 (위 → 아래) 파랑
+//   side 1 = 내 포켓몬 · 2 = 상대 · d = 변화량 (0 이면 기다리기만) · statCol 은 육성기 기술의 능력 색
 func string statCol(int statId){
     var list call sc = ["#ffffff", "#ff6a50", "#ffb030", "#c070ff", "#50d890", "#60c8ff", "#ffe060", "#f0f0ff"];   // 1 (없음) · 2 공격 · 3 방어 · 4 특공 · 5 특방 · 6 스피드 · 7 명중 · 8 회피
     return(sc[max(1, min(8, statId))]);
@@ -2508,61 +2521,23 @@ func statFx(int side, int statId, int d){
         wait(800);
     }
     else{
-        var string call sid = "mypoke";
         var float call sx = obj.mypoke.Xpos;
         var float call sy = obj.mypoke.Ypos;
         var float call ss = obj.mypoke.Xscale;
         if [side == 2]{
-            sid = "opppoke";
             sx = obj.opppoke.Xpos;
             sy = obj.opppoke.Ypos;
             ss = obj.opppoke.Xscale;
         }
-        var string call col = "#ff6a50";   // 능력과 상관없이 같은 화살표 (칼춤과 같은 것) · 오름 = 빨강
-        var int call cell = 1;
-        if [d < 0]{
-            cell = 2;
-            col = "#4a8aff";   // 내림 = 파랑 (같은 화살표를 뒤집은 것)
+        var float call kA = fxKa;
+        fxKa = 1;   // spBoost 는 쓰는 쪽 배율 (fxKa) 을 곱함 → 그림 크기 ss 로 맞춤
+        if [d > 0]{
+            spBoost(sx, sy, ss * 0.75, "#ff6a50", "#ff6a50", "#ff6a50", 48, 1);   // 오름: 칼춤과 같은 빨강 (능력과 상관없이)
         }
-        var float call asz = ss * 0.13;
-        if [abs(d) >= 2]{   // 크게 오르내리면 화살표도 크게
-            asz = ss * 0.16;
+        else{
+            spBoost(sx, sy, ss * 0.75, "#4a8aff", "#4a8aff", "#4a8aff", 48, -1);   // 내림: 같은 이펙트를 거꾸로 · 파랑
         }
-        var int call si = 1;
-        loop [si <= 8]{
-            dis.setObject([sx, sy], "sfx%si%", [asz, asz], "#ffffff");
-            mag.setObjTexture("sfx%si%", "fxstat", [(cell - 1) * 16, 0], [cell * 16, 16]);
-            dis.setObjColor("sfx%si%", col);
-            dis.setGlow("sfx%si%", col, asz * 0.3);
-            dis.setObjLayer("sfx%si%", 2);
-            dis.setObjAlpha("sfx%si%", 0);
-            si = si + 1;
-        }
-        var int call sf = 1;
-        loop [sf <= 48]{
-            si = 1;
-            loop [si <= 8]{
-                var float call su = (sf - (si - 1) * 3) / 20.0;   // 3 프레임 간격 · 하나가 20 프레임
-                if [su > 0] and [su <= 1]{
-                    var float call sxx = sx + (sin(si * 137) * 0.38) * ss;
-                    var float call syy = sy - ss * 0.35 + su * ss * 0.75;   // 오름: 아래 → 위
-                    if [d < 0]{
-                        syy = sy + ss * 0.4 - su * ss * 0.75;   // 내림: 위 → 아래
-                    }
-                    dis.setObjPos("sfx%si%", [sxx, syy]);
-                    dis.setObjAlpha("sfx%si%", floor(255 * min(1, su * 4) * min(1, (1 - su) * 3)));
-                }
-                if [su > 1]{
-                    dis.setObjAlpha("sfx%si%", 0);
-                }
-                si = si + 1;
-            }
-            dis.setObjOverlay(sid, col, floor(max(0, 110 * sin(sf * 15)) * min(1, (48 - sf) / 8.0)));   // 그림이 능력 색으로 깜빡
-            wait(16);
-            sf = sf + 1;
-        }
-        dis.setObjOverlay(sid, col, 0);
-        spClear(8);
+        fxKa = kA;
     }
 }
 // 단단해지기: 쓰는 포켓몬 그림이 잠깐 오그라들었다 (6 프레임 · 0.82 배) 잠시 버틴 뒤 원래 크기로 (8 프레임) · 그동안 은빛이 번쩍
@@ -3657,16 +3632,16 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     var string call cE = "#f0f0ff";
     if [mv == 14]{   // 칼춤
         spSwords(ax, ay, s, 36);
-        spBoost(ax, ay, s, cA, cA, cA, 34);
+        spBoost(ax, ay, s, cA, cA, cA, 34, 1);
     }
     if [mv == 349]{   // 용의춤
         spDragonAura(ax, ay, s, 34);
-        spBoost(ax, ay, s, cA, cP, cA, 34);
+        spBoost(ax, ay, s, cA, cP, cA, 34, 1);
     }
     var list call defUp = [110, 111, 151, 747];   // 방어 상승 (방패 고리)
     if [defUp.find(mv) != 0]{
         spShield(ax, ay, s, cD);
-        spBoost(ax, ay, s, cD, cD, cD, 30);
+        spBoost(ax, ay, s, cD, cD, cD, 30, 1);
     }
     if [mv == 106]{   // 단단해지기: 잠시 오그라들었다 원래대로
         spHarden(ax, ay, s);
@@ -3682,49 +3657,49 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     }
     if [mv == 322] or [mv == 455] or [mv == 602]{   // 코스믹파워 · 방어지령 · 자기장조작: 방어 · 특방
         spShield(ax, ay, s, cF);
-        spBoost(ax, ay, s, cD, cF, cD, 30);
+        spBoost(ax, ay, s, cD, cF, cD, 30, 1);
     }
     var list call spdUp = [97, 397, 475];   // 스피드 상승 (바람 줄)
     if [spdUp.find(mv) != 0]{
         spSpeedLines(ax, ay, s, 24);
-        spBoost(ax, ay, s, cP, cP, cP, 30);
+        spBoost(ax, ay, s, cP, cP, cP, 30, 1);
     }
     if [mv == 508] or [mv == 882]{   // 기어체인지 · 정리정돈: 공격 · 스피드
         spSpeedLines(ax, ay, s, 20);
-        spBoost(ax, ay, s, cA, cP, cA, 30);
+        spBoost(ax, ay, s, cA, cP, cA, 30, 1);
     }
     if [mv == 74] or [mv == 526] or [mv == 563] or [mv == 674]{   // 성장 · 분발 · 일구기 · 어시스트기어: 공격 · 특공
-        spBoost(ax, ay, s, cA, cS, cA, 34);
+        spBoost(ax, ay, s, cA, cS, cA, 34, 1);
     }
     if [mv == 96] or [mv == 159] or [mv == 336] or [mv == 187]{   // 요가포즈 · 각지기 · 멀리짖기 · 배북: 공격
-        spBoost(ax, ay, s, cA, cA, cA, 32);
+        spBoost(ax, ay, s, cA, cA, cA, 32, 1);
     }
     if [mv == 339] or [mv == 811]{   // 벌크업 · 코칭: 공격 · 방어
-        spBoost(ax, ay, s, cA, cD, cA, 32);
+        spBoost(ax, ay, s, cA, cD, cA, 32, 1);
     }
     if [mv == 489]{   // 똬리틀기: 공격 · 방어 · 명중
-        spBoost(ax, ay, s, cA, cD, cC, 32);
+        spBoost(ax, ay, s, cA, cD, cC, 32, 1);
     }
     if [mv == 347]{   // 명상: 특공 · 특방
-        spBoost(ax, ay, s, cS, cF, cS, 34);
+        spBoost(ax, ay, s, cS, cF, cS, 34, 1);
     }
     if [mv == 417] or [mv == 294]{   // 나쁜음모 · 반딧불: 특공
-        spBoost(ax, ay, s, cS, cS, cS, 34);
+        spBoost(ax, ay, s, cS, cS, cS, 34, 1);
     }
     if [mv == 133] or [mv == 268] or [mv == 597]{   // 망각술 · 충전 · 아로마미스트: 특방
-        spBoost(ax, ay, s, cF, cF, cF, 30);
+        spBoost(ax, ay, s, cF, cF, cF, 30, 1);
     }
     if [mv == 483]{   // 나비춤: 특공 · 특방 · 스피드
-        spBoost(ax, ay, s, cS, cF, cP, 34);
+        spBoost(ax, ay, s, cS, cF, cP, 34, 1);
     }
     if [mv == 601] or [mv == 868] or [mv == 504]{   // 지오컨트롤 · 제살깎기 · 껍질깨기: 크게
-        spBoost(ax, ay, s * 1.2, cS, cF, cP, 40);
+        spBoost(ax, ay, s * 1.2, cS, cF, cP, 40, 1);
     }
     if [mv == 748] or [mv == 775]{   // 배수의진 · 소울비트: 모든 능력
-        spBoost(ax, ay, s, cA, cS, cP, 38);
+        spBoost(ax, ay, s, cA, cS, cP, 38, 1);
     }
     if [mv == 104] or [mv == 107]{   // 그림자분신 · 작아지기: 회피
-        spBoost(ax, ay, s, cE, cE, cE, 30);
+        spBoost(ax, ay, s, cE, cE, cE, 30, 1);
     }
     if [mv == 408]{   // 파워젬: 여러 색 보석 바위가 차츰 나타나 쓰는 쪽 둘레를 돌다가 → 맞는 곳으로 빠르게 날아가 부서짐
         spGems(ax, ay, tx, ty, s);
