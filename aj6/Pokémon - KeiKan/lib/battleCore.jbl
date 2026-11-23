@@ -2497,8 +2497,8 @@ func spDracoMeteor(float ax, float ay, float tx, float ty, float s){
     spBurst(tx, ty, s, s * fxKt * 0.06, s * fxKt * 0.4, "#ffe0ff", "#9030ff", 14);
 }
 // ── 능력 변화 (2026-11-22): 랭크가 오르내릴 때 (lib/abilityCore.jbl 의 changeStage · 메시지를 보여 주는 0.8 초 = 48 프레임 동안)
-//   그 포켓몬 위에 화살표 (fx_stat.png · 1 오름 · 2 내림 · 능력 색) 여덟 개 (sfx1 ~ sfx8) 가 오르면 아래에서 위로 · 내리면 위에서 아래로 차례로 흐르고
-//   포켓몬 그림이 능력 색으로 깜빡임 (덧씌움) · side 1 = 내 포켓몬 · 2 = 상대 · d = 변화량 (0 이면 이펙트 없이 기다리기만)
+//   그 포켓몬 위에 화살표 (fx_stat.png · 1 오름 · 2 내림 · 능력과 상관없이 같음: 오름 빨강 · 내림 파랑) 여덟 개 (sfx1 ~ sfx8) 가 오르면 아래에서 위로 · 내리면 위에서 아래로 차례로 흐르고
+//   포켓몬 그림이 그 색으로 깜빡임 (덧씌움) · side 1 = 내 포켓몬 · 2 = 상대 · d = 변화량 (0 이면 이펙트 없이 기다리기만)
 func string statCol(int statId){
     var list call sc = ["#ffffff", "#ff6a50", "#ffb030", "#c070ff", "#50d890", "#60c8ff", "#ffe060", "#f0f0ff"];   // 1 (없음) · 2 공격 · 3 방어 · 4 특공 · 5 특방 · 6 스피드 · 7 명중 · 8 회피
     return(sc[max(1, min(8, statId))]);
@@ -2518,10 +2518,11 @@ func statFx(int side, int statId, int d){
             sy = obj.opppoke.Ypos;
             ss = obj.opppoke.Xscale;
         }
-        var string call col = statCol(statId);
+        var string call col = "#ff6a50";   // 능력과 상관없이 같은 화살표 (칼춤과 같은 것) · 오름 = 빨강
         var int call cell = 1;
         if [d < 0]{
             cell = 2;
+            col = "#4a8aff";   // 내림 = 파랑 (같은 화살표를 뒤집은 것)
         }
         var float call asz = ss * 0.13;
         if [abs(d) >= 2]{   // 크게 오르내리면 화살표도 크게
