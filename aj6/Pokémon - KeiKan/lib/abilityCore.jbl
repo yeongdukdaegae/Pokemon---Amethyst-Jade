@@ -358,6 +358,6 @@ func int changeStage(int side, int statId, int ch, int byFoe, int breaker){
     if [nw < was]{
         sou.playSfx("battlesfx", "statFall", 3000);
     }
-    wait(800);   // 랭크 메시지는 0.8 초 보여 주고 바로 다음으로
+    bc.statFx(side, statId, nw - was);   // 랭크 메시지를 0.8 초 보여 주는 동안 화살표가 오르내림 (오르내림이 없으면 기다리기만)
     return(nw - was);
 }

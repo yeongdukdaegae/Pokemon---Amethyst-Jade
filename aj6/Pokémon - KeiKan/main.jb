@@ -25,6 +25,8 @@ run{
     mag.importFile("assets/textures/battle/fx_hit.png") save as ("fxhit");   // 타격 아이콘 (32 x 32 칸 2 개: 주먹 · 발바닥 — DPPt 느낌 · 흰색이라 타입 색을 입힐 수 있음 · lib/battleCore.jbl 의 spImpact · fxsrc/make_fx_hit.py)
     mag.importFile("assets/textures/battle/fx_powder.png") save as ("fxpowder");   // 가루 한 줌 (16 x 16 칸 3 개 · 흰 알갱이라 색을 입혀 씀 — lib/battleCore.jbl 의 spPowder · fxsrc/make_fx_powder.py)
     mag.importFile("assets/textures/battle/fx_slash.png") save as ("fxslash");   // 베기 자국 하나 (48 x 48 · 크고 얇은 초승달 · 흰색 — lib/battleCore.jbl 의 spSlash · fxsrc/make_fx_slash.py)
+    mag.importFile("assets/textures/battle/fx_stat.png") save as ("fxstat");   // 능력 변화 화살표 (16 x 16 칸 2 개: 오름 · 내림 · 흰색이라 능력 색을 입혀 씀 — statFx · spBoost · fxsrc/make_fx_stat.py)
+    mag.importFile("assets/textures/battle/fx_shield.png") save as ("fxshield");   // 방패 (48 x 48 칸 2 개: 강철 · 배리어 — spShieldSlam)
     mag.importFile("assets/textures/battle/hitfx_2.png") save as ("hitfx2");
     mag.importFile("assets/textures/battle/hitfx_3.png") save as ("hitfx3");
     mag.importFile("assets/textures/battle/hitfx_4.png") save as ("hitfx4");

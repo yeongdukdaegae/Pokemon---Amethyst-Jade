@@ -2238,12 +2238,12 @@ func spSlash(float tx, float ty, float s, string glow, float size, int hold, flo
 func spBoost(float ax, float ay, float s, string c1, string c2, string c3, int fr){
     var list call bc3 = [c1, c2, c3];
     var float call bh = s * fxKa * 0.32;   // 몸 반쯤 높이
-    var list call ban = [0, 0, 0, 0, 0, 0];
     var int call bi = 1;
-    loop [bi <= 6]{
-        dis.setObject([ax, ay], "sfx%bi%", [1, 1], "#ffffff");
-        dis.setGlow("sfx%bi%", bc3[floor((bi - 1) / 2) + 1], s * 0.05);
+    loop [bi <= 6]{   // 화살표 (fx_stat.png 1 번 · 오름) 여섯: 둘씩 같은 색
+        dis.setObject([ax, ay], "sfx%bi%", [s * fxKa * 0.11, s * fxKa * 0.11], "#ffffff");
+        mag.setObjTexture("sfx%bi%", "fxstat", [0, 0], [16, 16]);
         dis.setObjColor("sfx%bi%", bc3[floor((bi - 1) / 2) + 1]);
+        dis.setGlow("sfx%bi%", bc3[floor((bi - 1) / 2) + 1], s * 0.04);
         dis.setObjLayer("sfx%bi%", 2);
         dis.setObjAlpha("sfx%bi%", 0);
         bi = bi + 1;
@@ -2275,25 +2275,16 @@ func spBoost(float ax, float ay, float s, string c1, string c2, string c3, int f
         // 몸 뒤 빛: 깜빡
         dis.setObjScale("sfxb", [bh * 2.4, bh * 2.4]);
         dis.setObjAlpha("sfxb", floor((70 + 60 * sin(bf * 30)) * min(1, bf / 6.0) * bfade));
-        // 꺾쇠 셋: 6 프레임 간격으로 하나씩 · 하나가 18 프레임 동안 몸 아래 → 머리 위로 솟음
+        // 화살표 여섯: 4 프레임 간격으로 하나씩 · 하나가 18 프레임 동안 몸 아래 → 머리 위로 솟음
         var int call bk = 1;
-        loop [bk <= 3]{
-            var float call bu = (bf - (bk - 1) * 6) / 18.0;
-            var int call bs1 = bk * 2 - 1;
-            var int call bs2 = bk * 2;
+        loop [bk <= 6]{
+            var float call bu = (bf - (bk - 1) * 4) / 18.0;
             if [bu > 0] and [bu <= 1]{
-                var float call bcx = ax + (bk - 2) * s * fxKa * 0.16;
-                var float call bcy = ay - bh * 0.8 + bu * bh * 2.4;
-                var float call bw = s * fxKa * 0.06;
-                ban[bs1] = segTo("sfx%bs1%", bcx - bw, bcy - bw * 0.8, bcx, bcy, s * fxKa * 0.018, ban[bs1]);
-                ban[bs2] = segTo("sfx%bs2%", bcx, bcy, bcx + bw, bcy - bw * 0.8, s * fxKa * 0.018, ban[bs2]);
-                var float call ba = 255 * min(1, bu * 5) * min(1, (1 - bu) * 3);
-                dis.setObjAlpha("sfx%bs1%", floor(ba));
-                dis.setObjAlpha("sfx%bs2%", floor(ba));
+                dis.setObjPos("sfx%bk%", [ax + sin(bk * 131) * s * fxKa * 0.22, ay - bh * 0.8 + bu * bh * 2.4]);
+                dis.setObjAlpha("sfx%bk%", floor(255 * min(1, bu * 5) * min(1, (1 - bu) * 3)));
             }
             if [bu > 1]{
-                dis.setObjAlpha("sfx%bs1%", 0);
-                dis.setObjAlpha("sfx%bs2%", 0);
+                dis.setObjAlpha("sfx%bk%", 0);
             }
             bk = bk + 1;
         }
@@ -2504,6 +2495,240 @@ func spDracoMeteor(float ax, float ay, float tx, float ty, float s){
     }
     spClear(12);
     spBurst(tx, ty, s, s * fxKt * 0.06, s * fxKt * 0.4, "#ffe0ff", "#9030ff", 14);
+}
+// ── 능력 변화 (2026-11-22): 랭크가 오르내릴 때 (lib/abilityCore.jbl 의 changeStage · 메시지를 보여 주는 0.8 초 = 48 프레임 동안)
+//   그 포켓몬 위에 화살표 (fx_stat.png · 1 오름 · 2 내림 · 능력 색) 여덟 개 (sfx1 ~ sfx8) 가 오르면 아래에서 위로 · 내리면 위에서 아래로 차례로 흐르고
+//   포켓몬 그림이 능력 색으로 깜빡임 (덧씌움) · side 1 = 내 포켓몬 · 2 = 상대 · d = 변화량 (0 이면 이펙트 없이 기다리기만)
+func string statCol(int statId){
+    var list call sc = ["#ffffff", "#ff6a50", "#ffb030", "#c070ff", "#50d890", "#60c8ff", "#ffe060", "#f0f0ff"];   // 1 (없음) · 2 공격 · 3 방어 · 4 특공 · 5 특방 · 6 스피드 · 7 명중 · 8 회피
+    return(sc[max(1, min(8, statId))]);
+}
+func statFx(int side, int statId, int d){
+    if [d == 0]{
+        wait(800);
+    }
+    else{
+        var string call sid = "mypoke";
+        var float call sx = obj.mypoke.Xpos;
+        var float call sy = obj.mypoke.Ypos;
+        var float call ss = obj.mypoke.Xscale;
+        if [side == 2]{
+            sid = "opppoke";
+            sx = obj.opppoke.Xpos;
+            sy = obj.opppoke.Ypos;
+            ss = obj.opppoke.Xscale;
+        }
+        var string call col = statCol(statId);
+        var int call cell = 1;
+        if [d < 0]{
+            cell = 2;
+        }
+        var float call asz = ss * 0.13;
+        if [abs(d) >= 2]{   // 크게 오르내리면 화살표도 크게
+            asz = ss * 0.16;
+        }
+        var int call si = 1;
+        loop [si <= 8]{
+            dis.setObject([sx, sy], "sfx%si%", [asz, asz], "#ffffff");
+            mag.setObjTexture("sfx%si%", "fxstat", [(cell - 1) * 16, 0], [cell * 16, 16]);
+            dis.setObjColor("sfx%si%", col);
+            dis.setGlow("sfx%si%", col, asz * 0.3);
+            dis.setObjLayer("sfx%si%", 2);
+            dis.setObjAlpha("sfx%si%", 0);
+            si = si + 1;
+        }
+        var int call sf = 1;
+        loop [sf <= 48]{
+            si = 1;
+            loop [si <= 8]{
+                var float call su = (sf - (si - 1) * 3) / 20.0;   // 3 프레임 간격 · 하나가 20 프레임
+                if [su > 0] and [su <= 1]{
+                    var float call sxx = sx + (sin(si * 137) * 0.38) * ss;
+                    var float call syy = sy - ss * 0.35 + su * ss * 0.75;   // 오름: 아래 → 위
+                    if [d < 0]{
+                        syy = sy + ss * 0.4 - su * ss * 0.75;   // 내림: 위 → 아래
+                    }
+                    dis.setObjPos("sfx%si%", [sxx, syy]);
+                    dis.setObjAlpha("sfx%si%", floor(255 * min(1, su * 4) * min(1, (1 - su) * 3)));
+                }
+                if [su > 1]{
+                    dis.setObjAlpha("sfx%si%", 0);
+                }
+                si = si + 1;
+            }
+            dis.setObjOverlay(sid, col, floor(max(0, 110 * sin(sf * 15)) * min(1, (48 - sf) / 8.0)));   // 그림이 능력 색으로 깜빡
+            wait(16);
+            sf = sf + 1;
+        }
+        dis.setObjOverlay(sid, col, 0);
+        spClear(8);
+    }
+}
+// 단단해지기: 쓰는 포켓몬 그림이 잠깐 오그라들었다 (6 프레임 · 0.82 배) 잠시 버틴 뒤 원래 크기로 (8 프레임) · 그동안 은빛이 번쩍
+func spHarden(float ax, float ay, float s){
+    var string call hid = "opppoke";
+    var float call hw = obj.opppoke.Xscale;
+    var float call hh = obj.opppoke.Yscale;
+    if [abs(ax - obj.mypoke.Xpos) < 1] and [abs(ay - obj.mypoke.Ypos) < 1]{
+        hid = "mypoke";
+        hw = obj.mypoke.Xscale;
+        hh = obj.mypoke.Yscale;
+    }
+    var int call hf = 1;
+    loop [hf <= 26]{
+        var float call hk = 1;
+        if [hf <= 6]{
+            hk = 1 - 0.18 * hf / 6.0;
+        }
+        if [hf > 6] and [hf <= 18]{
+            hk = 0.82;
+        }
+        if [hf > 18]{
+            hk = 0.82 + 0.18 * (hf - 18) / 8.0;
+        }
+        dis.setObjScale(hid, [hw * hk, hh * hk]);
+        dis.setObjOverlay(hid, "#e8eef8", floor(140 * max(0, sin(hf * 180 / 26.0))));
+        wait(16);
+        hf = hf + 1;
+    }
+    dis.setObjScale(hid, [hw, hh]);
+    dis.setObjOverlay(hid, "#e8eef8", 0);
+}
+// 방패를 내려찍음 (철벽 · 배리어): 쓰는 포켓몬과 상대 사이 (쓰는 쪽에서 상대 쪽으로 조금) — 내 포켓몬이면 그림 뒤 · 상대 포켓몬이면 그림 앞
+//   방패 (fx_shield.png · cell 1 강철 · 2 배리어 · sfx1) 가 위에서 6 프레임 만에 빠르게 떨어져 쾅 (먼지 sfx2 ~ sfx7 · 살짝 튀어 오름) → 반짝 (sfx8 · 훑음) → 옅어짐
+func spShieldSlam(float ax, float ay, float tx, float ty, float s, int cell){
+    var float call dl = max(1, sqrt((tx - ax) * (tx - ax) + (ty - ay) * (ty - ay)));
+    var float call gx = ax + (tx - ax) / dl * s * fxKa * 0.22;
+    var float call gy = ay + (ty - ay) / dl * s * fxKa * 0.22 - s * fxKa * 0.05;
+    var float call gsz = s * fxKa * 0.55;
+    var int call mine = 0;
+    if [abs(ax - obj.mypoke.Xpos) < 1] and [abs(ay - obj.mypoke.Ypos) < 1]{
+        mine = 1;
+    }
+    dis.setObject([gx, gy + s * 0.6], "sfx1", [gsz, gsz], "#ffffff");
+    mag.setObjTexture("sfx1", "fxshield", [(cell - 1) * 48, 0], [cell * 48, 48]);
+    if [cell == 2]{
+        dis.setGlow("sfx1", "#7ad8ff", s * 0.1);
+    }
+    if [mine == 1]{   // 내 포켓몬: 그림 뒤
+        sprFront(1);
+        dis.setObjLayer("sfx1", 0);
+    }
+    else{
+        dis.setObjLayer("sfx1", 2);
+    }
+    var int call di = 2;
+    loop [di <= 7]{
+        pxCirc(gx, gy - gsz * 0.45, "sfx%di%", s * fxKa * 0.03, "#e8e0d0");
+        dis.setObjLayer("sfx%di%", 2);
+        dis.setObjAlpha("sfx%di%", 0);
+        di = di + 1;
+    }
+    dis.setObject([gx, gy], "sfx8", [gsz * 0.8, s * fxKa * 0.03], "#ffffff");
+    dis.setGlow("sfx8", "#ffffff", s * 0.06);
+    dis.setObjLayer("sfx8", 2);
+    dis.setObjAlpha("sfx8", 0);
+    var int call sf = 1;
+    loop [sf <= 40]{
+        var float call yy = gy;
+        if [sf <= 6]{   // 떨어짐 (점점 빨라짐)
+            var float call ft = sf / 6.0;
+            yy = gy + s * 0.6 * (1 - ft * ft);
+        }
+        if [sf > 6] and [sf <= 12]{   // 쾅 → 살짝 튀었다 내려앉음
+            yy = gy + sin((sf - 6) * 30) * s * fxKa * 0.025;
+        }
+        dis.setObjPos("sfx1", [gx, yy]);
+        var float call sa = 255;
+        if [sf > 32]{
+            sa = 255 * (40 - sf) / 8.0;
+        }
+        dis.setObjAlpha("sfx1", floor(sa));
+        var float call du = (sf - 6) / 14.0;   // 먼지: 쾅 하는 순간 양옆으로 퍼짐
+        if [du > 0] and [du <= 1]{
+            di = 2;
+            loop [di <= 7]{
+                var float call dside = (di - 4.5) / 2.5;
+                dis.setObjPos("sfx%di%", [gx + dside * gsz * (0.3 + 0.5 * du), gy - gsz * 0.42 + sin(du * 180) * s * fxKa * 0.04]);
+                dis.setObjScale("sfx%di%", [s * fxKa * 0.06 * (1 + du), s * fxKa * 0.06 * (1 + du)]);
+                dis.setObjAlpha("sfx%di%", floor(200 * (1 - du)));
+                di = di + 1;
+            }
+        }
+        var float call hu = (sf - 14) / 12.0;   // 반짝: 위에서 아래로 훑음
+        if [hu > 0] and [hu <= 1]{
+            dis.setObjPos("sfx8", [gx, gy + gsz * (0.35 - 0.7 * hu)]);
+            dis.setObjAlpha("sfx8", floor(220 * sin(hu * 180)));
+        }
+        wait(16);
+        sf = sf + 1;
+    }
+    spClear(8);
+    if [mine == 1]{
+        sprFront(0);
+    }
+}
+// 코튼가드: 방패와 같은 자리에 솜 뭉치 15 개 (sfx1 ~ sfx15 · 하얀 원 + 연회색 빛 번짐) 가 아래에서부터 마구 몽글몽글 생겨나 솜 벽이 됨 → 잠시 뒤 옅어짐
+func spCottonWall(float ax, float ay, float tx, float ty, float s){
+    var float call dl = max(1, sqrt((tx - ax) * (tx - ax) + (ty - ay) * (ty - ay)));
+    var float call gx = ax + (tx - ax) / dl * s * fxKa * 0.22;
+    var float call gy = ay + (ty - ay) / dl * s * fxKa * 0.22 - s * fxKa * 0.05;
+    var int call mine = 0;
+    if [abs(ax - obj.mypoke.Xpos) < 1] and [abs(ay - obj.mypoke.Ypos) < 1]{
+        mine = 1;
+        sprFront(1);
+    }
+    var list call cx = [];
+    var list call cy = [];
+    var list call cr = [];
+    var int call ci = 1;
+    loop [ci <= 15]{
+        var int call row = floor((ci - 1) / 5);   // 아래 줄부터 (3 줄 × 5)
+        var int call col = ci - row * 5;
+        cx.add(gx + (col - 3) * s * fxKa * 0.1 + jaw.random(-1, 1) * s * fxKa * 0.025);
+        cy.add(gy - s * fxKa * 0.17 + row * s * fxKa * 0.13 + jaw.random(-1, 1) * s * fxKa * 0.02);
+        cr.add(s * fxKa * jaw.random(0.06, 0.085));
+        pxCirc(cx[ci], cy[ci], "sfx%ci%", cr[ci], "#ffffff");
+        dis.setGlow("sfx%ci%", "#d8dce8", s * 0.05);
+        if [mine == 1]{
+            dis.setObjLayer("sfx%ci%", 0);
+        }
+        else{
+            dis.setObjLayer("sfx%ci%", 2);
+        }
+        dis.setObjAlpha("sfx%ci%", 0);
+        ci = ci + 1;
+    }
+    var int call cf = 1;
+    loop [cf <= 46]{
+        ci = 1;
+        loop [ci <= 15]{
+            var float call cu = (cf - (ci - 1) * 1.4) / 6.0;   // 몽글: 0 → 1.25 → 1
+            if [cu > 0]{
+                var float call ck = 1;
+                if [cu < 1]{
+                    ck = 1.25 * cu;
+                }
+                if [cu >= 1] and [cu < 1.6]{
+                    ck = 1.25 - 0.25 * (cu - 1) / 0.6;
+                }
+                var float call cb = 1 + 0.04 * sin(cf * 20 + ci * 50);
+                dis.setObjScale("sfx%ci%", [cr[ci] * 2 * ck * cb, cr[ci] * 2 * ck * cb]);
+                var float call ca = 245;
+                if [cf > 38]{
+                    ca = 245 * (46 - cf) / 8.0;
+                }
+                dis.setObjAlpha("sfx%ci%", floor(ca));
+            }
+            ci = ci + 1;
+        }
+        wait(16);
+        cf = cf + 1;
+    }
+    spClear(15);
+    if [mine == 1]{
+        sprFront(0);
+    }
 }
 // ── 돌진 (2026-11-22): 공격하는 포켓몬 둘레에 기운 (sfx1 ~ sfx10) 이 맴돌며 진해짐 (20 프레임) → 몸 크기의 빛 덩이 (sfx11) 가 잔상 (sfx12 ~ sfx15) 을 남기며 7 프레임 만에 들이받음
 //   → 맞는 곳에서 충격파 (spBoom) · r = 빛 덩이 반지름 (s 에 곱함)
@@ -3437,10 +3662,22 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spDragonAura(ax, ay, s, 34);
         spBoost(ax, ay, s, cA, cP, cA, 34);
     }
-    var list call defUp = [106, 110, 111, 112, 151, 334, 538, 747];   // 방어 상승 (방패)
+    var list call defUp = [110, 111, 151, 747];   // 방어 상승 (방패 고리)
     if [defUp.find(mv) != 0]{
         spShield(ax, ay, s, cD);
         spBoost(ax, ay, s, cD, cD, cD, 30);
+    }
+    if [mv == 106]{   // 단단해지기: 잠시 오그라들었다 원래대로
+        spHarden(ax, ay, s);
+    }
+    if [mv == 334]{   // 철벽: 강철 방패를 내려찍음 (내 포켓몬 뒤 · 상대 포켓몬 앞)
+        spShieldSlam(ax, ay, tx, ty, s, 1);
+    }
+    if [mv == 112]{   // 배리어: 유리 같은 방패를 내려찍음
+        spShieldSlam(ax, ay, tx, ty, s, 2);
+    }
+    if [mv == 538]{   // 코튼가드: 그 자리에 솜 벽이 몽글몽글 생김
+        spCottonWall(ax, ay, tx, ty, s);
     }
     if [mv == 322] or [mv == 455] or [mv == 602]{   // 코스믹파워 · 방어지령 · 자기장조작: 방어 · 특방
         spShield(ax, ay, s, cF);
