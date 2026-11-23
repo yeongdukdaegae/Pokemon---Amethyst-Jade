@@ -53,7 +53,7 @@ MAN = {
  'BulkUp': 'belly_drum', 'Bounce': 'fly', 'MudShot': 'sand_attack', 'PoisonTail': 'mega_kick2', 'Covet': 'attract', 'VoltTackle': 'thunderbolt',
  'MagicalLeaf': 'razor_wind', 'WaterSport': 'bubble3', 'CalmMind': 'stat_increase', 'LeafBlade': 'cut', 'DragonDance': 'swords_dance',
  'RockBlast': 'rock_throw', 'ShockWave': 'thunder_wave', 'WaterPulse': 'bubble_beam2', 'DoomDesire': 'cosmic_power', 'PsychoBoost': 'psybeam',
- 'AuraSphere': 'hyper_beam2', 'DarkPulse': 'psybeam2', 'BugBuzz': 'uproar', 'DragonPulse': 'dragon_rage', 'FlashCannon': 'hyper_beam2',
+ 'AuraSphere': 'hyper_beam2', 'Overcharge': 'thunderbolt', 'DarkPulse': 'psybeam2', 'BugBuzz': 'uproar', 'DragonPulse': 'dragon_rage', 'FlashCannon': 'hyper_beam2',
  'EnergyBall': 'solar_beam', 'FocusBlast': 'hyper_beam2', 'EarthPower': 'earthquake', 'GigaImpact': 'take_down', 'Bulldoze': 'earthquake',
  'StompingTantrum': 'earthquake', 'HighHorsepower': 'earthquake', 'StoneEdge': 'rock_throw', 'StealthRock': 'rock_throw', 'SmackDown': 'rock_throw',
  'IronHead': 'headbutt', 'ZenHeadbutt': 'headbutt', 'HeadSmash': 'take_down', 'BraveBird': 'fly', 'XScissor': 'cut', 'NightSlash': 'cut',

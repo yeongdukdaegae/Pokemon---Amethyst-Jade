@@ -7,7 +7,7 @@
 //   · 타입 번호는 pokeDataManager.jb 참고
 //   · movedex[id] = 그 기술 (빈 번호는 0) · 기술마다 변수 mv이름 (예: mvTackle) 으로도 씀
 //   · 출처: PokeAPI 데이터 (Bulbapedia 기준) — 최신 세대 값
-//   · 920 번부터는 이 게임 오리지널 기술 (920 록다운 · 921 플레임클로 · 922 하이드로볼 · 923 바람베기)
+//   · 920 번부터는 이 게임 오리지널 기술 (920 록다운 · 921 플레임클로 · 922 하이드로볼 · 923 바람베기 · 924 오버차지)
 Use jawbreaker call jaw;
 
 var public list call mvPound;   // 1 막치기 · Pound
@@ -860,6 +860,7 @@ var public list call mvMalignantChain;   // 919 악독사슬 · Malignant Chain
 var public list call mvRockDown;   // 920 록다운 · Rock Down (남로쿠 계열 전용기 · 이 게임 오리지널)
 var public list call mvFlameClaw;   // 921 플레임클로 · Flame Claw (묘힛 계열 전용기 · 확정 화상)
 var public list call mvWindSlash;   // 923 바람베기 · Wind Slash (찌르호크 계열 전용기 · 급소에 맞기 쉬움 · 베기 + 바람 · 비접촉)
+var public list call mvOvercharge;   // 924 오버차지 · Overcharge (오버히트의 전기 판 · 쓰면 자신의 특공이 크게 떨어짐)
 var public list call mvHydroBall;   // 922 하이드로볼 · Hydro Ball (한달 계열 전용기 · 33% 혼란 — 혼란은 아직 구현 전)
 var public compound call movedex;
 var public list call moveFlinch;   // 풀죽음 확률 (%): moveFlinch[기술 id] (없는 기술은 0)
@@ -1728,6 +1729,7 @@ run{
     mvRockDown = [920, 0, 95, 100, 1, 13, 5];   // 바위 · 물리 · 위력 95 · 명중 100 · 부가효과 있음
     mvFlameClaw = [921, 0, 60, 90, 1, 2, 15];    // 불 · 물리 · 위력 60 · 명중 90 · 부가효과 (확정 화상)
     mvWindSlash = [923, 0, 80, 95, 0, 10, 15];   // 비행 · 물리 · 위력 80 · 명중 95 · PP 15
+    mvOvercharge = [924, 1, 130, 90, 1, 5, 5];   // 전기 · 특수 · 위력 130 · 명중 90 · PP 5 (오버히트와 같음)
     mvHydroBall = [922, 1, 80, 95, 1, 3, 10];    // 물 · 특수 · 위력 80 · 명중 95 · 부가효과 (33% 혼란) · PP 10
     movedex = [];
     movedex[1] = mvPound;
@@ -2581,10 +2583,11 @@ run{
     movedex[921] = mvFlameClaw;
     movedex[922] = mvHydroBall;
     movedex[923] = mvWindSlash;
+    movedex[924] = mvOvercharge;
 
     // 풀죽음 확률 (PokeAPI) · 920 록다운 = 10%
     moveFlinch = [];
-    moveFlinch[923] = 0;
+    moveFlinch[924] = 0;
     moveFlinch[23] = 30;   // 짓밟기
     moveFlinch[27] = 30;   // 돌려차기
     moveFlinch[29] = 30;   // 박치기
@@ -2619,7 +2622,7 @@ run{
 
     // 급소 단계 (PokeAPI)
     moveCrit = [];
-    moveCrit[923] = 0;
+    moveCrit[924] = 0;
     moveCrit[2] = 1;   // 태권당수
     moveCrit[923] = 1;   // 바람베기 (급소 단계 +1)
     moveCrit[13] = 1;   // 칼바람
@@ -2815,7 +2818,7 @@ run{
         2, 100, 1, 2, -1   // 930: 힘흡수
     ];
     moveStatAt = [];
-    moveStatAt[923] = 0;
+    moveStatAt[924] = 0;
     moveStatAt[14] = 1;   // 칼춤
     moveStatAt[28] = 6;   // 모래뿌리기
     moveStatAt[39] = 11;   // 꼬리흔들기
@@ -2869,6 +2872,7 @@ run{
     moveStatAt[309] = 263;   // 코멧펀치
     moveStatAt[313] = 268;   // 거짓울음
     moveStatAt[315] = 273;   // 오버히트
+    moveStatAt[924] = 273;   // 오버차지 (오버히트와 같은 기록: 자신 특공 -2)
     moveStatAt[317] = 278;   // 암석봉인
     moveStatAt[318] = 283;   // 은빛바람
     moveStatAt[319] = 296;   // 금속음
@@ -2985,9 +2989,9 @@ run{
 
     // 상태 이상 (PokeAPI)
     moveAil = [];
-    moveAil[923] = 0;
+    moveAil[924] = 0;
     moveAilCh = [];
-    moveAilCh[923] = 0;
+    moveAilCh[924] = 0;
     moveAil[7] = 1;   moveAilCh[7] = 10;   // 불꽃펀치
     moveAil[8] = 6;   moveAilCh[8] = 10;   // 냉동펀치
     moveAil[9] = 2;   moveAilCh[9] = 10;   // 번개펀치
@@ -3069,7 +3073,7 @@ run{
 
     // 체력 흡수 · 반동 · 회복 (PokeAPI)
     moveDrain = [];
-    moveDrain[923] = 0;
+    moveDrain[924] = 0;
     moveDrain[36] = -25;   // 돌진
     moveDrain[38] = -33;   // 이판사판태클
     moveDrain[66] = -25;   // 지옥의바퀴
@@ -3093,7 +3097,7 @@ run{
     moveDrain[617] = -50;   // 파멸의빛
     moveDrain[733] = 100;   // 생생버블
     moveHeal = [];
-    moveHeal[923] = 0;
+    moveHeal[924] = 0;
     moveHeal[105] = 50;   // HP회복
     moveHeal[135] = 50;   // 알낳기
     moveHeal[208] = 50;   // 우유마시기
@@ -3112,7 +3116,7 @@ run{
     // 혼란 (PokeAPI) · 922 하이드로볼 = 33%
     moveSelfT = [14, 54, 74, 96, 97, 100, 104, 105, 106, 107, 110, 111, 112, 113, 114, 115, 116, 117, 118, 133, 135, 150, 151, 156, 159, 160, 164, 182, 187, 191, 194, 195, 197, 201, 203, 208, 214, 215, 219, 226, 234, 235, 236, 240, 241, 254, 256, 258, 266, 268, 270, 273, 274, 275, 277, 278, 286, 287, 288, 289, 293, 294, 300, 303, 312, 322, 334, 336, 339, 346, 347, 349, 355, 356, 361, 366, 367, 379, 381, 383, 390, 392, 393, 397, 417, 433, 446, 455, 456, 461, 468, 469, 472, 475, 476, 478, 483, 489, 501, 502, 504, 508, 526, 538, 561, 563, 564, 569, 578, 579, 580, 581, 587, 588, 596, 597, 601, 602, 603, 604, 606, 607, 659, 661, 673, 674, 678, 694, 702, 743, 747, 748, 752, 756, 775, 791, 792, 811, 816, 829, 837, 842, 849, 850, 852, 863, 868, 880, 881, 882, 883, 908, 913];
     moveConf = [];
-    moveConf[923] = 0;
+    moveConf[924] = 0;
     moveConf[48] = 100;   // 초음파
     moveConf[60] = 10;   // 환상빔
     moveConf[93] = 10;   // 염동력
@@ -3133,7 +3137,7 @@ run{
 
     // 기술 분류 (Pokémon Showdown 데이터) — 920 록다운 = 비접촉 (0) · 921 플레임클로 = 접촉 + 베기 · 922 하이드로볼 = 파동
     moveFlags = [];
-    moveFlags[923] = 0;
+    moveFlags[924] = 0;
     moveFlags[1] = 1;   // 막치기
     moveFlags[2] = 1;   // 태권당수
     moveFlags[3] = 1;   // 연속뺨치기
@@ -3522,9 +3526,9 @@ run{
 
     // 연타 횟수 (Pokémon Showdown 데이터)
     moveHitMin = [];
-    moveHitMin[923] = 0;
+    moveHitMin[924] = 0;
     moveHitMax = [];
-    moveHitMax[923] = 0;
+    moveHitMax[924] = 0;
     moveHitMin[3] = 2;   moveHitMax[3] = 5;   // 연속뺨치기
     moveHitMin[4] = 2;   moveHitMax[4] = 5;   // 연속펀치
     moveHitMin[24] = 2;   moveHitMax[24] = 2;   // 두번차기
@@ -3559,7 +3563,7 @@ run{
 
     // 우선도 (PokeAPI · 최신 세대)
     movePrio = [];
-    movePrio[923] = 0;   // 921 번까지 0 으로 채움
+    movePrio[924] = 0;   // 921 번까지 0 으로 채움
     movePrio[18] = -6;   // 날려버리기
     movePrio[46] = -6;   // 울부짖기
     movePrio[68] = -5;   // 카운터
