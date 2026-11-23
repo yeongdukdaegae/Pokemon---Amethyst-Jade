@@ -1691,7 +1691,7 @@ func spBolt(float ax0, float ay0, float tx, float ty, float s, int fly, int hit,
     var int call bk = 1;
     loop [bk <= 7]{
         dis.setObject([ax, ay], "sfx%bk%", [1, 1], "#fffbe0");
-        dis.setGlow("sfx%bk%", "#ffd23a", s * 0.08 * (0.5 + 0.5 * pw));
+        dis.setGlow("sfx%bk%", "#ffd23a", s * 0.1 * (0.5 + 0.5 * pw));
         dis.setObjLayer("sfx%bk%", 2);
         dis.setObjAlpha("sfx%bk%", 0);
         bk = bk + 1;
@@ -1732,7 +1732,7 @@ func spBolt(float ax0, float ay0, float tx, float ty, float s, int fly, int hit,
             var float call blen = sqrt((bx2 - bx1) * (bx2 - bx1) + (by2 - by1) * (by2 - by1));
             var float call bang = atan2(by2 - by1, bx2 - bx1);
             dis.setObjPos("sfx%bk%", [(bx1 + bx2) / 2, (by1 + by2) / 2]);
-            dis.setObjScale("sfx%bk%", [blen + s * 0.012, s * 0.018 * (0.4 + 0.6 * pw) * pk(uh) * jaw.random(0.8, 1.4)]);
+            dis.setObjScale("sfx%bk%", [blen + s * 0.012, s * 0.018 * (0.4 + 0.6 * pw) * (1 + 0.6 * max(0, (pw - 0.5) * 2)) * pk(uh) * jaw.random(0.8, 1.4)]);   // 10만볼트 (pw 1) 는 1.6 배 굵게
             dis.rotateObj("sfx%bk%", bang - ban[bk], 0);
             ban[bk] = bang;
             dis.setObjAlpha("sfx%bk%", floor(jaw.random(210, 255)));
@@ -2501,7 +2501,7 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
         spIceHit(tx, ty, sT, 6);
     }
     if [mv == 85]{   // 10만볼트: 지그재그 전격 덩이가 쓰는 쪽 앞에서 상대까지 빠르게 날아감 → 닿은 상대에게 스파크가 사방으로 튀고 충격파 고리 셋 · 번쩍
-        spBolt(ax, ay, tx, ty, s, 9, 26, 1);
+        spBolt(ax, ay, tx, ty, s, 6, 26, 1);
     }
     if [mv == 56]{   // 하이드로펌프: 굵은 물줄기 두 줄 → 물방울이 사방으로 튐
         var int call k7 = 1;
