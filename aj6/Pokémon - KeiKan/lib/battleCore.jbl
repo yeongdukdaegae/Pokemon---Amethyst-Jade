@@ -1676,7 +1676,7 @@ func spIceHit(float tx, float ty, float s, int n){
 }
 // ── 10만볼트 (2026-11-22): 지그재그 전격 덩이 (이어진 선분 7 개 · sfx1 ~ sfx7 · 하얀 심 + 노란 빛 · 줄기 길이의 0.35) 가 쓰는 쪽 앞에서 fly 프레임 만에 상대까지 빠르게 날아감
 //   (2 프레임마다 모양이 바뀌며 지직 · 뒤에 불똥 sfx8 ~ sfx16) → 닿은 상대에게 스파크 16 개 (sfx1 ~ sfx16) 가 사방으로 튀고 · 충격파 고리 셋 (sfx17 ~ sfx19) 이 차례로 퍼지며 번쩍 (sfxb) · hit 프레임
-//   pw = 세기 (1 = 10만볼트 · 0.5 쯤 = 전기쇼크 · 스파크: 줄기가 가늘고 덜 꺾이고 · 스파크 수 · 충격파 고리 수 · 번쩍 크기가 줄어듦)
+//   pw = 세기 (1 = 10만볼트: 줄기가 가늘고 덜 꺾이고 · 스파크 수 · 충격파 고리 수 · 번쩍 크기가 줄어듦) · 0.5 보다 작으면 (전기쇼크) 닿을 때 전기 알갱이 6 개만 조금 튐
 //   선분 = 네모를 두 꺾이는 곳 사이에 놓고 그 방향으로 돌림 (rotateObj 는 더해 돌리므로 지금 각도 ban 을 기억해 차이만큼)
 func spBolt(float ax0, float ay0, float tx, float ty, float s, int fly, int hit, float pw){
     var float call bl0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
@@ -1755,6 +1755,12 @@ func spBolt(float ax0, float ay0, float tx, float ty, float s, int fly, int hit,
     var list call spv = [];
     var int call nsp = max(4, floor(16 * pw));   // 스파크 수
     var int call nri = 16 + max(1, floor(3 * pw));   // 마지막 고리 번호 (17 ~ 19)
+    var int call bigHit = 1;   // 0 = 전기 알갱이만 조금 튐 (전기쇼크 · pw < 0.5): 충격파 · 번쩍 없음
+    if [pw < 0.5]{
+        bigHit = 0;
+        nsp = 6;
+        nri = 16;
+    }
     bk = 1;
     loop [bk <= nsp]{
         pxTex(tx, ty, "sfx%bk%", s * fxKt * jaw.random(0.025, 0.045), 4);
@@ -1773,9 +1779,11 @@ func spBolt(float ax0, float ay0, float tx, float ty, float s, int fly, int hit,
         dis.setObjAlpha("sfx%ri%", 0);
         ri = ri + 1;
     }
-    pxCirc(tx, ty, "sfxb", s * fxKt * 0.08, "#ffffff");
-    dis.setGlow("sfxb", "#ffe040", s * 0.35 * pw);
-    dis.setObjLayer("sfxb", 1);
+    if [bigHit == 1]{
+        pxCirc(tx, ty, "sfxb", s * fxKt * 0.08, "#ffffff");
+        dis.setGlow("sfxb", "#ffe040", s * 0.35 * pw);
+        dis.setObjLayer("sfxb", 1);
+    }
     var int call wf = 1;
     loop [wf <= hit]{
         var float call wt = wf / (hit * 1.0);
@@ -1799,9 +1807,11 @@ func spBolt(float ax0, float ay0, float tx, float ty, float s, int fly, int hit,
             }
             ri = ri + 1;
         }
-        var float call wb = min(1, wf / 10.0);
-        dis.setObjScale("sfxb", [s * fxKt * (0.14 + 0.26 * wb) * pw, s * fxKt * (0.14 + 0.26 * wb) * pw]);
-        dis.setObjAlpha("sfxb", floor(255 * (1 - wb)));
+        if [bigHit == 1]{
+            var float call wb = min(1, wf / 10.0);
+            dis.setObjScale("sfxb", [s * fxKt * (0.14 + 0.26 * wb) * pw, s * fxKt * (0.14 + 0.26 * wb) * pw]);
+            dis.setObjAlpha("sfxb", floor(255 * (1 - wb)));
+        }
         wait(16);
         wf = wf + 1;
     }
@@ -1811,7 +1821,9 @@ func spBolt(float ax0, float ay0, float tx, float ty, float s, int fly, int hit,
         dis.removeObj("sfx%ri%");
         ri = ri + 1;
     }
-    dis.removeObj("sfxb");
+    if [bigHit == 1]{
+        dis.removeObj("sfxb");
+    }
 }
 // 선분 하나 (전기 줄기): 네모 id 를 (x1, y1) ~ (x2, y2) 사이에 놓고 그 방향으로 돌림 · 지금 각도 ang0 을 받아 새 각도를 돌려줌 (rotateObj 는 더해 돌림)
 func float segTo(string id, float x1, float y1, float x2, float y2, float th, float ang0){
@@ -2709,12 +2721,12 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     if [mv == 80]{   // 꽃잎댄스: 꽃잎이 맞는 곳 둘레를 춤추듯 돎
         spSwirl(9, tx, ty, sT, 14, 0.045, 46, 15, 0.04, "#ff9ad0");
     }
-    if [mv == 84]{   // 전기쇼크: 10만볼트의 옹졸한 판 (가늘고 짧은 전격 · 스파크 몇 개 · 작은 충격파 하나)
+    if [mv == 84]{   // 전기쇼크: 10만볼트의 옹졸한 판 (가늘고 짧은 전격 → 닿으면 전기 알갱이만 조금 튐)
         spBolt(ax, ay, tx, ty, s, 10, 16, 0.45);
     }
-    if [mv == 209]{   // 스파크: 몸에 전기를 두르고 (작게 지직) → 옹졸한 전격 (전기쇼크보다 조금 셈)
-        spSparks(ax, ay, sA, 4, 0.04, 0.22, 10);
-        spBolt(ax, ay, tx, ty, s, 9, 16, 0.55);
+    if [mv == 209]{   // 스파크: 공격하는 쪽에서 번쩍 → 맞는 곳에 스파크 (전용 이펙트는 추후)
+        spSparks(ax, ay, sA, 4, 0.05, 0.25, 12);
+        spSparks(tx, ty, sT, 7, 0.06, 0.3, 21);
     }
     if [mv == 87]{   // 번개: 커다란 번개가 위에서 연달아 떨어짐 → 지직거림
         spRain(4, tx, ty, sT, 5, 0.12, 6, 3, 0, 0.14, "#ffd23a");
