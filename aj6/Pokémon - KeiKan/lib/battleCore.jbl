@@ -1989,6 +1989,11 @@ func dashBack(int fr){
 func dashHit(float tx, float ty, float s, string inCol, string outCol, float size){
     spBurst(tx, ty, s, s * size * 0.15, s * size, inCol, outCol, 10);
 }
+// 두 포켓몬 그림을 레이어 1 로 (on 1) · 원래 0 으로 (on 0) — 기운 덩이 (레이어 0 · 땅 · 발판보다 나중에 만들어 그 위) 를 두 포켓몬 뒤에 그릴 때
+func sprFront(int on){
+    dis.setObjLayer("mypoke", on);
+    dis.setObjLayer("opppoke", on);
+}
 // ── 와일드볼트 · 볼트태클 (2026-11-22): 몸에 폭탄 기운 (커다란 빛 덩이 sfxb · 폭탄 기술의 모으는 빛처럼) 과 전기 파동 (몸 둘레를 감은 지그재그 고리 · 선분 8 개 sfx1 ~ sfx8 · 불똥 sfx9 ~ sfx12) 을 두름 (wrap 프레임)
 //   전기는 내내 2 프레임마다 모양이 바뀌며 지직 → 두른 채로 바로 돌격 (6 프레임 = 0.1 초) → 돌격 끝에서 전격이 사방으로 퍼짐 (spDischarge) → 돌아옴
 //   big 1 = 볼트태클 (더 크고 밝게)
@@ -2003,7 +2008,8 @@ func spVoltCharge(float ax, float ay, float tx, float ty, float s, int wrap, int
     }
     pxCirc(ax, ay, "sfxb", vr, vin);
     dis.setGlow("sfxb", vout, s * 0.25);
-    dis.setObjLayer("sfxb", 1);
+    sprFront(1);
+    dis.setObjLayer("sfxb", 0);   // 기운 덩이는 쓰는 쪽 · 맞는 쪽 그림 뒤 (땅 · 발판 위)
     dis.setObjAlpha("sfxb", 0);
     var list call van = [0, 0, 0, 0, 0, 0, 0, 0];
     var list call vrr = [0, 0, 0, 0, 0, 0, 0, 0, 0];   // 꺾이는 곳 9 개의 반지름 (마지막 = 첫 곳)
@@ -2086,6 +2092,7 @@ func spVoltCharge(float ax, float ay, float tx, float ty, float s, int wrap, int
     }
     spClear(12);
     dis.removeObj("sfxb");
+    sprFront(0);
     // 돌격 끝: 전격이 사방으로 퍼짐 (맞는 쪽 둘레)
     var float call kA = fxKa;
     fxKa = fxKt;
@@ -2111,7 +2118,8 @@ func spAuraDash(float ax, float ay, float tx, float ty, float s, int wrap, int k
     }
     pxCirc(ax, ay, "sfxb", ar, ain);
     dis.setGlow("sfxb", aout, s * 0.25);
-    dis.setObjLayer("sfxb", 1);
+    sprFront(1);
+    dis.setObjLayer("sfxb", 0);   // 기운 덩이는 쓰는 쪽 · 맞는 쪽 그림 뒤 (땅 · 발판 위)
     dis.setObjAlpha("sfxb", 0);
     var int call ai = 1;
     loop [ai <= 12]{
@@ -2175,6 +2183,7 @@ func spAuraDash(float ax, float ay, float tx, float ty, float s, int wrap, int k
     }
     spClear(12);
     dis.removeObj("sfxb");
+    sprFront(0);
     if [kind == 1]{
         spBoom(ex, ey, s * fxKt, "#fff0a0", "#ff4a10", 0.6, 10, 1, 16);
     }
