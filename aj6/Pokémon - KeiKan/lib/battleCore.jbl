@@ -2831,57 +2831,106 @@ func spBarBeam(float ax0, float ay0, float tx, float ty, float s, string inCol, 
     spBurst(tx, ty, s, s * fxKt * 0.05, s * fxKt * 0.25, inCol, outCol, 10);
 }
 // ── 간단한 공용 이펙트 묶음 (2026-11-24) ──
-// 물기: 맞는 곳 위아래에서 이빨 셋씩 (세모 · sfx1 ~ sfx6) 이 5 프레임 만에 콱 다물고 → 번쩍 (타입 색) → 살짝 벌어지며 사라짐 · col = 이빨 색 · glow = 빛
+// 물기 (2026-11-24 · 크게 다시): 맞는 곳 위에서 이빨 넷 (sfx1 ~ sfx4) · 아래에서 셋 (sfx5 ~ sfx7) 이 엇갈려 턱 모양 (바깥 이빨일수록 휨) 으로 나타나
+//   5 프레임 만에 콱 다묾 (살짝 지나쳤다가 맞물림) → 번쩍 (sfxb · glow 색) + 하얀 충격 선 넷 (sfx8 ~ sfx11) 이 퍼지고 맞은 포켓몬이 흔들림 → 살짝 벌어지며 사라짐
+//   col = 이빨 색 · glow = 빛 · size = 이빨 폭 (s 에 곱함)
 func spFangs(float tx, float ty, float s, string col, string glow, float size){
-    var float call fw = s * size;          // 이빨 하나의 폭
-    var float call fh = fw * 1.4;          // 높이
-    var float call gap = s * size * 2.2;   // 처음 벌어진 거리 (위아래 각각)
+    var float call fw = s * size;          // 이빨 폭
+    var float call fh = fw * 1.7;          // 높이 (뾰족하게)
+    var float call gap = fw * 2.4;         // 처음 벌어진 거리 (위아래 각각)
+    var string call tid = "opppoke";
+    var float call sx0 = obj.opppoke.Xpos;
+    if [abs(tx - obj.mypoke.Xpos) < 1] and [abs(ty - obj.mypoke.Ypos) < 1]{
+        tid = "mypoke";
+        sx0 = obj.mypoke.Xpos;
+    }
+    var list call fxo = [-1.5, -0.5, 0.5, 1.5, -1, 0, 1];   // 이빨 가로 자리 (폭의 1.1 배 단위)
     var int call fi = 1;
-    loop [fi <= 6]{
-        var float call fx = tx + (fi - floor((fi - 1) / 3) * 3 - 2) * fw * 1.05;
-        if [fi <= 3]{   // 위 이빨 (아래를 향함)
-            dis.setObjPlg([fx - fw / 2, ty + gap + fh], [fx + fw / 2, ty + gap + fh], [fx, ty + gap], "sfx%fi%", col);
+    loop [fi <= 7]{
+        var float call fx = tx + fxo[fi] * fw * 1.1;
+        var float call farc = abs(fxo[fi]) * fw * 0.45;   // 턱 곡선: 바깥 이빨은 위 이빨이 더 아래 · 아래 이빨이 더 위
+        if [fi <= 4]{   // 위 이빨 (아래를 향함)
+            dis.setObjPlg([fx - fw / 2, ty + gap + fh - farc], [fx + fw / 2, ty + gap + fh - farc], [fx, ty + gap - farc], "sfx%fi%", col);
         }
         else{           // 아래 이빨 (위를 향함)
-            dis.setObjPlg([fx - fw / 2, ty - gap - fh], [fx + fw / 2, ty - gap - fh], [fx, ty - gap], "sfx%fi%", col);
+            dis.setObjPlg([fx - fw / 2, ty - gap - fh + farc], [fx + fw / 2, ty - gap - fh + farc], [fx, ty - gap + farc], "sfx%fi%", col);
         }
-        dis.setGlow("sfx%fi%", glow, fw * 0.4);
+        dis.setGlow("sfx%fi%", glow, fw * 0.5);
         dis.setObjLayer("sfx%fi%", 2);
+        dis.setObjAlpha("sfx%fi%", 0);
         fi = fi + 1;
     }
+    var list call ran = [0, 0, 0, 0];
+    var int call ri = 8;
+    loop [ri <= 11]{
+        dis.setObject([tx, ty], "sfx%ri%", [1, 1], "#ffffff");
+        dis.setGlow("sfx%ri%", glow, fw * 0.3);
+        dis.setObjLayer("sfx%ri%", 2);
+        dis.setObjAlpha("sfx%ri%", 0);
+        ri = ri + 1;
+    }
     var int call ff = 1;
-    loop [ff <= 18]{
+    loop [ff <= 22]{
         var float call d = gap;
-        if [ff <= 5]{
-            d = gap * (1 - ff / 5.0);   // 다묾
+        if [ff <= 5]{   // 다묾 (점점 빨라짐 · 끝에서 살짝 지나침)
+            var float call ct = ff / 5.0;
+            d = gap * (1 - ct * ct) - fh * 0.12 * ct * ct;
         }
-        if [ff > 5] and [ff <= 9]{
+        if [ff > 5] and [ff <= 7]{   // 맞물림
+            d = 0 - fh * 0.12 * (7 - ff) / 2.0;
+        }
+        if [ff > 7] and [ff <= 12]{
             d = 0;
         }
-        if [ff > 9]{
-            d = gap * 0.25 * (ff - 9) / 9.0;   // 살짝 벌어짐
+        if [ff > 12]{   // 살짝 벌어지며 사라짐
+            d = gap * 0.3 * (ff - 12) / 10.0;
         }
         fi = 1;
-        loop [fi <= 6]{
-            var float call fx2 = tx + (fi - floor((fi - 1) / 3) * 3 - 2) * fw * 1.05;
-            if [fi <= 3]{
-                dis.setObjPos("sfx%fi%", [fx2, ty + d + fh / 2]);
+        loop [fi <= 7]{
+            var float call fx2 = tx + fxo[fi] * fw * 1.1;
+            var float call farc2 = abs(fxo[fi]) * fw * 0.45;
+            if [fi <= 4]{
+                dis.setObjPos("sfx%fi%", [fx2, ty + d + fh / 2 - farc2]);
             }
             else{
-                dis.setObjPos("sfx%fi%", [fx2, ty - d - fh / 2]);
+                dis.setObjPos("sfx%fi%", [fx2, ty - d - fh / 2 + farc2]);
             }
-            if [ff > 9]{
-                dis.setObjAlpha("sfx%fi%", floor(255 * (18 - ff) / 9.0));
+            var float call fa = 255 * min(1, ff / 2.0);
+            if [ff > 12]{
+                fa = 255 * (22 - ff) / 10.0;
             }
+            dis.setObjAlpha("sfx%fi%", floor(fa));
             fi = fi + 1;
         }
         if [ff == 5]{
-            spBurstStart(tx, ty, s, glow);
+            spBurstStart(tx, ty, s * size * 14, glow);
+        }
+        if [ff >= 5]{   // 충격: 번쩍이 퍼지며 옅어짐 · 충격 선 넷이 바깥으로 · 맞은 포켓몬이 흔들림
+            var float call it = min(1, (ff - 5) / 10.0);
+            dis.setObjScale("sfxb", [fw * (2 + 4 * it), fw * (2 + 4 * it)]);
+            dis.setObjAlpha("sfxb", floor(230 * (1 - it)));
+            ri = 8;
+            loop [ri <= 11]{
+                var int call rq = ri - 7;
+                var float call ra = 45 + rq * 90;
+                var float call r1 = fw * (2.2 + 2.5 * it);
+                var float call r2 = fw * (3.2 + 3.5 * it);
+                ran[rq] = segTo("sfx%ri%", tx + cos(ra) * r1, ty + sin(ra) * r1, tx + cos(ra) * r2, ty + sin(ra) * r2, fw * 0.25, ran[rq]);
+                dis.setObjAlpha("sfx%ri%", floor(255 * (1 - it)));
+                ri = ri + 1;
+            }
+            if [ff <= 13]{
+                dis.setObjPos(tid, [sx0 + sin(ff * 120) * fw * 0.35, ty]);
+            }
+            else{
+                dis.setObjPos(tid, [sx0, ty]);
+            }
         }
         wait(16);
         ff = ff + 1;
     }
-    spClear(6);
+    dis.setObjPos(tid, [sx0, ty]);
+    spClear(11);
     dis.removeObj("sfxb");
 }
 // 번쩍 하나 (sfxb) 를 만들어 두기만 함 (spFangs 등이 지움) — 크게 번진 빛
@@ -4076,21 +4125,21 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     }
     // ── 간단한 공용 이펙트로 묶은 기술 (2026-11-24) ──
     if [mv == 44] or [mv == 162]{   // 물기 · 분노의앞니: 흰 이빨이 콱
-        spFangs(tx, ty, sT, "#ffffff", "#c8b0e8", 0.05);
+        spFangs(tx, ty, sT, "#ffffff", "#c8b0e8", 0.08);
     }
     if [mv == 242]{   // 깨물어부수기: 더 큰 이빨
-        spFangs(tx, ty, sT, "#ffffff", "#9a70d8", 0.065);
+        spFangs(tx, ty, sT, "#ffffff", "#9a70d8", 0.1);
     }
     if [mv == 423]{   // 얼음엄니
-        spFangs(tx, ty, sT, "#e8faff", "#6ad0ff", 0.05);
+        spFangs(tx, ty, sT, "#e8faff", "#6ad0ff", 0.08);
         spIceHit(tx, ty, sT, 4);
     }
     if [mv == 424]{   // 불꽃엄니
-        spFangs(tx, ty, sT, "#fff0e0", "#ff6a20", 0.05);
+        spFangs(tx, ty, sT, "#fff0e0", "#ff6a20", 0.08);
         spBurst(tx, ty, sT, sT * 0.04, sT * 0.2, "#ffe080", "#ff5a10", 10);
     }
     if [mv == 422]{   // 번개엄니
-        spFangs(tx, ty, sT, "#fffbe0", "#ffd23a", 0.05);
+        spFangs(tx, ty, sT, "#fffbe0", "#ffd23a", 0.08);
         spSparks(tx, ty, sT, 6, 0.05, 0.3, 14);
     }
     // 소리 (음파 고리) — spSound(…, 색, 고리 수, 크기)
