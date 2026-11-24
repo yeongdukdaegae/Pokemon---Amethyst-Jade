@@ -764,11 +764,25 @@ func spFly(string id, float ax, float ay, float tx, float ty, float s, int fr, f
     }
 }
 
+// 빔 기술 (2026-11-24): 빔이 쓰는 쪽 그림 뒤 · 맞는 쪽 그림 앞에 그려지게 — 그동안 쓰는 쪽 그림만 레이어 3 (기술 이펙트 2 보다 위) · on 0 = 원래대로 (0)
+func atkFront(float ax, float ay, int on){
+    var string call aid = "opppoke";
+    if [abs(ax - obj.mypoke.Xpos) < 1] and [abs(ay - obj.mypoke.Ypos) < 1]{
+        aid = "mypoke";
+    }
+    if [on == 1]{
+        dis.setObjLayer(aid, 3);
+    }
+    else{
+        dis.setObjLayer(aid, 0);
+    }
+}
 // ── 빔 기술 공통 (2026-11-22): 공격하는 쪽 → 맞는 쪽으로 이어지는 굵은 빛줄기
 //   몸통 = 픽셀 원 14 개 (sfx1 ~ sfx14 · 가운데 inCol · 둘레 outCol 빛 번짐) · sfx15 = 쏘는 곳 빛 · sfx16 = 줄기 끝 빛
 //   w = 굵기 (반지름 = s * w) · hold = 유지 프레임 · 뻗기 10 프레임 → 유지 (굵기가 떨림) → 12 프레임 동안 가늘어지며 사라짐 → spBurst
 //   mode: 0 보통 · 1 무지개 (색이 흘러감) · 2 은빛 (반짝임) · 3 물결 (줄기가 굽이침) · 4 · 7 줄기 전체를 위 · 아래로 조금 비킴 (두 번 쏘는 기술) · 5 전기 (줄기가 지직거림) · 6 빨강 · 초록 번갈아
 func spBeam(float ax0, float ay0, float tx, float ty, float s, string inCol, string outCol, float w, int hold, int mode){
+    atkFront(ax0, ay0, 1);   // 빔은 쓰는 쪽 뒤 · 맞는 쪽 앞
     var list call rb = ["#ff5a5a", "#ffb04a", "#fff06a", "#7cff8a", "#6ad8ff", "#7a8cff", "#d07aff"];
     var float call bl0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
     var float call ax = ax0 + (tx - ax0) / bl0 * s * 0.2;   // 쏘는 곳: 공격하는 포켓몬의 조금 앞 (상대 쪽)
@@ -860,6 +874,7 @@ func spBeam(float ax0, float ay0, float tx, float ty, float s, string inCol, str
     }
     spClear(16);
     spBurst(tx, ty, s * fxKt, br * 1.2 * fxKt, s * fxKt * (0.2 + w * 2), inCol, outCol, 12);
+    atkFront(ax0, ay0, 0);
 }
 // 빛 모으기 (솔라빔 · 메테오빔 · 일렉트로빔): 둘레의 작은 빛 8 개가 쏘는 곳 (spBeam 과 같은 곳 · 공격하는 쪽의 조금 앞) 으로 빨려 들고 가운데 빛이 커짐 · sfx1 ~ sfx9 (끝나면 지움)
 func spGather(float ax, float ay, float tx, float ty, float s, string inCol, string outCol, int fr){
@@ -2731,6 +2746,7 @@ func spCottonWall(float ax, float ay, float tx, float ty, float s){
 //   6 프레임 만에 쭉 뻗고 → hold 프레임 (30 = 0.5 초) 동안 굵기가 떨리며 맞는 곳을 계속 때림: 맞는 곳에서 타입 알갱이 (fx_type tex 번 · 12 개 sfx3 ~ sfx14) 가 마구 튀고 빛 (sfxb) 이 깜빡
 //   → 8 프레임 동안 가늘어지며 사라짐 → 빛이 터짐 · w = 굵기 (s 에 곱함) · pcol = 알갱이 색 (덧칠 · "" 이면 그림 색 그대로)
 func spBarBeam(float ax0, float ay0, float tx, float ty, float s, string inCol, string outCol, float w, int hold, int tex, string pcol){
+    atkFront(ax0, ay0, 1);   // 빔은 쓰는 쪽 뒤 · 맞는 쪽 앞
     var float call bl0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
     var float call ax = ax0 + (tx - ax0) / bl0 * s * fxKa * 0.2;
     var float call ay = ay0 + (ty - ay0) / bl0 * s * fxKa * 0.2;
@@ -2829,6 +2845,7 @@ func spBarBeam(float ax0, float ay0, float tx, float ty, float s, string inCol, 
     spClear(14);
     dis.removeObj("sfxb");
     spBurst(tx, ty, s, s * fxKt * 0.05, s * fxKt * 0.25, inCol, outCol, 10);
+    atkFront(ax0, ay0, 0);
 }
 // ── 간단한 공용 이펙트 묶음 (2026-11-24) ──
 // 물기 (2026-11-24 · 크게 다시): 맞는 곳 위에서 이빨 넷 (sfx1 ~ sfx4) · 아래에서 셋 (sfx5 ~ sfx7) 이 엇갈려 턱 모양 (바깥 이빨일수록 휨) 으로 나타나
