@@ -1,0 +1,170 @@
+Use jawbreaker call jaw;
+Use DisPlayer call dis;
+Use Magellan call mag;
+
+// 배틀 날씨 연출 (2026-11-24): battleManager.jb 가 배틀을 시작할 때 setup 으로 띄움 → wxRun 이 1 인 동안 지금 날씨 (weather) 를 배틀 화면 (battleL ~ battleR · battleB ~ battleT) 에 그림
+//   텍스쳐 fx_weather.png (16 x 16 칸: 1 빗줄기 · 2 모래 · 3 눈송이 · 4 햇빛 알갱이) · 오브젝트 wx1 ~ wx18 (레이어 1: 포켓몬 위 · 기술 이펙트 (2) · UI 아래)
+//   가시성은 있되 방해가 안 되게: 반투명 (알파 165 ~ 200 · 햇살은 30 ~ 50) · 작게 · 날씨가 없으면 모두 숨김
+//     1 쾌청: 위에서 비스듬히 내리쬐는 옅은 햇살 줄기 셋 (wx16 ~ wx18 · 천천히 숨 쉬듯 진해졌다 옅어짐) + 떠다니는 빛 알갱이 8 개
+//     2 비: 빗줄기 15 개가 비스듬히 빠르게 떨어짐
+//     3 모래바람: 모래 알갱이 15 개가 오른쪽에서 왼쪽으로 흩날림 (위아래로 출렁)
+//     4 눈: 눈송이 15 개가 천천히 흔들리며 내려옴
+//   배틀이 끝나면 (wxRun = 0) 오브젝트를 지우고 wxRun = 2 로 알림 (battleManager.jb 가 기다렸다가 장면을 닫음)
+var public int call weather;      // 0 없음 · 1 쾌청 · 2 비 · 3 모래바람 · 4 눈 (battleManager.jb)
+var public int call wxRun;        // 1 = 그림 · 0 = 그만 (battleManager.jb) · 2 = 다 지움 (이 파일)
+var public float call battleL;
+var public float call battleR;
+var public float call battleB;
+var public float call battleT;
+
+run{
+    var int call cur = -1;
+    var list call wpx = [];
+    var list call wpy = [];
+    var list call wsp = [];   // 알갱이마다 빠르기 · 흔들림 위상
+    var list call wph = [];
+    var list call wra = [];   // 알갱이마다 돌린 각도 (날씨가 바뀌면 되돌림 · rotateObj 는 더해 돌림)
+    var int call wi = 1;
+    loop [wi <= 15]{
+        dis.setObject([0, 0], "wx%wi%", [8, 8], "#ffffff");
+        dis.setObjLayer("wx%wi%", 1);
+        dis.setObjAlpha("wx%wi%", 0);
+        wpx.add(0);
+        wpy.add(0);
+        wsp.add(jaw.random(0.7, 1.3));
+        wph.add(jaw.random(0, 360));
+        wra.add(0);
+        wi = wi + 1;
+    }
+    wi = 16;
+    loop [wi <= 18]{   // 햇살 줄기 (그림 없는 네모 · 빛 번짐)
+        dis.setObject([0, 0], "wx%wi%", [8, 8], "#fff6d0");
+        dis.setGlow("wx%wi%", "#ffe890", 40);
+        dis.setObjLayer("wx%wi%", 1);
+        dis.setObjAlpha("wx%wi%", 0);
+        dis.rotateObj("wx%wi%", -28, 0);
+        wi = wi + 1;
+    }
+    var float call bw = battleR - battleL;
+    var float call bh = battleT - battleB;
+    var int call wf = 0;
+    loop [wxRun == 1]{
+        wf = wf + 1;
+        if [weather != cur]{   // 날씨가 바뀜: 그림 · 크기 · 자리를 새로
+            cur = weather;
+            wi = 1;
+            loop [wi <= 15]{
+                dis.rotateObj("wx%wi%", 0 - wra[wi], 0);
+                wra[wi] = 0;
+                wpx[wi] = battleL + jaw.random(0, 1) * bw;
+                wpy[wi] = battleB + jaw.random(0, 1) * bh;
+                var int call cell = 0;
+                var float call sz = 18;
+                if [cur == 2]{
+                    cell = 1;
+                    sz = 46;
+                }
+                if [cur == 3]{
+                    cell = 2;
+                    sz = 30;
+                }
+                if [cur == 4]{
+                    cell = 3;
+                    sz = 20 + jaw.random(0, 10);
+                }
+                if [cur == 1] and [wi <= 8]{
+                    cell = 4;
+                    sz = 14 + jaw.random(0, 10);
+                }
+                if [cell > 0]{
+                    mag.setObjTexture("wx%wi%", "fxweather", [(cell - 1) * 16, 0], [cell * 16, 16]);
+                    dis.setObjScale("wx%wi%", [sz, sz]);
+                }
+                else{
+                    dis.setObjAlpha("wx%wi%", 0);
+                }
+                wi = wi + 1;
+            }
+            wi = 16;
+            loop [wi <= 18]{
+                dis.setObjAlpha("wx%wi%", 0);
+                wi = wi + 1;
+            }
+        }
+        if [cur == 1]{   // 쾌청: 햇살 줄기 셋 (숨 쉬듯) + 빛 알갱이 8 개가 천천히 떠오름
+            wi = 16;
+            loop [wi <= 18]{
+                var float call rk = wi - 16;
+                dis.setObjPos("wx%wi%", [battleL + bw * (0.18 + 0.22 * rk), battleT - bh * 0.25]);
+                dis.setObjScale("wx%wi%", [bw * 0.05, bh * 1.2]);
+                dis.setObjAlpha("wx%wi%", floor(28 + 22 * sin(wf * 1.5 + rk * 120)));
+                wi = wi + 1;
+            }
+            wi = 1;
+            loop [wi <= 8]{
+                wpy[wi] = wpy[wi] + 0.35 * wsp[wi];
+                wpx[wi] = wpx[wi] + sin(wf * 2 + wph[wi]) * 0.3;
+                if [wpy[wi] > battleT]{
+                    wpy[wi] = battleB;
+                    wpx[wi] = battleL + jaw.random(0, 1) * bw;
+                }
+                dis.setObjPos("wx%wi%", [wpx[wi], wpy[wi]]);
+                dis.setObjAlpha("wx%wi%", floor(70 + 50 * sin(wf * 4 + wph[wi])));
+                wi = wi + 1;
+            }
+        }
+        if [cur == 2]{   // 비: 비스듬히 빠르게
+            wi = 1;
+            loop [wi <= 15]{
+                wpy[wi] = wpy[wi] - 14 * wsp[wi];
+                wpx[wi] = wpx[wi] - 5 * wsp[wi];
+                if [wpy[wi] < battleB]{
+                    wpy[wi] = battleT + jaw.random(0, 40);
+                    wpx[wi] = battleL + jaw.random(0, 1.2) * bw;
+                }
+                dis.setObjPos("wx%wi%", [wpx[wi], wpy[wi]]);
+                dis.setObjAlpha("wx%wi%", 165);
+                wi = wi + 1;
+            }
+        }
+        if [cur == 3]{   // 모래바람: 오른쪽 → 왼쪽으로 흩날림 · 위아래로 출렁 · 빙글
+            wi = 1;
+            loop [wi <= 15]{
+                wpx[wi] = wpx[wi] - 7 * wsp[wi];
+                wpy[wi] = wpy[wi] + sin(wf * 5 + wph[wi]) * 1.2;
+                if [wpx[wi] < battleL - 20]{
+                    wpx[wi] = battleR + jaw.random(0, 60);
+                    wpy[wi] = battleB + jaw.random(0, 1) * bh;
+                }
+                dis.setObjPos("wx%wi%", [wpx[wi], wpy[wi]]);
+                dis.setObjAlpha("wx%wi%", 185);
+                dis.rotateObj("wx%wi%", 6, 0);
+                wra[wi] = wra[wi] + 6;
+                wi = wi + 1;
+            }
+        }
+        if [cur == 4]{   // 눈: 천천히 흔들리며 내려옴
+            wi = 1;
+            loop [wi <= 15]{
+                wpy[wi] = wpy[wi] - 1.6 * wsp[wi];
+                wpx[wi] = wpx[wi] + sin(wf * 2.5 + wph[wi]) * 0.9 - 0.4;
+                if [wpy[wi] < battleB]{
+                    wpy[wi] = battleT + jaw.random(0, 30);
+                    wpx[wi] = battleL + jaw.random(0, 1.1) * bw;
+                }
+                dis.setObjPos("wx%wi%", [wpx[wi], wpy[wi]]);
+                dis.setObjAlpha("wx%wi%", 200);
+                dis.rotateObj("wx%wi%", 1.5, 0);
+                wra[wi] = wra[wi] + 1.5;
+                wi = wi + 1;
+            }
+        }
+        dis.waitF(1);
+    }
+    wi = 1;
+    loop [wi <= 18]{
+        dis.removeObj("wx%wi%");
+        wi = wi + 1;
+    }
+    wxRun = 2;
+}

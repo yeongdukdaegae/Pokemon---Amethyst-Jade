@@ -27,6 +27,7 @@ run{
     mag.importFile("assets/textures/battle/fx_slash.png") save as ("fxslash");   // 베기 자국 하나 (48 x 48 · 크고 얇은 초승달 · 흰색 — lib/battleCore.jbl 의 spSlash · fxsrc/make_fx_slash.py)
     mag.importFile("assets/textures/battle/fx_stat.png") save as ("fxstat");   // 능력 변화 화살표 (16 x 16 칸 2 개: 오름 · 내림 · 흰색이라 능력 색을 입혀 씀 — statFx · spBoost · fxsrc/make_fx_stat.py)
     mag.importFile("assets/textures/battle/fx_shield.png") save as ("fxshield");   // 방패 (48 x 48 칸 2 개: 강철 · 배리어 — spShieldSlam)
+    mag.importFile("assets/textures/battle/fx_weather.png") save as ("fxweather");   // 날씨 (16 x 16 칸 4 개: 빗줄기 · 모래 · 눈송이 · 햇빛 알갱이 — assets/codes/battle/weatherFx.jb · fxsrc/make_fx_weather.py)
     mag.importFile("assets/textures/battle/hitfx_2.png") save as ("hitfx2");
     mag.importFile("assets/textures/battle/hitfx_3.png") save as ("hitfx3");
     mag.importFile("assets/textures/battle/hitfx_4.png") save as ("hitfx4");
