@@ -1649,6 +1649,17 @@ run{
             }
             if [whiteOut == 1]{   // 전멸: 가장 가까운 포켓몬센터의 카운터 앞으로 (검은 화면 "warpblk" 은 battleManager.jb 가 덮어 둠 → 맵이 바뀐 뒤 아래 warpIn 이 걷음)
                 whiteOut = 0;
+                if [place == 12]{   // 유풍체육관 안에서 전멸
+                    var int call gyTr = 13;   // 유풍체육관 트레이너 (lib/fieldNpc.jbl 31 ~ 33 번 · 트레이너 13 ~ 15) 를 이긴 기록을 지움 → 다시 들어가면 다시 배틀을 걸어옴
+                    loop [gyTr <= 15]{
+                        var int call gyAt = trDone.find(gyTr);
+                        if [gyAt != 0]{
+                            trDone.remove(gyAt);
+                        }
+                        gyTr = gyTr + 1;
+                    }
+                    log("유풍체육관 트레이너: 다시 배틀 (이긴 기록 지움)");
+                }
                 // 가장 가까운 포켓몬센터: 관산마을 (place 2) · 보라매숲 (5) 부터 서쪽 (6 · 7 · 8 · 9) 은 유풍시티 (place 9)
                 var int call woC = 2;
                 var float call woX = 3000;   // 간호순 (5 열 2 줄) 바로 아래 · 카운터 앞 (4 줄)
@@ -1895,6 +1906,15 @@ run{
         }
         if [place == 12] and [canMove == 1] and [gyFall == 1]{   // 떨어짐 (양력 0 · 하늘 위) → 로비 접수처 (데스크) 앞 (3 열 4 줄 · 위를 봄 · lib/gymFly.jbl)
             gyFall = 0;
+            var int call gyTr = 13;   // 유풍체육관 트레이너 (lib/fieldNpc.jbl 31 ~ 33 번 · 트레이너 13 ~ 15) 를 이긴 기록을 지움 → 다시 들어가면 다시 배틀을 걸어옴
+            loop [gyTr <= 15]{
+                var int call gyAt = trDone.find(gyTr);
+                if [gyAt != 0]{
+                    trDone.remove(gyAt);
+                }
+                gyTr = gyTr + 1;
+            }
+            log("유풍체육관 트레이너: 다시 배틀 (이긴 기록 지움)");
             warp = 11;
             wx = 18968;
             wy = 3112;
