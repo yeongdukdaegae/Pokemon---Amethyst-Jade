@@ -569,7 +569,7 @@ func chargeFx(int mv, float ax, float ay, float tx, float ty, float s){
         fxKt = 1.3;
     }
     if [mv == 76]{
-        spGather(ax, ay, tx, ty, s * fxKa, "#ffffe0", "#ffe04a", 30);
+        spGather(ax, ay, tx, ty, s * fxKa, "#f4ffe0", "#7ae040", 30);
     }
 }
 func moveFx(int mv, float ax, float ay, float tx, float ty, float s, string col){
@@ -3508,11 +3508,11 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     if [mv == 416]{   // 기가임팩트: 몸에 보랏빛 기운을 두름 → 온몸으로 돌진 (잔상) → 맞는 곳에 큰 충격파
         spRush(ax, ay, tx, ty, s, "#fff0ff", "#9a3aff", 0.13);
     }
-    if [mv == 76]{   // 솔라빔: 2 턴째 = 일자 막대 빔 (금빛 · 0.5 초 동안 맞으며 햇빛 알갱이가 마구 튐) — 기 모으기는 1 턴째 (chargeFx) · 쾌청이면 한 번에 (모으기 → 발사)
+    if [mv == 76]{   // 솔라빔: 2 턴째 = 일자 막대 빔 (녹색빛 · 0.5 초 동안 맞으며 햇빛 알갱이가 마구 튐) — 기 모으기는 1 턴째 (chargeFx) · 쾌청이면 한 번에 (모으기 → 발사)
         if [fxSrcWx == 1]{
-            spGather(ax, ay, tx, ty, sA, "#ffffe0", "#ffe04a", 30);
+            spGather(ax, ay, tx, ty, sA, "#f4ffe0", "#7ae040", 30);
         }
-        spBarBeam(ax, ay, tx, ty, s, "#fffff0", "#ffd84a", 0.055, 30, 0, "#fff6a0");
+        spBarBeam(ax, ay, tx, ty, s, "#f4ffe0", "#7ae040", 0.055, 30, 0, "#d8ffa0");   // 녹색빛 (가운데 연둣빛 흰색 · 둘레 초록)
     }
     if [mv == 451]{   // 차지빔: 지직거리는 노란 전기 줄기
         spBeam(ax, ay, tx, ty, s, "#fffbd0", "#ffd23a", 0.06, 22, 5);
