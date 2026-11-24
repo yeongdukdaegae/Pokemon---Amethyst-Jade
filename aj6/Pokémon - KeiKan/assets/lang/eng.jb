@@ -576,7 +576,7 @@ run{
     engLang[7481] = "You only get one booster, so save it!";
     engLang[7482] = "The Starly here are raised by the Gym. You can't catch them!";
     engLang[7483] = "On really windy days, even I fall sometimes.";
-    engLang[7484] = "Flowney is on the top platform. ...Though she's away right now!";
+    engLang[7484] = "Flowney is on the top platform. Brace yourself before you fly up!";
     engLang[7485] = "The Leader's wind is on a whole other level!";
     engLang[7486] = "A glider lent out by the Gym is lying here.\nIt looks like you could ride the wind between platforms.";
     engLang[7487] = "Put it on";
@@ -608,6 +608,13 @@ run{
     engLang[7513] = "The mist disappeared from the battlefield.";
     engLang[7514] = "The weirdness disappeared from the battlefield!";
     engLang[7515] = "You lost your footing and fell...!\n...A safety net caught you, and you're back in the lobby.";   // Yupung Gym: off the platforms without flying (lib/gymFly.jbl)
+    engLang[7516] = "Flowney";   // 유풍체육관 관장 휴린
+    engLang[7517] = "Gym Leader";   // 유풍체육관 관장 휴린
+    engLang[7518] = "A cool breeze... so it's you. The one who pushed through this wind.\nDon't take this lightly. You'll be blown away.";   // 유풍체육관 관장 휴린
+    engLang[7519] = "...The wind has stopped. You were one step faster than the wind.\nAll right, this Gale Badge is yours.";   // 유풍체육관 관장 휴린
+    engLang[7520] = "You don't fight the wind. You ride it.\nSomeone who knows that can fly even higher.";   // 유풍체육관 관장 휴린
+    engLang[7521] = "Next time, I'll have a stronger wind ready.\nTry not to get blown away then.";   // 유풍체육관 관장 휴린
+    engLang[7522] = "You received the Gale Badge from Flowney!";   // 유풍체육관 관장 휴린
     engLang[7238] = "Here, take these too.\nThey're Poké Balls, for catching Pokémon.";
     engLang[7239] = "You received {n} {item}s!";
     engLang[7240] = "Hillet Town Shop";

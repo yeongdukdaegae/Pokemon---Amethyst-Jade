@@ -9,6 +9,7 @@ Use pokeGen call pg;
 //   2 ~ 4 = 1번도로의 곤충채집소년 (민수 · 준호 · 태양) — 초반 벌레 포켓몬 (노로키 · 꿈벅) · 평균 레벨 6 · 인공지능 2 등급
 //   5 ~ 11 = 보라매숲의 곤충채집소년 · 짧은치마
 //   13 ~ 15 = 유풍체육관 트레이너 (하늬 · 마파 · 높새) — 비행 포켓몬 두 마리씩 · 평균 Lv.9.5 · 상금 800 원
+//   16 = 유풍체육관 관장 휴린 — 앗치 Lv.11 · 찌르꼬 Lv.12 · 아크치 Lv.14 (에이스) · 개체값 6V · 노력치 · 레벨보다 앞선 기술 배치 · 인공지능 4 등급 · 이기면 유풍배지
 //   12 = 라이벌 (보라매숲 서쪽 출구) — 주인공이 남자면 지현 · 여자면 재휘 · 노로키 Lv.8 · 앗치 Lv.9 · 스타팅 Lv.11 (개체값 3V · 주인공에게 유리한 타입) · 기술은 자력기 · 상금 1000 원
 
 var public compound call oppParty;
@@ -151,6 +152,25 @@ func load(int id){
             oppParty.add(pg.newPoke(77, 10, 1));
         }
     }
+    if [id == 16]{   // 유풍체육관 관장 휴린 (아직 빈 텍스쳐 틀) — 기술 배치는 조금 어렵게: 레벨보다 조금 앞선 기술 · 특성 (단단한발톱 · 이판사판) · 노력치 공격 · 스피드
+        trTex = "trRival";
+        trTexS = 80;
+        trFoot = 79;
+        trPrize = 100;
+        trClassL = 7517;
+        trNameL = 7516;
+        trLoseL = 7519;
+        trAi = 4;
+        var compound call hy1 = pg.makeSet(14, 11, 0, 181, 365, 98, 64, 45, 0, 252, 0, 0, 4, 252);    // 앗치: 단단한발톱 · 쪼아대기 · 전광석화 · 쪼기 · 울음소리
+        hy1[15] = 1;
+        oppParty.add(hy1);
+        var compound call hy2 = pg.makeSet(77, 12, 0, 120, 17, 98, 104, 45, 0, 252, 0, 0, 4, 252);    // 찌르꼬: 이판사판 · 날개치기 · 전광석화 · 그림자분신 · 울음소리
+        hy2[15] = 1;
+        oppParty.add(hy2);
+        var compound call hy3 = pg.makeSet(15, 14, 0, 181, 332, 365, 98, 343, 4, 252, 0, 0, 0, 252);   // 아크치 (에이스): 단단한발톱 · 제비반환 · 쪼아대기 · 전광석화 · 탐내다
+        hy3[15] = 1;
+        oppParty.add(hy3);
+    }
     if [id == 6] or [id == 8] or [id == 10] or [id == 11]{
         trTex = "trLass";
         trTexS = 80;
@@ -180,6 +200,9 @@ func load(int id){
 
 // 눈이 마주쳤을 때 대사의 lang 번호 · 이긴 뒤 잡담 (두 가지 중 하나 · 이 번호 + 0 또는 1)
 func int introL(int id){
+    if [id == 16]{   // 휴린
+        return(7518);
+    }
     if [id >= 13] and [id <= 15]{   // 유풍체육관 트레이너
         return(7474 + (id - 13));
     }
@@ -195,6 +218,9 @@ func int introL(int id){
     return(7320 + id);
 }
 func int chatL(int id){
+    if [id == 16]{   // 휴린: 이긴 뒤 (7520 · 7521)
+        return(7520);
+    }
     if [id >= 13] and [id <= 15]{
         return(7480 + (id - 13) * 2);
     }

@@ -607,10 +607,14 @@ func int trainerAt(float px, float py){
     var int call c = floor((px - 21000) / 16.0 + 17 + 0.5);
     var int call r = floor(35 + 0.5 - (py - 3000) / 16.0);
     var int call k = 31;
-    loop [k <= 33]{
+    loop [k <= 34]{   // 31 ~ 33 = 체육관 트레이너 · 34 = 관장 휴린 (맨 위 발판 · 10 칸 넓이라 가로 ±5)
         if [k <= npPlace.length]{
+            var int call kw = 2;
+            if [k == 34]{
+                kw = 5;
+            }
             if [npPlace[k] == 12] and [trDone.find(npTr[k]) == 0]{
-                if [c >= npCol[k] - 2] and [c <= npCol[k] + 2] and [r >= npRow[k] - 2] and [r <= npRow[k] + 2]{
+                if [c >= npCol[k] - kw] and [c <= npCol[k] + kw] and [r >= npRow[k] - 2] and [r <= npRow[k] + 2]{
                     return(k);
                 }
             }
