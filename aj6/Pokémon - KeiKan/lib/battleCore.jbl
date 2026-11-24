@@ -721,7 +721,7 @@ func moveFx(int mv, float ax, float ay, float tx, float ty, float s, string col)
 //   moveFx 가 먼저 여기를 봄 (있으면 이것 · 없으면 종류별 이펙트) · 오브젝트 sfx1 ~ sfx16 (끝나면 모두 지움)
 func int hasSp(int mv){
     var list call sp = [192, 411, 247, 53, 58, 85, 56, 412, 406, 315, 63, 416, 76, 451, 62, 61, 324, 430, 60, 820, 795, 796, 800, 711, 714, 888, 907, 905, 744, 705];   // 63 ~ 705 = 빔 기술 (spBeam)
-    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200, 352, 399, 805, 505, 396, 311, 408, 7, 8, 9, 418, 325, 4, 5, 146, 183, 223, 264, 309, 327, 359, 409, 612, 721, 817, 818, 857, 889, 24, 25, 26, 27, 67, 136, 167, 299, 490, 688, 813, 823, 853, 370, 123, 139, 499, 810, 108, 230, 225, 524, 77, 78, 79, 147, 178, 600, 750, 476, 528, 344, 38, 36, 834, 394, 924, 434, 15, 210, 314, 332, 348, 400, 403, 404, 427, 440, 533, 534, 548, 669, 781, 830, 845, 860, 869, 875, 891, 895, 910, 911, 923, 14, 349, 106, 110, 111, 112, 151, 334, 538, 747, 322, 455, 602, 97, 397, 475, 508, 882, 74, 526, 563, 674, 96, 159, 336, 187, 339, 811, 489, 347, 417, 294, 133, 268, 597, 483, 601, 868, 504, 748, 775, 104, 107];   // 타입 텍스쳐 (fx_type.png) 기술
+    var list call sp2 = [52, 126, 83, 145, 55, 75, 345, 437, 80, 84, 209, 87, 435, 181, 196, 59, 88, 157, 317, 479, 920, 51, 124, 584, 10, 154, 163, 232, 306, 337, 421, 468, 827, 921, 121, 188, 402, 426, 443, 491, 903, 585, 23, 89, 90, 222, 523, 707, 200, 352, 399, 805, 505, 396, 311, 408, 7, 8, 9, 418, 325, 4, 5, 146, 183, 223, 264, 309, 327, 359, 409, 612, 721, 817, 818, 857, 889, 24, 25, 26, 27, 67, 136, 167, 299, 490, 688, 813, 823, 853, 370, 123, 139, 499, 810, 108, 230, 225, 524, 77, 78, 79, 147, 178, 600, 750, 476, 528, 344, 38, 36, 834, 394, 924, 434, 15, 210, 314, 332, 348, 400, 403, 404, 427, 440, 533, 534, 548, 669, 781, 830, 845, 860, 869, 875, 891, 895, 910, 911, 923, 14, 349, 106, 110, 111, 112, 151, 334, 538, 747, 322, 455, 602, 97, 397, 475, 508, 882, 74, 526, 563, 674, 96, 159, 336, 187, 339, 811, 489, 347, 417, 294, 133, 268, 597, 483, 601, 868, 504, 748, 775, 104, 107, 44, 242, 162, 423, 424, 422, 45, 46, 47, 48, 103, 319, 195, 173, 253, 555, 574, 405, 71, 202, 141, 138, 577, 105, 234, 273, 236, 235, 355, 156, 182, 197, 203, 501, 469, 93, 94, 120, 153, 211, 231, 360, 442, 484, 684, 66, 69, 233, 249, 276, 280, 480, 122, 310, 425, 11, 12, 20, 21, 29, 32, 33, 34, 35, 37, 70, 98, 175, 206, 229, 245, 252, 283, 343, 387, 458, 398, 407, 525, 784, 91, 529, 667, 127, 401, 453, 205, 457, 224, 369, 450, 565, 679, 172, 488, 17, 64, 65, 365, 814, 228, 282, 371, 372, 389, 492, 675, 428, 609, 583, 22, 438, 452, 785, 803, 885];   // 타입 텍스쳐 (fx_type.png) 기술
     if [sp.find(mv) != 0]{
         return(1);
     }
@@ -2830,6 +2830,253 @@ func spBarBeam(float ax0, float ay0, float tx, float ty, float s, string inCol, 
     dis.removeObj("sfxb");
     spBurst(tx, ty, s, s * fxKt * 0.05, s * fxKt * 0.25, inCol, outCol, 10);
 }
+// ── 간단한 공용 이펙트 묶음 (2026-11-24) ──
+// 물기: 맞는 곳 위아래에서 이빨 셋씩 (세모 · sfx1 ~ sfx6) 이 5 프레임 만에 콱 다물고 → 번쩍 (타입 색) → 살짝 벌어지며 사라짐 · col = 이빨 색 · glow = 빛
+func spFangs(float tx, float ty, float s, string col, string glow, float size){
+    var float call fw = s * size;          // 이빨 하나의 폭
+    var float call fh = fw * 1.4;          // 높이
+    var float call gap = s * size * 2.2;   // 처음 벌어진 거리 (위아래 각각)
+    var int call fi = 1;
+    loop [fi <= 6]{
+        var float call fx = tx + (fi - floor((fi - 1) / 3) * 3 - 2) * fw * 1.05;
+        if [fi <= 3]{   // 위 이빨 (아래를 향함)
+            dis.setObjPlg([fx - fw / 2, ty + gap + fh], [fx + fw / 2, ty + gap + fh], [fx, ty + gap], "sfx%fi%", col);
+        }
+        else{           // 아래 이빨 (위를 향함)
+            dis.setObjPlg([fx - fw / 2, ty - gap - fh], [fx + fw / 2, ty - gap - fh], [fx, ty - gap], "sfx%fi%", col);
+        }
+        dis.setGlow("sfx%fi%", glow, fw * 0.4);
+        dis.setObjLayer("sfx%fi%", 2);
+        fi = fi + 1;
+    }
+    var int call ff = 1;
+    loop [ff <= 18]{
+        var float call d = gap;
+        if [ff <= 5]{
+            d = gap * (1 - ff / 5.0);   // 다묾
+        }
+        if [ff > 5] and [ff <= 9]{
+            d = 0;
+        }
+        if [ff > 9]{
+            d = gap * 0.25 * (ff - 9) / 9.0;   // 살짝 벌어짐
+        }
+        fi = 1;
+        loop [fi <= 6]{
+            var float call fx2 = tx + (fi - floor((fi - 1) / 3) * 3 - 2) * fw * 1.05;
+            if [fi <= 3]{
+                dis.setObjPos("sfx%fi%", [fx2, ty + d + fh / 2]);
+            }
+            else{
+                dis.setObjPos("sfx%fi%", [fx2, ty - d - fh / 2]);
+            }
+            if [ff > 9]{
+                dis.setObjAlpha("sfx%fi%", floor(255 * (18 - ff) / 9.0));
+            }
+            fi = fi + 1;
+        }
+        if [ff == 5]{
+            spBurstStart(tx, ty, s, glow);
+        }
+        wait(16);
+        ff = ff + 1;
+    }
+    spClear(6);
+    dis.removeObj("sfxb");
+}
+// 번쩍 하나 (sfxb) 를 만들어 두기만 함 (spFangs 등이 지움) — 크게 번진 빛
+func spBurstStart(float x, float y, float s, string glow){
+    pxCirc(x, y, "sfxb", s * 0.07, "#ffffff");
+    dis.setGlow("sfxb", glow, s * 0.25);
+    dis.setObjLayer("sfxb", 1);
+}
+// 소리: 쓰는 쪽 앞에서 음파 고리 (fx_ring · sfx1 ~ sfxn · n ≤ 10) 가 3 프레임 간격으로 퍼져 나가며 맞는 쪽으로 (커지며 옅어짐) · col = 색 · big = 크기
+func spSound(float ax0, float ay0, float tx, float ty, float s, string col, int n, float big){
+    var float call sl0 = max(1, sqrt((tx - ax0) * (tx - ax0) + (ty - ay0) * (ty - ay0)));
+    var float call ax = ax0 + (tx - ax0) / sl0 * s * fxKa * 0.2;
+    var float call ay = ay0 + (ty - ay0) / sl0 * s * fxKa * 0.2;
+    var int call si = 1;
+    loop [si <= n]{
+        ringObj("sfx%si%", ax, ay, col);
+        dis.setGlow("sfx%si%", col, s * 0.05);
+        dis.setObjLayer("sfx%si%", 2);
+        dis.setObjAlpha("sfx%si%", 0);
+        si = si + 1;
+    }
+    var int call sEnd = (n - 1) * 3 + 16;
+    var int call sf = 1;
+    loop [sf <= sEnd]{
+        si = 1;
+        loop [si <= n]{
+            var float call su = (sf - (si - 1) * 3) / 16.0;
+            if [su > 0] and [su <= 1]{
+                var float call sr = s * big * (0.12 + 0.5 * su) * pk(su);
+                dis.setObjPos("sfx%si%", [ax + (tx - ax) * su, ay + (ty - ay) * su]);
+                dis.setObjScale("sfx%si%", [sr, sr * 1.15]);
+                dis.setObjAlpha("sfx%si%", floor(230 * min(1, su * 6) * (1 - su)));
+            }
+            if [su > 1]{
+                dis.setObjAlpha("sfx%si%", 0);
+            }
+            si = si + 1;
+        }
+        wait(16);
+        sf = sf + 1;
+    }
+    spClear(n);
+}
+// 접촉 물리 기본: 돌격 (0.1 초) → 맞는 곳에서 충격 빛 (spImpact 0) + 타입 색 빛 번짐 → 돌아옴
+func spDashBasic(float ax, float ay, float tx, float ty, float s, float sT, string col){
+    dashGo(ax, ay, tx, ty, s, 6);
+    spImpact(tx, ty, sT, 0, "#ffffff", 0.42, 2, 0);
+    dashHit(tx, ty, sT, "#ffffff", col, 0.25);
+    dashBack(8);
+}
+// 흡수: 맞는 쪽 둘레에서 빛 알갱이 10 개 (sfx1 ~ sfx10) 가 차례로 떠올라 포물선을 그리며 쓰는 쪽으로 빨려 듦 → 쓰는 쪽이 빛남 (sfxb)
+func spDrain(float ax, float ay, float tx, float ty, float s, string col, int n){
+    var int call di = 1;
+    loop [di <= n]{
+        pxCirc(tx, ty, "sfx%di%", s * 0.025, "#ffffff");
+        dis.setGlow("sfx%di%", col, s * 0.07);
+        dis.setObjLayer("sfx%di%", 2);
+        dis.setObjAlpha("sfx%di%", 0);
+        di = di + 1;
+    }
+    var int call dEnd = (n - 1) * 3 + 20;
+    var int call df = 1;
+    loop [df <= dEnd]{
+        di = 1;
+        loop [di <= n]{
+            var float call du = (df - (di - 1) * 3) / 20.0;
+            if [du > 0] and [du <= 1]{
+                var float call sx = tx + sin(di * 97) * s * fxKt * 0.15;
+                var float call sy = ty + cos(di * 61) * s * fxKt * 0.1;
+                var float call de = du * du;
+                dis.setObjPos("sfx%di%", [sx + (ax - sx) * de, sy + (ay - sy) * de + sin(du * 180) * s * 0.18]);
+                var float call dsz = s * 0.05 * (fxKt + (fxKa - fxKt) * de);
+                dis.setObjScale("sfx%di%", [dsz, dsz]);
+                dis.setObjAlpha("sfx%di%", floor(255 * min(1, du * 5)));
+            }
+            if [du > 1]{
+                dis.setObjAlpha("sfx%di%", 0);
+            }
+            di = di + 1;
+        }
+        wait(16);
+        df = df + 1;
+    }
+    spClear(n);
+    spBurst(ax, ay, s, s * fxKa * 0.05, s * fxKa * 0.28, "#ffffff", col, 12);
+}
+// 회복: 쓰는 쪽 둘레에 반짝임 (fx_type 8 · 10 개 · sfx1 ~ sfx10) 이 차례로 반짝이며 천천히 떠오르고 · 몸 뒤 빛 (sfxb · 그림 뒤) 이 부드럽게 커졌다 사라짐
+func spHeal(float ax, float ay, float s, string col){
+    var float call hr = s * fxKa * 0.3;
+    var int call hi = 1;
+    loop [hi <= 10]{
+        pxTex(ax, ay, "sfx%hi%", s * fxKa * 0.035, 8);
+        dis.setObjColor("sfx%hi%", col);
+        dis.setGlow("sfx%hi%", col, s * 0.05);
+        dis.setObjLayer("sfx%hi%", 2);
+        dis.setObjAlpha("sfx%hi%", 0);
+        hi = hi + 1;
+    }
+    pxCirc(ax, ay, "sfxb", hr, col);
+    dis.setGlow("sfxb", col, s * 0.2);
+    sprFront(1);
+    dis.setObjLayer("sfxb", 0);
+    dis.setObjAlpha("sfxb", 0);
+    var int call hf = 1;
+    loop [hf <= 40]{
+        var float call ht = hf / 40.0;
+        dis.setObjScale("sfxb", [hr * 2 * (0.7 + 0.4 * ht), hr * 2 * (0.7 + 0.4 * ht)]);
+        dis.setObjAlpha("sfxb", floor(120 * sin(ht * 180)));
+        hi = 1;
+        loop [hi <= 10]{
+            var float call hu = (hf - (hi - 1) * 3) / 18.0;
+            if [hu > 0] and [hu <= 1]{
+                dis.setObjPos("sfx%hi%", [ax + sin(hi * 137) * hr * 0.9, ay - hr * 0.5 + hu * hr * 1.6]);
+                dis.setObjAlpha("sfx%hi%", floor(255 * sin(hu * 180)));
+                dis.rotateObj("sfx%hi%", 8, 0);
+            }
+            if [hu > 1]{
+                dis.setObjAlpha("sfx%hi%", 0);
+            }
+            hi = hi + 1;
+        }
+        wait(16);
+        hf = hf + 1;
+    }
+    spClear(10);
+    dis.removeObj("sfxb");
+    sprFront(0);
+}
+// 방어 (방어 · 판별 · 버티기 등): 쓰는 쪽을 감싸는 둥근 보호막 (고리 sfx1 + 옅은 막 sfxb) 이 커지며 나타나 반짝 → 잠시 유지 → 사라짐
+func spProtect(float ax, float ay, float s, string col){
+    var float call pr = s * fxKa * 0.42;
+    ringObj("sfx1", ax, ay, col);
+    dis.setGlow("sfx1", col, s * 0.1);
+    dis.setObjLayer("sfx1", 2);
+    pxCirc(ax, ay, "sfxb", pr, col);
+    dis.setObjLayer("sfxb", 2);
+    dis.setObjAlpha("sfxb", 0);
+    var int call pf = 1;
+    loop [pf <= 34]{
+        var float call pk2 = min(1, pf / 6.0);
+        var float call pa = 1;
+        if [pf > 26]{
+            pa = (34 - pf) / 8.0;
+        }
+        dis.setObjScale("sfx1", [pr * 2 * pk2, pr * 2 * pk2]);
+        dis.setObjAlpha("sfx1", floor(255 * pa * (0.8 + 0.2 * sin(pf * 40))));
+        dis.setObjScale("sfxb", [pr * 2 * pk2, pr * 2 * pk2]);
+        dis.setObjAlpha("sfxb", floor(60 * pa));
+        wait(16);
+        pf = pf + 1;
+    }
+    dis.removeObj("sfx1");
+    dis.removeObj("sfxb");
+}
+// 염동력 계열: 맞는 쪽에 사념 고리 셋 (sfx1 ~ sfx3) 이 차례로 조여들고 (커다란 고리 → 작게) · 맞는 포켓몬이 그 색으로 깜빡이며 좌우로 흔들림
+func spPsy(float tx, float ty, float s, string col, int big){
+    var string call tid = "opppoke";
+    var float call tx0 = obj.opppoke.Xpos;
+    if [abs(tx - obj.mypoke.Xpos) < 1] and [abs(ty - obj.mypoke.Ypos) < 1]{
+        tid = "mypoke";
+        tx0 = obj.mypoke.Xpos;
+    }
+    var int call pi = 1;
+    loop [pi <= 3]{
+        ringObj("sfx%pi%", tx, ty, col);
+        dis.setGlow("sfx%pi%", col, s * 0.08);
+        dis.setObjLayer("sfx%pi%", 2);
+        dis.setObjAlpha("sfx%pi%", 0);
+        pi = pi + 1;
+    }
+    var int call pEnd = 30 + big * 12;
+    var int call pf = 1;
+    loop [pf <= pEnd]{
+        pi = 1;
+        loop [pi <= 3]{
+            var float call pu = (pf - (pi - 1) * 6) / 14.0;
+            if [pu > 0] and [pu <= 1]{
+                var float call prr = s * (0.9 - 0.7 * pu) * (1 + 0.3 * big);
+                dis.setObjScale("sfx%pi%", [prr, prr * 0.8]);
+                dis.setObjAlpha("sfx%pi%", floor(230 * sin(pu * 180)));
+            }
+            if [pu > 1]{
+                dis.setObjAlpha("sfx%pi%", 0);
+            }
+            pi = pi + 1;
+        }
+        dis.setObjPos(tid, [tx0 + sin(pf * 50) * s * 0.02 * (1 + big), ty]);
+        dis.setObjOverlay(tid, col, floor(max(0, 120 * sin(pf * 25))));
+        wait(16);
+        pf = pf + 1;
+    }
+    dis.setObjPos(tid, [tx0, ty]);
+    dis.setObjOverlay(tid, col, 0);
+    spClear(3);
+}
 // ── 돌진 (2026-11-22): 공격하는 포켓몬 둘레에 기운 (sfx1 ~ sfx10) 이 맴돌며 진해짐 (20 프레임) → 몸 크기의 빛 덩이 (sfx11) 가 잔상 (sfx12 ~ sfx15) 을 남기며 7 프레임 만에 들이받음
 //   → 맞는 곳에서 충격파 (spBoom) · r = 빛 덩이 반지름 (s 에 곱함)
 func spRush(float ax, float ay, float tx, float ty, float s, string inCol, string outCol, float r){
@@ -3826,6 +4073,123 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     }
     if [mv == 104] or [mv == 107]{   // 그림자분신 · 작아지기: 회피
         spBoost(ax, ay, s, cE, cE, cE, 30, 1);
+    }
+    // ── 간단한 공용 이펙트로 묶은 기술 (2026-11-24) ──
+    if [mv == 44] or [mv == 162]{   // 물기 · 분노의앞니: 흰 이빨이 콱
+        spFangs(tx, ty, sT, "#ffffff", "#c8b0e8", 0.05);
+    }
+    if [mv == 242]{   // 깨물어부수기: 더 큰 이빨
+        spFangs(tx, ty, sT, "#ffffff", "#9a70d8", 0.065);
+    }
+    if [mv == 423]{   // 얼음엄니
+        spFangs(tx, ty, sT, "#e8faff", "#6ad0ff", 0.05);
+        spIceHit(tx, ty, sT, 4);
+    }
+    if [mv == 424]{   // 불꽃엄니
+        spFangs(tx, ty, sT, "#fff0e0", "#ff6a20", 0.05);
+        spBurst(tx, ty, sT, sT * 0.04, sT * 0.2, "#ffe080", "#ff5a10", 10);
+    }
+    if [mv == 422]{   // 번개엄니
+        spFangs(tx, ty, sT, "#fffbe0", "#ffd23a", 0.05);
+        spSparks(tx, ty, sT, 6, 0.05, 0.3, 14);
+    }
+    // 소리 (음파 고리) — spSound(…, 색, 고리 수, 크기)
+    if [mv == 45]{   // 울음소리
+        spSound(ax, ay, tx, ty, s, "#ffffff", 4, 0.5);
+    }
+    if [mv == 46]{   // 울부짖기: 크고 많이
+        spSound(ax, ay, tx, ty, s, "#fff0c0", 7, 0.8);
+    }
+    if [mv == 47]{   // 노래하기: 분홍 · 느긋하게
+        spSound(ax, ay, tx, ty, s, "#ffb0e0", 5, 0.5);
+    }
+    if [mv == 48]{   // 초음파: 하늘빛 · 많이 · 작게
+        spSound(ax, ay, tx, ty, s, "#c8f0ff", 8, 0.35);
+    }
+    if [mv == 103]{   // 싫은소리
+        spSound(ax, ay, tx, ty, s, "#f0f0f0", 8, 0.45);
+    }
+    if [mv == 319]{   // 금속음
+        spSound(ax, ay, tx, ty, s, "#d0dce8", 7, 0.45);
+    }
+    if [mv == 195]{   // 멸망의노래
+        spSound(ax, ay, tx, ty, s, "#d0a0ff", 6, 0.6);
+    }
+    if [mv == 173] or [mv == 253]{   // 코골기 · 소란피기
+        spSound(ax, ay, tx, ty, s, "#ffe0b0", 6, 0.55);
+    }
+    if [mv == 555]{   // 바크아웃
+        spSound(ax, ay, tx, ty, s, "#a080c0", 6, 0.55);
+    }
+    if [mv == 574]{   // 차밍보이스
+        spSound(ax, ay, tx, ty, s, "#ffa0d0", 6, 0.55);
+    }
+    if [mv == 405]{   // 벌레의야단법석
+        spSound(ax, ay, tx, ty, s, "#c8e860", 7, 0.6);
+    }
+    // 흡수 (빛 알갱이가 쓰는 쪽으로)
+    if [mv == 71]{   // 흡수
+        spDrain(ax, ay, tx, ty, s, "#90ff70", 6);
+    }
+    if [mv == 202]{   // 기가드레인
+        spDrain(ax, ay, tx, ty, s, "#60f040", 10);
+    }
+    if [mv == 141]{   // 흡혈
+        spDrain(ax, ay, tx, ty, s, "#ff6a6a", 6);
+    }
+    if [mv == 138]{   // 꿈먹기
+        spDrain(ax, ay, tx, ty, s, "#ff90d0", 10);
+    }
+    if [mv == 577]{   // 드레인키스
+        spDrain(ax, ay, tx, ty, s, "#ffa8d8", 8);
+    }
+    // 회복
+    if [mv == 105]{   // HP회복
+        spHeal(ax, ay, s, "#a0ffb8");
+    }
+    if [mv == 234] or [mv == 273]{   // 아침햇살 · 희망사항
+        spHeal(ax, ay, s, "#fff0a0");
+    }
+    if [mv == 236]{   // 달빛
+        spHeal(ax, ay, s, "#e0d0ff");
+    }
+    if [mv == 235]{   // 광합성
+        spHeal(ax, ay, s, "#b8ff80");
+    }
+    if [mv == 355]{   // 날개쉬기
+        spHeal(ax, ay, s, "#e0f0ff");
+    }
+    if [mv == 156]{   // 잠자기
+        spHeal(ax, ay, s, "#c8c8ff");
+    }
+    // 방어
+    if [mv == 182] or [mv == 197]{   // 방어 · 판별
+        spProtect(ax, ay, s, "#80ffb0");
+    }
+    if [mv == 203]{   // 버티기
+        spProtect(ax, ay, s, "#ffb080");
+    }
+    if [mv == 501] or [mv == 469]{   // 패스트가드 · 와이드가드
+        spProtect(ax, ay, s, "#ffe8a0");
+    }
+    // 염동력 계열
+    if [mv == 93]{   // 염동력
+        spPsy(tx, ty, sT, "#ff90e0", 0);
+    }
+    if [mv == 94]{   // 사이코키네시스
+        spPsy(tx, ty, sT, "#ff70d0", 1);
+    }
+    // 자폭 · 대폭발: 쓰는 쪽에서 크게 터짐
+    if [mv == 120]{
+        spBoom(ax, ay, sA, "#fff4d0", "#ff8a2a", 0.9, 12, 0, 18);
+    }
+    if [mv == 153]{
+        spBoom(ax, ay, sA, "#fffbe8", "#ff6a20", 1.3, 16, 0, 22);
+    }
+    // 접촉 물리 기본 (돌격 → 타입 색 충격) — 전용 이펙트가 없는 접촉 기술
+    var list call dashMv = [211, 231, 360, 442, 484, 684, 66, 69, 233, 249, 276, 280, 480, 122, 310, 425, 11, 12, 20, 21, 29, 32, 33, 34, 35, 37, 70, 98, 175, 206, 229, 245, 252, 283, 343, 387, 458, 398, 407, 525, 784, 91, 529, 667, 127, 401, 453, 205, 457, 224, 369, 450, 565, 679, 172, 488, 17, 64, 65, 365, 814, 228, 282, 371, 372, 389, 492, 675, 428, 609, 583, 22, 438, 452, 785, 803, 885];
+    if [dashMv.find(mv) != 0]{
+        spDashBasic(ax, ay, tx, ty, s, sT, fxSrcCol);
     }
     if [mv == 408]{   // 파워젬: 여러 색 보석 바위가 차츰 나타나 쓰는 쪽 둘레를 돌다가 → 맞는 곳으로 빠르게 날아가 부서짐
         spGems(ax, ay, tx, ty, s);
