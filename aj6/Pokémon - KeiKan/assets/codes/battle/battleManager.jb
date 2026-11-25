@@ -1381,7 +1381,7 @@ run{
                 bc.setMsg("wildappeared", lang[3895], msgS, msgW);
                 bc.waitMsg(1200);
                 battleOver = 3;
-                goTo(6431);   // 배틀 끝 (도주)
+                goTo(6439);   // 배틀 끝 (도주)
             }
             bc.setMsg("wildappeared", lang[3896], msgS, msgW);
             bc.waitMsg(1200);
@@ -1758,7 +1758,7 @@ run{
         }
         if [pendingMove != 0]{
             if [caughtNow == 1]{   // 잡음: 행동 없이 턴 끝의 경험치 처리로
-                goTo(5426);   // 포획 경험치
+                goTo(5434);   // 포획 경험치
             }
             // ── 한 턴: 메뉴 상자는 그대로 · 메뉴 글자와 커서는 숨김 (턴이 끝나면 다시) · 왼쪽 상자에 메시지 ──
             dis.disableObj("bselect");
@@ -3529,7 +3529,7 @@ run{
                             tgAlive = myHp;
                             tgName = myName;
                         }
-                        if [um[2] == 2] and [bc.hasSp(uMove) == 1]{   // 변화 기술 중 따로 만든 이펙트가 있는 것 (손톱갈기 등 · lib/battleCore.jbl 의 spFx)
+                        if [um[2] == 2] and [bc.hasSp(uMove) == 1] and [uMove != 182] and [uMove != 197]{   // 변화 기술 중 따로 만든 이펙트가 있는 것 (손톱갈기 등 · lib/battleCore.jbl 의 spFx) — 방어 · 판별은 성공했을 때만 (아래)
                             if [side == 1]{
                                 bc.fxFrom(myTexNow, mySz, weather, terrain);
                                 bc.moveFx(uMove, obj.mypoke.Xpos, obj.mypoke.Ypos, obj.opppoke.Xpos, obj.opppoke.Ypos, pfS, mu.typeCol(um[6]));
@@ -3878,6 +3878,14 @@ run{
                                     sProt[side] = 1;
                                     if [uMove == 197]{   // 판별: 막을 때 피함 (2)
                                         sProt[side] = 2;
+                                    }
+                                    if [side == 1]{   // 성공했을 때만 이펙트 (방어 = 둥근 보호막 · 판별 = "!" 뒤 옆으로 피함)
+                                        bc.fxFrom(myTexNow, mySz, weather, terrain);
+                                        bc.moveFx(uMove, obj.mypoke.Xpos, obj.mypoke.Ypos, obj.opppoke.Xpos, obj.opppoke.Ypos, pfS, mu.typeCol(um[6]));
+                                    }
+                                    else{
+                                        bc.fxFrom(oppTex, oppSz, weather, terrain);
+                                        bc.moveFx(uMove, obj.opppoke.Xpos, obj.opppoke.Ypos, obj.mypoke.Xpos, obj.mypoke.Ypos, pfS, mu.typeCol(um[6]));
                                     }
                                     bc.setMsg("wildappeared", replaceStr(lang[1485], "{poke}", aName), msgS, msgW);
                                 }
@@ -4629,7 +4637,7 @@ run{
                 k = k + 1;
             }
             if [battleOver == 3]{   // 날려버리기 · 울부짖기 · 순간이동: 배틀이 그대로 끝남
-                goTo(6431);   // 배틀 끝 (도망)
+                goTo(6439);   // 배틀 끝 (도망)
             }
             // 턴 끝: 방어 · 버티기는 그 턴만 · 이번 턴에 안 썼으면 연속 횟수는 0
             var int call zs = 1;
@@ -5997,7 +6005,7 @@ run{
             }
             forceSw = 0;
             if [battleOver != 0]{
-                goTo(6431);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
+                goTo(6439);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
             }
             if ([myChg != 0] or [myRech == 1]) and [myHp > 0]{   // 모으는 중 · 반동으로 쉬는 턴: 메뉴 없이 다음 턴
                 var compound call cgM = myPoke[22];
