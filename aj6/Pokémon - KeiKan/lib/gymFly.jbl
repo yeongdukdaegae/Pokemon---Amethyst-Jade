@@ -49,6 +49,7 @@ var public int call gyWt;      // 바람이 바뀔 때까지 남은 프레임 (5
 var public compound call gyRes;   // 리포트에서 읽은 체육관 상태 (loadManager.jb · enter 가 한 번 쓰고 비움)
 var public list call gyFxX;    // 바람 이펙트 줄기 위치 (화면)
 var public list call gyFxY;
+var public int call gyFxV;     // 바람 줄기가 보이는지 (1 보임 · 0 숨김: 메뉴 · 대화 · 배틀 중 — 못 움직이는 동안)
 var public float call gyAx;    // 바람 이펙트가 흐르는 화면 (폭 · 가운데 y · 높이)
 var public float call gyAy;
 var public float call gyAh;
@@ -226,13 +227,40 @@ func fxMake(){
         loop [j <= 4]{
             dis.setObject([gyFxX[k], gyFxY[k]], "gyFx%k%_%j%", [gyAh * 0.008, gyAh * 0.008], "#ffffff");
             can.setUi("gyFx%k%_%j%");
-            dis.setObjLayer("gyFx%k%_%j%", 50);
+            dis.setObjLayer("gyFx%k%_%j%", 30);   // 필드 메뉴 · 포켓몬 메뉴 (40 ~) · 대화창 (80 ~) 아래
             dis.setObjAlpha("gyFx%k%_%j%", 150 - j * 30);
             j = j + 1;
         }
         k = k + 1;
     }
+    gyFxV = 1;
     fxMove();
+}
+func hudAlpha(int a){   // 양력 게이지 · 바람 방향 글자 (글라이더를 가졌을 때만 있음)
+    dis.setObjAlpha("gyUb", a);
+    dis.setObjAlpha("gyUg", a);
+    dis.setObjAlpha("gyUf", a);
+    dis.setObjAlpha("gyUt", a);
+    dis.setObjAlpha("gyUn", a);
+    dis.setObjAlpha("gyUz", a);
+    dis.setObjAlpha("gyUw", a);
+}
+func fxVis(int on){   // 바람 줄기 · 양력 게이지 보이기 / 숨기기 (바뀔 때만 · 메뉴가 그 위에 덮이도록)
+    if [on != gyFxV]{
+        gyFxV = on;
+        if [gyGlide == 1]{
+            hudAlpha(255 * on);
+        }
+        var int call k = 1;
+        loop [k <= 14]{
+            var int call j = 1;
+            loop [j <= 4]{
+                dis.setObjAlpha("gyFx%k%_%j%", (150 - j * 30) * on);
+                j = j + 1;
+            }
+            k = k + 1;
+        }
+    }
 }
 func fxMove(){
     var float call wa = 90 - gyWd * 45;
@@ -328,6 +356,9 @@ func uiMake(){
     dis.setObjLayer("gyUn", 63);
     dis.setObjLayer("gyUz", 63);
     dis.setObjLayer("gyUw", 63);
+    if [gyFxV == 0]{   // 메뉴 · 대화 중에 만들어지면 숨긴 채로
+        hudAlpha(0);
+    }
     uiSet();
 }
 func uiSet(){
@@ -454,6 +485,7 @@ func int tick(float px, float py, int cm){
     var int call res = 0;
     var int call stay = 0;   // 1 = 이륙 전에 발판 밖으로 나가려 해서 제자리로 돌림
     var int call zNow = ky.z();
+    fxVis(cm);   // 메뉴 (포켓몬 · 가방 · 능력치 화면) · 대화 중에는 바람 줄기를 숨김
     if [cm == 1]{
         gyF = gyF + 1;
         fxMove();

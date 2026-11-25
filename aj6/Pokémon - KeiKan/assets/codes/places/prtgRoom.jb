@@ -2685,7 +2685,9 @@ run{
             dis.setObjAlpha("warpblk", 0) for 180;
             wait(200);
             dis.removeObj("warpblk");
-            canMove = 1;
+            if [woNurse == 0]{   // 전멸 뒤라면 간호순 대사가 끝날 때까지 못 움직임 (그 사이 선택 키로 간호순과 또 말하지 않게)
+                canMove = 1;
+            }
         }
         if [woNurse == 1]{   // 전멸 뒤: 간호순이 먼저 회복시켜 줌
             woNurse = 0;
@@ -2699,6 +2701,7 @@ run{
             ft.close();
             setup("assets/codes/saveManager.jb");   // 회복한 상태로 리포트
             loop [ky.z()]{ dis.waitF(1); }
+            wait(150);   // 마지막 대사를 넘긴 선택 키가 바로 간호순 말 걸기로 이어지지 않게
             canMove = 1;
         }
         fn.depth(obj.prtg.Ypos);   // 사람과 플레이어의 앞뒤

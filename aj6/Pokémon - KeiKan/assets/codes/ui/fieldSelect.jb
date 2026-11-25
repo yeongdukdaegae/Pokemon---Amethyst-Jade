@@ -28,6 +28,7 @@ var public float call fsOx;   // 맵의 [0, 0] 칸이 놓인 곳 (방 스크립�
 var public float call fsOy;
 var public list call fsSolid;
 var public list call fsAct;
+var public int call ftIsOpen;   // 대화창이 열려 있으면 1 (lib/fieldTalk.jbl) — 열려 있는 동안엔 새로 말 걸지 않음
 var public bit call canMove;
 var public int call direction;   // 1 왼쪽 · 2 오른쪽 · 3 아래 · 4 위 (jahui.jb)
 var public list call lang;
@@ -135,7 +136,7 @@ run{
                 }
             }
         }
-        if [ky.z()] and [canMove == 1] and [nowAct != 0]{
+        if [ky.z()] and [canMove == 1] and [nowAct != 0] and [ftIsOpen == 0]{
             // 상호작용: 대사 상자 (화면에 고정 · 4 줄) — Z 로 닫음
             canMove = 0;
             sou.playSfx("ui", "choose", 2000);
