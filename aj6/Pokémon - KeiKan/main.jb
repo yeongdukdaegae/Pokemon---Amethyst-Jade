@@ -20,6 +20,7 @@ run{
     mag.importFile("assets/textures/battle/fx_type.png") save as ("fxtype");   // 타입별 이펙트 알갱이 (16 x 16 칸 9 개: 불똥 · 물거품 · 나뭇잎 · 스파크 · 얼음 · 돌 · 독 · 반짝임 · 꽃잎 — lib/battleCore.jbl 의 pxTex)
     mag.importFile("assets/textures/battle/fx_claw.png") save as ("fxclaw");   // 발톱 자국 (32 x 32 칸 4 개: 그어지는 중 2 칸 · 다 그어짐 · 사라지는 중 — 흰색이라 색을 입혀 씀 · lib/battleCore.jbl 의 spClaws)
     mag.importFile("assets/textures/battle/fx_ball.png") save as ("fxball");   // 폭탄 기술의 물건 같은 공 (24 x 24 칸 6 개: 알 · 씨앗 · 진흙 덩이 · 쇠 공 · 오물 덩이 · 시럽 방울 — lib/battleCore.jbl 의 bombBall)
+    mag.importFile("assets/textures/battle/fx_waterball.png") save as ("fxwball");   // 하이드로볼 물 공 (32 x 32 칸 4 개 = 소용돌이 프레임 — lib/battleCore.jbl 의 spHydroBall)
     mag.importFile("assets/textures/battle/fx_ring.png") save as ("fxring");   // 파동 기술의 고리 (32 x 32 · 흰색이라 색을 입혀 씀 — lib/battleCore.jbl 의 spPulse)
     mag.importFile("assets/textures/battle/fx_gem.png") save as ("fxgem");   // 파워젬의 보석 바위 (24 x 24 칸 4 개 · 흰 · 회색 조각면이라 색을 입혀 씀 — lib/battleCore.jbl 의 spGems · fxsrc/make_fx_gem.py)
     mag.importFile("assets/textures/battle/fx_hit.png") save as ("fxhit");   // 타격 아이콘 (32 x 32 칸 2 개: 주먹 · 발바닥 — DPPt 느낌 · 흰색이라 타입 색을 입힐 수 있음 · lib/battleCore.jbl 의 spImpact · fxsrc/make_fx_hit.py)
