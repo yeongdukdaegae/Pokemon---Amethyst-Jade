@@ -20,6 +20,8 @@ Use keyIn call ky;   // Z · X (스페이스 · Esc 도)
 
 var public int call ftResult;
 var public string call ftWho;     // 지금 열린 상자의 이름 ("" = 이름 상자 없음)
+var public int call ftIsOpen;     // 1 = 대화 상자가 열려 있음 (여러 스크립트가 같은 상자를 쓰므로 · 없으면 쓸 때 다시 열고 · 이미 닫혔으면 닫기를 건너뜀)
+var public int call ftHasName;    // 1 = 지금 상자에 이름 상자 · 초상화 칸이 있음 (닫을 때)
 var public float call ftX;
 var public float call ftY;
 var public float call ftW;
@@ -28,6 +30,9 @@ var public float call ftTs;
 var public float call ftOff;      // 이름 상자가 있으면 글을 조금 내림
 
 func open(string who){
+    if [ftIsOpen == 1]{   // 이미 열려 있으면 (다른 스크립트가 연 것) 지우고 새로
+        removeBox();
+    }
     ftWho = who;
     ftX = 0;
     ftY = 1440 / 11 - 360;
@@ -83,6 +88,18 @@ func open(string who){
         dis.setObjLayer("fmsgc%q%", 82);
         q = q + 1;
     }
+    ftIsOpen = 1;
+    ftHasName = 0;
+    if [who != ""]{
+        ftHasName = 1;
+    }
+}
+// 줄 하나에 글: 상자가 없으면 (다른 스크립트가 닫음) 다시 열고 씀
+func setLine(int q, string s){
+    if [ftIsOpen == 0]{
+        open(ftWho);
+    }
+    dis.setTxtContent("fmsgc%q%", s);
 }
 
 func type(string text){
@@ -110,7 +127,7 @@ func typePage(string text){
     var list call ln = splitStr(wrapped, "\n");
     var int call q = 1;
     loop [q <= 4]{
-        dis.setTxtContent("fmsgc%q%", "");
+        setLine(q, "");
         q = q + 1;
     }
     log("대사: " + text);
@@ -125,7 +142,7 @@ func typePage(string text){
         if [ky.x()]{
             var int call sq = 1;
             loop [sq <= nL]{
-                dis.setTxtContent("fmsgc%sq%", ln[sq]);
+                setLine(sq, ln[sq]);
                 sq = sq + 1;
             }
             tq = nL + 1;
@@ -141,7 +158,7 @@ func typePage(string text){
                     acc = acc + 30;
                 }
                 else{
-                    dis.setTxtContent("fmsgc%tq%", subStr(ln[tq], 1, tn));
+                    setLine(tq, subStr(ln[tq], 1, tn));
                 }
             }
             dis.waitF(1);
@@ -289,9 +306,15 @@ func choose3(string a1, string a2, string a3){
 }
 
 func close(){
+    if [ftIsOpen == 1]{   // 이미 닫혔으면 (다른 스크립트가 닫음) 건너뜀 — 없는 오브젝트를 지우면 오류
+        removeBox();
+    }
+    loop [ky.x()]{ dis.waitF(1); }   // 넘기던 X 로 메뉴가 열리지 않게
+}
+func removeBox(){
     dis.removeObj("fmsgbd");
     dis.removeObj("fmsgbg");
-    if [ftWho != ""]{
+    if [ftHasName == 1]{
         dis.removeObj("fmsgnb");
         dis.removeObj("fmsgnf");
         dis.removeObj("fmsgnt");
@@ -303,5 +326,6 @@ func close(){
         dis.removeObj("fmsgc%q%");
         q = q + 1;
     }
-    loop [ky.x()]{ dis.waitF(1); }   // 넘기던 X 로 메뉴가 열리지 않게
+    ftIsOpen = 0;
+    ftHasName = 0;
 }
