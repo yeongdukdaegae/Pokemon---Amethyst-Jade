@@ -34,6 +34,20 @@ run{
         mag.setasAnime(stL, 70, "stfx%stR%");
         stR = stR + 1;
     }
+    mag.importFile("assets/textures/battle/fx_hand.png") save as ("fxhand");   // 손 기술 · 방어 · 판별 애니메이션 (32 x 32 · 가로 6 프레임 · 10 줄 — lib/battleCore.jbl 의 spHand · spGuard · spDetect)
+    stR = 1;   // 줄마다 "hdfx줄_프레임" → 애니메이션 "hdfx줄" (70ms) · 보호막 반짝임 고리 "hdfx10s" (3 ~ 6 프레임 · 90ms)
+    loop [stR <= 10]{
+        var list call hdL = [];
+        var int call hdF = 1;
+        loop [hdF <= 6]{
+            mag.setasTexture("fxhand", [(hdF - 1) * 32, (stR - 1) * 32], [hdF * 32, stR * 32]) save as ("hdfx%stR%_%hdF%");
+            hdL.add("hdfx%stR%_%hdF%");
+            hdF = hdF + 1;
+        }
+        mag.setasAnime(hdL, 70, "hdfx%stR%");
+        stR = stR + 1;
+    }
+    mag.setasAnime(["hdfx10_3", "hdfx10_4", "hdfx10_5", "hdfx10_6"], 90, "hdfx10s");
     mag.importFile("assets/textures/battle/fx_ring.png") save as ("fxring");   // 파동 기술의 고리 (32 x 32 · 흰색이라 색을 입혀 씀 — lib/battleCore.jbl 의 spPulse)
     mag.importFile("assets/textures/battle/fx_gem.png") save as ("fxgem");   // 파워젬의 보석 바위 (24 x 24 칸 4 개 · 흰 · 회색 조각면이라 색을 입혀 씀 — lib/battleCore.jbl 의 spGems · fxsrc/make_fx_gem.py)
     mag.importFile("assets/textures/battle/fx_hit.png") save as ("fxhit");   // 타격 아이콘 (32 x 32 칸 2 개: 주먹 · 발바닥 — DPPt 느낌 · 흰색이라 타입 색을 입힐 수 있음 · lib/battleCore.jbl 의 spImpact · fxsrc/make_fx_hit.py)

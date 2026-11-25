@@ -1381,7 +1381,7 @@ run{
                 bc.setMsg("wildappeared", lang[3895], msgS, msgW);
                 bc.waitMsg(1200);
                 battleOver = 3;
-                goTo(6416);   // 배틀 끝 (도주)
+                goTo(6431);   // 배틀 끝 (도주)
             }
             bc.setMsg("wildappeared", lang[3896], msgS, msgW);
             bc.waitMsg(1200);
@@ -1758,7 +1758,7 @@ run{
         }
         if [pendingMove != 0]{
             if [caughtNow == 1]{   // 잡음: 행동 없이 턴 끝의 경험치 처리로
-                goTo(5411);   // 포획 경험치
+                goTo(5426);   // 포획 경험치
             }
             // ── 한 턴: 메뉴 상자는 그대로 · 메뉴 글자와 커서는 숨김 (턴이 끝나면 다시) · 왼쪽 상자에 메시지 ──
             dis.disableObj("bselect");
@@ -2534,11 +2534,23 @@ run{
                         }
                     }
                     // 방어 · 판별: 이번 턴에 방어한 상대에게 겨냥하는 기술은 막힘 (고스트다이브 · 섀도다이브는 뚫음)
-                    if [failed == 0] and [sProt[3 - side] == 1] and [bc.selfTarget(uMove) == 0] and [uMove != 566] and [uMove != 467]{
+                    if [failed == 0] and [sProt[3 - side] >= 1] and [bc.selfTarget(uMove) == 0] and [uMove != 566] and [uMove != 467]{   // sProt 1 = 방어 · 2 = 판별
                         failed = 1;
                         hit = 0;
-                        bc.setMsg("wildappeared", replaceStr(lang[1460], "{poke}", dName), msgS, msgW);
-                        log(dName + " 방어");
+                        if [side == 1]{   // 막는 쪽 이펙트 (방어 = 보호막이 번쩍 · 판별 = "!" 를 띄우며 옆으로 피함)
+                            bc.guardFx(sProt[2], obj.opppoke.Xpos, obj.opppoke.Ypos, pfS);
+                        }
+                        else{
+                            bc.guardFx(sProt[1], obj.mypoke.Xpos, obj.mypoke.Ypos, pfS);
+                        }
+                        if [sProt[3 - side] == 2]{   // 판별: 피함 (방어와 다른 판정 · 메시지)
+                            bc.setMsg("wildappeared", replaceStr(replaceStr(lang[7523], "{poke}", dName), "{atk}", aName), msgS, msgW);
+                            log(dName + " 판별로 피함");
+                        }
+                        else{
+                            bc.setMsg("wildappeared", replaceStr(lang[1460], "{poke}", dName), msgS, msgW);
+                            log(dName + " 방어");
+                        }
                     }
                     // 록온 · 마음의눈: 다음 기술이 반드시 맞음
                     if [failed == 0] and [sLock[side] == 1] and [bc.selfTarget(uMove) == 0]{
@@ -3864,6 +3876,9 @@ run{
                                 }
                                 else{
                                     sProt[side] = 1;
+                                    if [uMove == 197]{   // 판별: 막을 때 피함 (2)
+                                        sProt[side] = 2;
+                                    }
                                     bc.setMsg("wildappeared", replaceStr(lang[1485], "{poke}", aName), msgS, msgW);
                                 }
                             }
@@ -4614,7 +4629,7 @@ run{
                 k = k + 1;
             }
             if [battleOver == 3]{   // 날려버리기 · 울부짖기 · 순간이동: 배틀이 그대로 끝남
-                goTo(6416);   // 배틀 끝 (도망)
+                goTo(6431);   // 배틀 끝 (도망)
             }
             // 턴 끝: 방어 · 버티기는 그 턴만 · 이번 턴에 안 썼으면 연속 횟수는 0
             var int call zs = 1;
@@ -5982,7 +5997,7 @@ run{
             }
             forceSw = 0;
             if [battleOver != 0]{
-                goTo(6416);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
+                goTo(6431);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
             }
             if ([myChg != 0] or [myRech == 1]) and [myHp > 0]{   // 모으는 중 · 반동으로 쉬는 턴: 메뉴 없이 다음 턴
                 var compound call cgM = myPoke[22];

@@ -615,6 +615,7 @@ run{
     engLang[7520] = "You don't fight the wind. You ride it.\nSomeone who knows that can fly even higher.";   // 유풍체육관 관장 휴린
     engLang[7521] = "Next time, I'll have a stronger wind ready.\nTry not to get blown away then.";   // 유풍체육관 관장 휴린
     engLang[7522] = "You received the Flowd Badge from Flowney!";   // 유풍체육관 관장 휴린
+    engLang[7523] = "{poke} evaded {atk}'s attack!";   // 판별 (Detect) 로 피함
     engLang[7238] = "Here, take these too.\nThey're Poké Balls, for catching Pokémon.";
     engLang[7239] = "You received {n} {item}s!";
     engLang[7240] = "Hillet Town Shop";
