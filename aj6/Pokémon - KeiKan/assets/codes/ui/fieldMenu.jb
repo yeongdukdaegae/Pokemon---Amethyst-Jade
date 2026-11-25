@@ -41,6 +41,7 @@ var public matrix[8, 8] call selectUi;   // 가방 화면의 커서 (menuSelecti
 var public list call selectedBox;      // [가로 칸, 세로 칸]
 var public bit call isUi;
 var public bit call canMove;
+var public int call fmOpen;   // 1 = X 메뉴 (와 그 안의 포켓몬 · 가방 · 능력치 화면) 가 열려 있음 — lib/gymFly.jbl 이 바람 UI 를 숨김
 var public int call fmClock;   // 1 = 메뉴가 열려 있음 → timeManager.jb 가 맨 위의 날짜 · 시각 글자 (fmhdrt) 를 1 분마다 고침
 var public list call lang;
 var public int call money;          // 소지금 (맨 위 오른쪽에 보여 줌)
@@ -83,6 +84,7 @@ run{
     loop{
         if [ky.x()] and [canMove == 1]{
             canMove = 0;
+            fmOpen = 1;
             sou.playSfx("ui", "choose", 2000);
             // 화면 전체 (모바일은 조작부 위의 화면)
             var float call mX = 0;
@@ -786,6 +788,7 @@ run{
             dis.removeObj("fmhdrt");
             dis.removeObj("fmhdrm");
             loop [ky.x()]{ dis.waitF(1); }
+            fmOpen = 0;
             if [quitTitle == 1]{   // 타이틀로 나감: 움직이지 못하게 둔 채 이 메뉴 코드도 끝
                 break();
             }

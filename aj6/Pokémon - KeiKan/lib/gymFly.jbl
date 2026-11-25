@@ -49,6 +49,8 @@ var public int call gyWt;      // 바람이 바뀔 때까지 남은 프레임 (5
 var public compound call gyRes;   // 리포트에서 읽은 체육관 상태 (loadManager.jb · enter 가 한 번 쓰고 비움)
 var public list call gyFxX;    // 바람 이펙트 줄기 위치 (화면)
 var public list call gyFxY;
+var public int call fmOpen;    // X 메뉴가 열려 있음 (fieldMenu.jb)
+var public int call wxRun;     // 1 = 배틀 중 (battleManager.jb 의 날씨 연출)
 var public int call gyFxV;     // 바람 줄기가 보이는지 (1 보임 · 0 숨김: 메뉴 · 대화 · 배틀 중 — 못 움직이는 동안)
 var public float call gyAx;    // 바람 이펙트가 흐르는 화면 (폭 · 가운데 y · 높이)
 var public float call gyAy;
@@ -356,7 +358,7 @@ func uiMake(){
     dis.setObjLayer("gyUn", 63);
     dis.setObjLayer("gyUz", 63);
     dis.setObjLayer("gyUw", 63);
-    if [gyFxV == 0]{   // 메뉴 · 대화 중에 만들어지면 숨긴 채로
+    if [fmOpen == 1] or [wxRun == 1]{   // 메뉴 · 배틀 중에 만들어지면 숨긴 채로 (다음 tick 의 fxVis 가 다시 보임)
         hudAlpha(0);
     }
     uiSet();
@@ -485,7 +487,11 @@ func int tick(float px, float py, int cm){
     var int call res = 0;
     var int call stay = 0;   // 1 = 이륙 전에 발판 밖으로 나가려 해서 제자리로 돌림
     var int call zNow = ky.z();
-    fxVis(cm);   // 메뉴 (포켓몬 · 가방 · 능력치 화면) · 대화 중에는 바람 줄기를 숨김
+    var int call vis = 1;   // 메뉴 (포켓몬 · 가방 · 능력치 화면) · 배틀 중에는 바람 줄기 · 양력 게이지를 숨김 (날 때 · 대화 중에는 보임)
+    if [fmOpen == 1] or [wxRun == 1]{
+        vis = 0;
+    }
+    fxVis(vis);
     if [cm == 1]{
         gyF = gyF + 1;
         fxMove();
