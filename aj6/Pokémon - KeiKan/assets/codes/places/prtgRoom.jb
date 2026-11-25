@@ -1601,6 +1601,9 @@ run{
             if [battleForm == 1]{
                 sou.introPart("global", "wildBattle", 2600, 90000);   // wildBattle.mp3 = 원본의 90 ~ 181 초만 잘라 둔 파일 → 처음 (원본 90 초) 부터 재생 → 그 뒤 2.6 ~ 90 초 (원본 92.6 ~ 180 초) 구간을 반복
             }
+            else if [trainerId == 16]{   // 유풍체육관 관장 휴린: 관장 배틀 음악 — gymLeader.mp3 = 원본 (180 초 · 한 바퀴 44.42 초) 의 앞 61.4 초만 (한 바퀴가 정확히 44420 밀리초가 되게 7 ppm 늘임 · 소리 크기를 트레이너 배틀 음악에 맞춤) → 처음부터 재생 → 16.000 ~ 60.420 초 구간을 반복 (2026-11-25)
+                sou.introPart("global", "gymLeader", 16000, 60420);
+            }
             else{
                 sou.introPart("global", "trainerBattle", 17117, 100611);   // 트레이너 배틀 음악: trainerBattle.mp3 = 원본 (같은 곡을 9 번 넘게 이어 붙인 12 분 46 초) 의 앞 106 초만 (한 바퀴가 정확히 83494 밀리초가 되게 3.5 ppm 늘임) → 처음부터 재생 → 17.117 ~ 100.611 초 구간을 반복 (2026-11-20 최적화)
             }
@@ -1787,12 +1790,18 @@ run{
         if [place == 6]{   // 1번도로 서쪽: 1번도로 음악
             wantBgm = "route1";
         }
-        if [place == 7] or [place == 8] or [place == 11] or [place == 12]{   // 유풍시티 · 상점 · 체육관 로비 (제작자 제공 음악)
+        if [place == 7] or [place == 8] or [place == 11]{   // 유풍시티 · 상점 · 체육관 로비 (제작자 제공 음악)
             wantBgm = "yupungCity";
+        }
+        if [place == 12]{   // 유풍체육관 안 (제작자 제공 음악)
+            wantBgm = "gymInside";
         }
         if [wantBgm != curBgm]{
             sou.break("global", true);
-            if [wantBgm == "route1"]{   // route1.mp3 = 원본 (같은 곡 두 바퀴 · 156 초) 의 앞 100 초만 (한 바퀴가 정확히 77833 밀리초가 되게 4 ppm 줄임) → 처음부터 재생 → 18.339 ~ 96.172 초 구간을 반복 (2026-11-20 최적화)
+            if [wantBgm == "gymInside"]{   // gymInside.mp3 = 원본 (105 초 · 한 바퀴 32.008 초) 의 앞 41 초만 (한 바퀴가 정확히 32008 밀리초가 되게 7 ppm 줄임 · 소리 크기를 1번도로 음악에 맞춤) → 처음부터 재생 → 8.000 ~ 40.008 초 구간을 반복 (2026-11-25)
+                sou.introPart("global", "gymInside", 8000, 40008);
+            }
+            else if [wantBgm == "route1"]{   // route1.mp3 = 원본 (같은 곡 두 바퀴 · 156 초) 의 앞 100 초만 (한 바퀴가 정확히 77833 밀리초가 되게 4 ppm 줄임) → 처음부터 재생 → 18.339 ~ 96.172 초 구간을 반복 (2026-11-20 최적화)
                 sou.introPart("global", "route1", 18339, 96172);
             }
             else{

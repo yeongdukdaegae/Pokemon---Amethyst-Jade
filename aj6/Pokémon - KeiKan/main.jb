@@ -56,6 +56,8 @@ run{
     mag.importFile("assets/maps/gym_1.tl") save as ("gym1");   // 유풍체육관 안 (하늘 위 발판)   // 유풍체육관 로비 (접수처 · 도전 신청 단말기)   // 유풍시티 (지금은 곧은 벽돌 길만)
     mag.importFile("assets/sounds/bgm/1/yupungCity.mp3") save as ("yupungCity");   // 유풍시티 (제작자 제공)
     mag.importFile("assets/sounds/bgm/1/trainerBattle.mp3") save as ("trainerBattle");
+    mag.importFile("assets/sounds/bgm/1/gymLeader.mp3") save as ("gymLeader");   // 관장 배틀 (유풍체육관 휴린 · prtgRoom.jb 가 한 바퀴 구간을 반복)
+    mag.importFile("assets/sounds/bgm/1/gymInside.mp3") save as ("gymInside");   // 유풍체육관 안 (제작자 제공 · 한 바퀴 구간을 반복)
     mag.importFile("assets/sounds/bgm/1/wildVictory.mp3") save as ("wildVictory");         // 승리 음악: 야생 포켓몬
     mag.importFile("assets/sounds/bgm/1/trainerVictory.mp3") save as ("trainerVictory");   // 승리 음악: 트레이너
     mag.importFile("assets/sounds/bgm/1/wildBattle.mp3") save as ("wildBattle");   // 1번 배틀 (야생) 음악 — 원본의 90 초부터 잘라 둔 파일 · 2.6 ~ 90 초 (원본 92.6 ~ 180 초) 구간을 반복
