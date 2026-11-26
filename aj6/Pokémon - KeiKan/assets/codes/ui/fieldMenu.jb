@@ -702,7 +702,7 @@ run{
                     }
                     if [stAct == 1]{
                         if [fileExists("data/save/save.json")]{
-                            exportFile("data/save/save.json", "PokemonAJ_report.jbx");
+                            exportFile("data/save/save.json", "PokemonAJ_report.rpt");   // 내보낸 리포트 파일 (.rpt · 불러오기는 확장자와 상관없이 내용으로 확인)
                             fm.info(mX, mY, mW, mH, lang[7247], "", lang[7249], "");
                         }
                         else{
