@@ -43,7 +43,11 @@ async def main():
   async with async_playwright() as p:
     exe=os.environ.get('CHROME') or next((q for q in ['/opt/pw-browsers/chromium/chrome-linux64/chrome','/opt/pw-browsers/chromium'] if os.path.isfile(q)),None)
     b=await p.chromium.launch(executable_path=exe,args=['--no-sandbox','--headless=new']) if exe else await p.chromium.launch(args=['--no-sandbox','--headless=new'])
-    pg=await b.new_page(viewport={'width':int(os.environ.get('VW','1280')),'height':int(os.environ.get('VH','800'))}); errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
+    pg=await b.new_page(accept_downloads=True,viewport={'width':int(os.environ.get('VW','1280')),'height':int(os.environ.get('VH','800'))});
+    # DLF: 게임이 내려받기 한 파일을 이 경로에 저장 · IMPF: 게임이 파일을 고르게 하면 이 파일을 고름 (리포트 내보내기 · 불러오기 시험)
+    if os.environ.get('DLF'): pg.on('download',lambda d: asyncio.ensure_future(d.save_as(os.environ['DLF'])))
+    if os.environ.get('IMPF'): pg.on('filechooser',lambda fc: asyncio.ensure_future(fc.set_files(os.environ['IMPF'])))
+    errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
     await pg.add_init_script(CLOCK.replace('__SPEED__',str(SPD[0])))
     await pg.add_init_script("delete window.showOpenFilePicker;delete window.showSaveFilePicker;window.__lt=[];try{new PerformanceObserver(l=>{for(const e of l.getEntries())window.__lt.push([Math.round(e.startTime),Math.round(e.duration)])}).observe({type:'longtask',buffered:true})}catch(e){}")
     # SND=1: 소리 재생 기록 (AudioBufferSourceNode.start 마다 [시각 ms, 길이 s] · 디코드 실패 수) → 끝에 SND 줄로 찍음

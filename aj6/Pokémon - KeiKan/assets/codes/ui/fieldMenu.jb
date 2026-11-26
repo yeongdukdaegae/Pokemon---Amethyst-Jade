@@ -702,7 +702,13 @@ run{
                     }
                     if [stAct == 1]{
                         if [fileExists("data/save/save.json")]{
-                            exportFile("data/save/save.json", "PokemonAJ_report.rpt");   // 내보낸 리포트 파일 (.rpt · 불러오기는 확장자와 상관없이 내용으로 확인)
+                            // 내보낸 리포트 파일 (.rpt): 첫 칸을 "keikanrpt" 로 표시해서 내보냄 → 불러오기는 이 표시가 있는 파일만 받음 (예전 .jbx 파일은 지원 끝)
+                            var compound call exD = [];
+                            loadJson("data/save/save.json", "exD");
+                            exD[1] = "keikanrpt";
+                            setJson("exp", exD);
+                            genJson("data/save/export.json", "exp");
+                            exportFile("data/save/export.json", "PokemonAJ_report.rpt");
                             fm.info(mX, mY, mW, mH, lang[7247], "", lang[7249], "");
                         }
                         else{
@@ -723,8 +729,9 @@ run{
                             loadJson("data/save/import.json", "impD");
                             var int call impOk = 0;
                             if [impD.length >= 7]{
-                                if [impD[1] == "keikan"]{
+                                if [impD[1] == "keikanrpt"]{   // .rpt 로 내보낸 리포트만 (예전 .jbx 는 첫 칸이 "keikan" → 받지 않음)
                                     impOk = 1;
+                                    impD[1] = "keikan";
                                 }
                             }
                             if [impOk == 1]{
