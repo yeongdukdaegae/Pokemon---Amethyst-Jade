@@ -97,9 +97,9 @@ var public list call ls70;
 var public list call pk176;   // 176 몰드류 (그림 없음)
 var public list call ls176;
 var public list call pk51;   // 051 호롱 (불 / 전기 · 이 게임 오리지널 · 그림 없음)
-var public list call pk52;   // 052 텔렘
+var public list call pk52;   // 052 해랄로
 var public list call pk53;   // 053 개로드
-var public list call heremLearn;   // 호롱 · 텔렘 계열 자력기
+var public list call heremLearn;   // 호롱 · 해랄로 계열 자력기
 var public list call ls53;   // 개로드 자력기 (호롱 계열 + 55 오버차지)
 var public list call evoHerem;
 var public list call evoTelem;
@@ -413,7 +413,7 @@ run{
     pk151 = [151, 55, 95, 55, 35, 75, 115, 4, 4, 60, 7, 8, 86, 1, 39, 51, 124];   // 포푸니
     // 051 ~ 053: 호롱 계열 (불 / 전기) · 특성 타오르는불꽃 / 숨겨진 특성 의기양양 · 성비 4 : 4 · 포획률 190 · 75 · 45 · 기초 경험치 61 · 147 · 250 · 성장 0 (보통 빠름 · 일반 포켓몬) — 종족값 · 타입 · 특성 외는 임시 값
     pk51 = [51, 30, 40, 50, 75, 40, 80, 4, 4, 190, 2, 5, 61, 0, 18, 0, 72];   // 호롱
-    pk52 = [52, 60, 40, 50, 90, 50, 95, 4, 4, 75, 2, 5, 147, 0, 18, 0, 72];   // 텔렘
+    pk52 = [52, 60, 40, 50, 90, 50, 95, 4, 4, 75, 2, 5, 147, 0, 18, 0, 72];   // 해랄로
     pk53 = [53, 70, 55, 80, 140, 80, 99, 4, 4, 45, 2, 5, 250, 0, 18, 0, 72];   // 개로드
     keidex = [sapdos, saplock, strockey, starly, staravia, staraptor, nechitt, pulame, tijlame, kotter, hatter, kartten, mosquie, morenquiy, lazburg, genersp, maggy, fraggpie, eaggpie, mimikyu, pk74, pk75, pk76, pk88, pk89, pk90, pk91, pk93, pk101, pk102, pk103, pk104, pk105, pk106, pk107, pk108, pk109, pk111, pk112, pk113, pk114, pk117, pk118, pk139, pk140, pk142, pk144, pk120, pk121, pk122, pk123, pk124, pk125, pk126, pk127, pk128, pk92, pk100, pk148, pk149, pk156, pk157, pk158, pk167, pk168, pk131, pk132, pk67, pk68, pk69, pk115, pk159, pk153, pk133, pk163, pk164, pk116, pk145, pk146, pk147, pk141, pk150, pk151, pk70, pk176, pk179, pk180, pk181, pk182, pk183, pk184, pk185, pk186, pk187, pk94, pk95, pk96, pk97, pk98, pk99, pk165, pk166, pk175, pk143, pk154, pk155, pk134, pk135, pk136, pk160, pk161, pk162, pk80, pk84, pk85, pk86, pk72, pk73, pk81, pk82, pk83, pk177, pk178, pk51, pk52, pk53];   // 순서 = keidex 번호 (pokenum) · 새 포켓몬은 뒤에 추가
 
@@ -943,7 +943,7 @@ run{
         25, 163, 30, 404, 35, 235, 40, 348, 45, 241, 50, 76   // 베어가르기 · 시저크로스 · 광합성 · 리프블레이드 · 쾌청 · 솔라빔
     ];
     learnset[177] = ls177;
-    // 호롱 - 텔렘 - 개로드 계열 자력기 (진화: 텔렘 Lv.23 · 개로드 Lv.37)
+    // 호롱 - 해랄로 - 개로드 계열 자력기 (진화: 해랄로 Lv.23 · 개로드 Lv.37)
     heremLearn = [
         5, 52, 5, 84,           // 불꽃세례 · 전기쇼크
         7, 268,                 // 충전
@@ -953,7 +953,7 @@ run{
         17, 510,                // 불태우기
         20, 555, 20, 352,       // 바크아웃 · 물의파동
         22, 598,                // 괴전파
-        23, 451,                // 차지빔 (텔렘 진화)
+        23, 451,                // 차지빔 (해랄로 진화)
         25, 351,                // 전격파
         27, 595,                // 매지컬플레임
         30, 435,                // 방전
@@ -978,7 +978,7 @@ run{
         17, 510,                // 불태우기
         20, 555, 20, 352,       // 바크아웃 · 물의파동
         22, 598,                // 괴전파
-        23, 451,                // 차지빔 (텔렘 진화)
+        23, 451,                // 차지빔 (해랄로 진화)
         25, 351,                // 전격파
         27, 595,                // 매지컬플레임
         30, 435,                // 방전
@@ -1339,8 +1339,8 @@ run{
     evolution[15] = evoAkeuchi;
     evoFomantis = [34, 178];   // 짜랑랑 → 라란티스 (Lv.34 · 본가는 낮에만 — 지금은 시간 조건 없음)
     evolution[177] = evoFomantis;
-    evoHerem = [23, 52];   // 호롱 → 텔렘 (Lv.23)
-    evoTelem = [37, 53];   // 텔렘 → 개로드 (Lv.37)
+    evoHerem = [23, 52];   // 호롱 → 해랄로 (Lv.23)
+    evoTelem = [37, 53];   // 해랄로 → 개로드 (Lv.37)
     evolution[51] = evoHerem;
     evolution[52] = evoTelem;
     evolutionIds = [1, 2, 4, 5, 7, 8, 10, 12, 14, 15, 177, 51, 52];
