@@ -207,16 +207,19 @@ func yesNo(string yes, string no){
             }
             sel = 3 - sel;
             dis.setObjPos("ftqsel", [bx, by + bh / 2 - bt * 2 - rh * (sel - 0.5)]);
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             loop [isKeyInput(held)] for 300{ dis.waitF(1); }
         }
         if [ky.z()]{
             loop [ky.z()]{ dis.waitF(1); }
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             out = sel;
         }
         if [ky.x()]{
             loop [ky.x()]{ dis.waitF(1); }
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             out = 2;
         }
@@ -281,16 +284,19 @@ func choose3(string a1, string a2, string a3){
                 }
             }
             dis.setObjPos("ftqsel", [bx, by + bh / 2 - bt * 2 - rh * (sel - 0.5)]);
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             loop [isKeyInput(held)] for 300{ dis.waitF(1); }
         }
         if [ky.z()]{
             loop [ky.z()]{ dis.waitF(1); }
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             out = sel;
         }
         if [ky.x()]{
             loop [ky.x()]{ dis.waitF(1); }
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             out = 3;
         }

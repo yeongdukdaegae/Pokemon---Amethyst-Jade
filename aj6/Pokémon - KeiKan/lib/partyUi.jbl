@@ -272,6 +272,7 @@ func choose(float cx, float cy, float w, float h, int cur, int forced, int buste
             if [dst >= 1] and [dst <= myParty.length] and [dst != sel]{   // 빈 칸으로는 못 감
                 sel = dst;
                 paint(sel, cur);
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
             }
             loop [isKeyInput(held)] for 300{

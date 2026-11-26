@@ -388,6 +388,7 @@ func open(int idx, int newMove){
             if [isKeyInput("right")]{
                 lr = "right";
             }
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             if [smode == 0]{
                 var int call rq = 1;
@@ -428,6 +429,7 @@ func open(int idx, int newMove){
         if [smode >= 1]{   // 능력 화면: Z = 개체값 ↔ 노력치 · X = 나가기 (위아래는 쓰지 않음)
             if [ky.z()]{
                 loop [ky.z()]{ dis.waitF(1); }
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
                 statHide();
                 smode = 3 - smode;
@@ -435,6 +437,7 @@ func open(int idx, int newMove){
             }
             if [ky.x()]{
                 loop [ky.x()]{ dis.waitF(1); }
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
                 out = 0;
             }
@@ -472,12 +475,14 @@ func open(int idx, int newMove){
                 }
                 mu.highlight("pinm%sel%", nmv, rw, rh, 1, 1);
                 info(nmv, rx, iy, rw, ih);
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
             }
             loop [isKeyInput(key)] for 250{ dis.waitF(1); }
         }
         if [ky.z()]{
             loop [ky.z()]{ dis.waitF(1); }
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             if [newMove != 0]{   // 배우기: 잊을 기술 (1 ~ 4) · 새 기술 칸 = 배우지 않음
                 if [sel == 5]{
@@ -523,6 +528,7 @@ func open(int idx, int newMove){
         }
         if [ky.x()]{
             loop [ky.x()]{ dis.waitF(1); }
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             if [held != 0]{
                 mu.overlayButton("pinm%held%", "#ffe040", 0);

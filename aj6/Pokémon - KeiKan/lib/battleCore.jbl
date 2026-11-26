@@ -580,6 +580,7 @@ func moveSfx(int mv){
     if [nm != ""]{
         sou.setSpeaker("movesfx");
         sou.setVol("movesfx", 128);   // 기술 효과음은 절반 크기
+        sou.setSpeaker("movesfx");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
         sou.playSfx("movesfx", "se_%nm%", 3000);
         seF0 = bFrame;
         seOn = 1;

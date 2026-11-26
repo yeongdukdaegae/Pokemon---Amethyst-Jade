@@ -1430,6 +1430,7 @@ run{
             }
             if [gr == 1] or [gr == 3]{   // 양력 0 (1) · 날지 않는데 하늘 위 (3): 떨어짐 → 로비 접수처 앞
                 canMove = 0;
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
                 ft.open("");
                 if [gr == 1]{

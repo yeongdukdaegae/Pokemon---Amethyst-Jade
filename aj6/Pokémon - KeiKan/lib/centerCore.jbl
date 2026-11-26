@@ -327,11 +327,13 @@ func shop(int sellMode){
                 tp = sel - V + 1;
             }
             redraw = 1;
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             loop [isKeyInput(held)] for 250{ dis.waitF(1); }
         }
         if [ky.z()]{
             loop [ky.z()]{ dis.waitF(1); }
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             var int call id = stock[sel];
             var int call pr = shopPrice(id);
@@ -411,12 +413,14 @@ func shop(int sellMode){
                         if [nc != cnt]{
                             cnt = nc;
                             qDraw = 1;
+                            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                             sou.playSfx("ui", "choose", 2000);
                         }
                         loop [isKeyInput(qh2)] for 180{ dis.waitF(1); }
                     }
                     if [ky.z()]{
                         loop [ky.z()]{ dis.waitF(1); }
+                        sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                         sou.playSfx("ui", "choose", 2000);
                         qOut = 1;
                     }

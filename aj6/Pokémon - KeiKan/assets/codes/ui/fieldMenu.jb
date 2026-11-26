@@ -85,6 +85,7 @@ run{
         if [ky.x()] and [canMove == 1]{
             canMove = 0;
             fmOpen = 1;
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             // 화면 전체 (모바일은 조작부 위의 화면)
             var float call mX = 0;
@@ -489,6 +490,7 @@ run{
                             if [bSlot <= slotAt.length]{
                                 isUi = 0;          // 커서 멈춤 (선택 상자가 뜨는 동안)
                                 dis.waitF(2);
+                                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                                 sou.playSfx("ui", "choose", 2000);
                                 var int call bAt = slotAt[bSlot];
                                 var compound call bIt = bag[bAt];

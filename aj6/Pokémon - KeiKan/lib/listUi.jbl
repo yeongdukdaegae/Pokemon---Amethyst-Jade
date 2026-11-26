@@ -143,6 +143,7 @@ func open(float xRight, float yBottom, float w, float rowH, int rows){
                     first = sel - rows + 1;
                 }
                 paint(x, top, w, rowH, rows, first, sel);
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
             }
             loop [isKeyInput(held)] for 300{

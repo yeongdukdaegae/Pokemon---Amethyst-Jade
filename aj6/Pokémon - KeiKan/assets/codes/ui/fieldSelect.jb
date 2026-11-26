@@ -150,6 +150,7 @@ run{
         if [zTap == 1] and [canMove == 1] and [nowAct != 0] and [ftIsOpen == 0]{
             // 상호작용: 대사 상자 (화면에 고정 · 4 줄) — Z 로 닫음
             canMove = 0;
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             var string call actText = "";
             var string call whoName = "";   // 말하는 사람의 이름 ("" = 이름 상자 없음)

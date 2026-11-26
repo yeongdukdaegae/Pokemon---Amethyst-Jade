@@ -560,6 +560,7 @@ func int tick(float px, float py, int cm){
                         gyDy = -1;
                     }
                     glideVel();
+                    sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                     sou.playSfx("ui", "choose", 2000);
                     log("글라이더: 이륙");
                 }
@@ -608,6 +609,7 @@ func int tick(float px, float py, int cm){
                 if [zNow == 1] and [gyZp == 0] and [gyBoost > 0] and [gyCd <= 0]{   // 부스터
                     gyBoost = gyBoost - 1;
                     gyLift = min(100, gyLift + 10);
+                    sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                     sou.playSfx("ui", "choose", 2000);
                     log("부스터: 양력 +10");
                 }

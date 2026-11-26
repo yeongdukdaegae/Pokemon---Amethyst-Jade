@@ -55,6 +55,7 @@ func gymApply(){
             var compound call gl = [902, 1];
             bag.add(gl);
             log("유풍체육관 도전장을 받음");
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             ft.say(replaceStr(replaceStr(lang[7239], "{item}", lang[3902]), "{n}", "1"));
             ft.say(lang[7462]);
@@ -312,6 +313,7 @@ func withdraw(){
                     }
                     dis.setTxtContent("fmct", hd);
                 }
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
                 loop [isKeyInput(key)] for 200{ dis.waitF(1); }
             }
@@ -320,6 +322,7 @@ func withdraw(){
                 if [r >= 2]{
                     var int call wa = (box - 1) * 48 + (r - 2) * 8 + c;
                     if [wa <= pcBox.length]{
+                        sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                         sou.playSfx("ui", "choose", 2000);
                         var compound call wp = pcBox[wa];
                         myParty.add(wp);

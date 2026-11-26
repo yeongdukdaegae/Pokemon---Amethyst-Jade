@@ -156,6 +156,7 @@ func grid(float cx, float cy, float w, float h, int start){
                 if [fmOff[dst] == 0]{   // 잠긴 칸으로는 못 감
                     sel = dst;
                     paint(sel);
+                    sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                     sou.playSfx("ui", "choose", 2000);
                 }
             }
@@ -169,6 +170,7 @@ func grid(float cx, float cy, float w, float h, int start){
             }
             if [any == 1]{
                 if [fmOff[sel] == 0]{
+                    sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                     sou.playSfx("ui", "choose", 2000);
                     out = sel;
                 }
@@ -384,6 +386,7 @@ func rows(float cx, float cy, float w, float h, string title){
                 dis.setObjColor("fmr%sel%bd", "#9fbfff");
                 sel = dst;
                 dis.setObjColor("fmr%sel%bd", "#ffe040");
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
             }
             loop [isKeyInput(held)] for 300{
@@ -395,6 +398,7 @@ func rows(float cx, float cy, float w, float h, string title){
                 dis.waitF(1);
             }
             if [n >= 1]{
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
                 out = sel;
             }
@@ -599,6 +603,7 @@ func choice(float cx, float cy, float w, float h){
             if [dst != sel]{
                 sel = dst;
                 dis.setObjPos("fmqsel", [cx, cy + bh / 2 - bt * 2 - rh * (sel - 0.5)]);
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
             }
             loop [isKeyInput(held)] for 300{
@@ -609,6 +614,7 @@ func choice(float cx, float cy, float w, float h){
             loop [ky.z()]{
                 dis.waitF(1);
             }
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             out = sel;
         }
@@ -826,6 +832,7 @@ func party(float cx, float cy, float w, float h, string title){
                 dis.setObjColor("fmy%sel%bd", "#9fbfff");
                 sel = dst;
                 dis.setObjColor("fmy%sel%bd", "#ffe040");
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
             }
             loop [isKeyInput(held)] for 300{
@@ -837,6 +844,7 @@ func party(float cx, float cy, float w, float h, string title){
                 dis.waitF(1);
             }
             if [n >= 1]{
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
                 out = sel;
             }
@@ -1063,6 +1071,7 @@ func townMap(float cx, float cy, float w, float h, int cur, int mw, int mh, int 
             if [best != 0]{
                 sel = best;
                 moved = 1;
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
             }
             loop [isKeyInput(held)] for 300{ dis.waitF(1); }
@@ -1147,6 +1156,7 @@ func buttons(float cx, float cy, float w, float h){
                 dis.setObjColor("fmb%sel%bd", "#9fbfff");
                 sel = dst;
                 dis.setObjColor("fmb%sel%bd", "#ffe040");
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
             }
             loop [isKeyInput(held)] for 300{ dis.waitF(1); }
@@ -1154,6 +1164,7 @@ func buttons(float cx, float cy, float w, float h){
         if [ky.z()]{
             loop [ky.z()]{ dis.waitF(1); }
             if [fmOff[sel] == 0]{
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
                 out = sel;
             }
@@ -1245,6 +1256,7 @@ func buttonGrid(float cx, float cy, float w, float h, int cols){
                     dis.setObjColor("fmg%sel%bd", "#9fbfff");
                     sel = dst;
                     dis.setObjColor("fmg%sel%bd", "#ffe040");
+                    sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                     sou.playSfx("ui", "choose", 2000);
                 }
             }
@@ -1252,6 +1264,7 @@ func buttonGrid(float cx, float cy, float w, float h, int cols){
         }
         if [ky.z()]{
             loop [ky.z()]{ dis.waitF(1); }
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             out = sel;
         }
@@ -1339,6 +1352,7 @@ func pages(float cx, float cy, float w, float h, string title){
             }
             if [pg0 < n]{
                 pg0 = pg0 + 1;
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
             }
         }
@@ -1349,6 +1363,7 @@ func pages(float cx, float cy, float w, float h, string title){
             }
             if [pg0 > 1]{
                 pg0 = pg0 - 1;
+                sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
                 sou.playSfx("ui", "choose", 2000);
             }
         }
@@ -1357,6 +1372,7 @@ func pages(float cx, float cy, float w, float h, string title){
         }
         if [ky.z()]{
             loop [ky.z()]{ dis.waitF(1); }
+            sou.setSpeaker("ui");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
             sou.playSfx("ui", "choose", 2000);
             if [pg0 < n]{
                 pg0 = pg0 + 1;

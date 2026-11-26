@@ -353,9 +353,11 @@ func int changeStage(int side, int statId, int ch, int byFoe, int breaker){
     log(nm + " " + lang[1320 + statId] + " 랭크 %was% → %nw%");
     sou.setSpeaker("battlesfx");
     if [nw > was]{
+        sou.setSpeaker("battlesfx");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
         sou.playSfx("battlesfx", "statRise", 3000);
     }
     if [nw < was]{
+        sou.setSpeaker("battlesfx");   // 스피커가 아직 없을 수 있음 (리포트를 불러오자마자 등) — 이미 있으면 그대로
         sou.playSfx("battlesfx", "statFall", 3000);
     }
     bc.statFx(side, statId, nw - was);   // 랭크 메시지를 0.8 초 보여 주는 동안 화살표가 오르내림 (오르내림이 없으면 기다리기만)
