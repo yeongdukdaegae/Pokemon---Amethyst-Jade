@@ -3,6 +3,7 @@ Use Canvas call can;
 Use DisPlayer call dis;
 Use Magellan call mag;
 Use colliders call col;
+Use keyIn call ky;   // Z (스페이스 도) = 달리기
 
 var public float call speed;
 var public int call direction;
@@ -39,28 +40,34 @@ run{
             }
         }
         else{
+            // 걷기 속도: Z 를 누르고 있으면 1.5 배 (달리기) · 가로 + 세로 방향키를 함께 누르면 (대각선) 0.71 배 (대각선이 더 빨라지지 않게 · 바니합 방지)
+            var float call mx = 0;
+            var float call my = 0;
             if [isKeyInput("left")]{
-                col.setVelocityX("", -64 * speed);
+                mx = -1;
                 direction = 1;
             }
             else if [isKeyInput("right")]{
-                col.setVelocityX("", 64 * speed);
+                mx = 1;
                 direction = 2;
             }
-            else{
-                col.setVelocityX("", 0);
-            }
             if [isKeyInput("down")]{
-                col.setVelocityY("", -64 * speed);
+                my = -1;
                 direction = 3;
             }
             else if [isKeyInput("up")]{
-                col.setVelocityY("", 64 * speed);
+                my = 1;
                 direction = 4;
             }
-            else{
-                col.setVelocityY("", 0);
+            var float call mul = 1;
+            if [ky.z() == 1]{
+                mul = 1.5;
             }
+            if [mx != 0] and [my != 0]{
+                mul = mul * 0.71;
+            }
+            col.setVelocityX("", 64 * speed * mul * mx);
+            col.setVelocityY("", 64 * speed * mul * my);
         }
         dis.waitF(1);
     }

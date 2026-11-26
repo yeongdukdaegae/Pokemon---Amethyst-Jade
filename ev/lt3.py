@@ -84,7 +84,13 @@ async def main():
         continue
       ms=130
       if ':' in k: k,ms=k.split(':'); ms=int(ms)
-      await key(K[k],ms); await w(350)
+      if '+' in k:   # 여러 키를 함께 누름 (예: Z+R:1000 = Z 와 오른쪽을 1 초 동안)
+        ks=[K.get(q,q.lower()) for q in k.split('+')]
+        for q in ks: await pg.keyboard.down(q)
+        await pg.wait_for_timeout(max(40,ms/SPD[0]))
+        for q in ks: await pg.keyboard.up(q)
+        await w(350); continue
+      await key(K.get(k,k.lower()),ms); await w(350)
     await w(800); await shot('end'); print('LONGTASKS',await pg.evaluate('window.__lt'))
     if os.environ.get('SND'): print('SND',await pg.evaluate('[window.__sndErr,window.__snd.slice(-12)]'))
     L=await log(); print([l for l in L.split('\n') if any(x in l for x in os.environ.get('GREP','✖|맵|단차|야생|트레이너|보스').split('|'))][-14:]); print('ERR',[l for l in L.split('\n') if '✖' in l][:3], errs[:2])
