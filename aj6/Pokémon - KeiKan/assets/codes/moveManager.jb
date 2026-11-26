@@ -7,7 +7,7 @@
 //   · 타입 번호는 pokeDataManager.jb 참고
 //   · movedex[id] = 그 기술 (빈 번호는 0) · 기술마다 변수 mv이름 (예: mvTackle) 으로도 씀
 //   · 출처: PokeAPI 데이터 (Bulbapedia 기준) — 최신 세대 값
-//   · 920 번부터는 이 게임 오리지널 기술 (920 록다운 · 921 플레임클로 · 922 하이드로볼 · 923 바람베기 · 924 오버차지 · 925 마인드포스)
+//   · 920 번부터는 이 게임 오리지널 기술 (920 록다운 · 921 플레임클로 · 922 하이드로볼 · 923 바람베기 · 924 오버차지 · 925 브레인스톰)
 Use jawbreaker call jaw;
 
 var public list call mvPound;   // 1 막치기 · Pound
@@ -860,7 +860,7 @@ var public list call mvMalignantChain;   // 919 악독사슬 · Malignant Chain
 var public list call mvRockDown;   // 920 록다운 · Rock Down (남로쿠 계열 전용기 · 이 게임 오리지널)
 var public list call mvFlameClaw;   // 921 플레임클로 · Flame Claw (묘힛 계열 전용기 · 확정 화상)
 var public list call mvWindSlash;   // 923 바람베기 · Wind Slash (찌르호크 계열 전용기 · 급소에 맞기 쉬움 · 베기 + 바람 · 비접촉)
-var public list call mvMindForce;   // 925 마인드포스 · Mind Force (에스퍼 · 쓰면 자신의 특공이 크게 떨어짐 · 이 게임 오리지널)
+var public list call mvBrainstorm;   // 925 브레인스톰 · Brainstorm (에스퍼 · 쓰면 자신의 특공이 크게 떨어짐 · 이 게임 오리지널)
 var public list call mvOvercharge;   // 924 오버차지 · Overcharge (오버히트의 전기 판 · 쓰면 자신의 특공이 크게 떨어짐)
 var public list call mvHydroBall;   // 922 하이드로볼 · Hydro Ball (한달 계열 전용기 · 33% 혼란 — 혼란은 아직 구현 전)
 var public compound call movedex;
@@ -1730,7 +1730,7 @@ run{
     mvRockDown = [920, 0, 95, 100, 1, 13, 5];   // 바위 · 물리 · 위력 95 · 명중 100 · 부가효과 있음
     mvFlameClaw = [921, 0, 60, 90, 1, 2, 15];    // 불 · 물리 · 위력 60 · 명중 90 · 부가효과 (확정 화상)
     mvWindSlash = [923, 0, 80, 95, 0, 10, 15];   // 비행 · 물리 · 위력 80 · 명중 95 · PP 15
-    mvMindForce = [925, 1, 140, 90, 1, 11, 5];   // 에스퍼 · 특수 · 위력 140 · 명중 90 · PP 5 · 쓰면 자신 특공 -2
+    mvBrainstorm = [925, 1, 140, 90, 1, 11, 5];   // 에스퍼 · 특수 · 위력 140 · 명중 90 · PP 5 · 쓰면 자신 특공 -2
     mvOvercharge = [924, 1, 130, 90, 1, 5, 5];   // 전기 · 특수 · 위력 130 · 명중 90 · PP 5 (오버히트와 같음)
     mvHydroBall = [922, 1, 80, 95, 1, 3, 10];    // 물 · 특수 · 위력 80 · 명중 95 · 부가효과 (33% 혼란) · PP 10
     movedex = [];
@@ -2586,7 +2586,7 @@ run{
     movedex[922] = mvHydroBall;
     movedex[923] = mvWindSlash;
     movedex[924] = mvOvercharge;
-    movedex[925] = mvMindForce;
+    movedex[925] = mvBrainstorm;
 
     // 풀죽음 확률 (PokeAPI) · 920 록다운 = 10%
     moveFlinch = [];
@@ -2879,7 +2879,7 @@ run{
     moveStatAt[313] = 268;   // 거짓울음
     moveStatAt[315] = 273;   // 오버히트
     moveStatAt[924] = 273;   // 오버차지 (오버히트와 같은 기록: 자신 특공 -2)
-    moveStatAt[925] = 273;   // 마인드포스 (오버히트와 같은 기록: 자신 특공 -2)
+    moveStatAt[925] = 273;   // 브레인스톰 (오버히트와 같은 기록: 자신 특공 -2)
     moveStatAt[317] = 278;   // 암석봉인
     moveStatAt[318] = 283;   // 은빛바람
     moveStatAt[319] = 296;   // 금속음

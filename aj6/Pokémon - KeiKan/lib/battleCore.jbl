@@ -4142,9 +4142,9 @@ func spHand(int mv, float ax, float ay, float tx, float ty, float s){
         stFade(2, 8);
     }
 }
-// ── 마인드포스 (2026-11-26 · 오리지널 에스퍼 기술 925): 쓰는 쪽에서 사념 파동 고리 하나가 퍼짐 → 맞는 쪽 둘레에 에스퍼 구슬 8 개가 차례로 생겨 맴돎
+// ── 브레인스톰 (2026-11-26 · 오리지널 에스퍼 기술 925): 쓰는 쪽에서 사념 파동 고리 하나가 퍼짐 → 맞는 쪽 둘레에 에스퍼 구슬 8 개가 차례로 생겨 맴돎
 //   → 구슬이 한꺼번에 맞는 쪽으로 꽂히며 (맞는 쪽이 뒤틀리듯 흔들림) → 분홍빛으로 폭발 (spBoom) · 오브젝트 sfx9 고리 · sfx1 ~ sfx8 구슬
-func spMindForce(float ax, float ay, float tx, float ty, float s){
+func spBrainstorm(float ax, float ay, float tx, float ty, float s){
     var float call sa = s * fxKa;
     var float call st = s * fxKt;
     var string call mIn = "#ffd2f2";
@@ -4600,8 +4600,8 @@ func spFx(int mv, float ax, float ay, float tx, float ty, float s){
     if [mv == 406]{   // 용의파동: 푸른 보랏빛 고리가 줄지어 날아감
         spPulse(ax, ay, tx, ty, s, "#d0c8ff", "#5a4aff", 0.085, 24, 0);
     }
-    if [mv == 925]{   // 마인드포스: 사념 파동 → 상대 둘레에 에스퍼 구슬 8 개 → 꽂히며 폭발
-        spMindForce(ax, ay, tx, ty, s);
+    if [mv == 925]{   // 브레인스톰: 사념 파동 → 상대 둘레에 에스퍼 구슬 8 개 → 꽂히며 폭발
+        spBrainstorm(ax, ay, tx, ty, s);
     }
     var list call hdMv = [1, 3, 292, 358, 238, 530, 395, 382, 918, 68, 279, 185, 364, 168, 712, 289, 462, 251, 374, 509, 227, 269, 270, 607, 271, 415, 321, 511, 516];   // 손 기술 (spHand · fx_hand.png)
     if [hdMv.find(mv) != 0]{
