@@ -2054,6 +2054,7 @@ run{
     engLang[1221] = "Flame Claw";   // 오리지널 기술
     engLang[1223] = "Wind Slash";   // 오리지널 기술
     engLang[1224] = "Overcharge";   // 오리지널 기술
+    engLang[1225] = "Mind Force";   // 오리지널 기술
     engLang[1222] = "Hydro Ball";   // 오리지널 기술
     // 기술 설명: lang[2000 + 기술 id] (한 줄 · 화면에서 상자 폭에 맞춰 줄바꿈) — 9세대 일부 · 오리지널 기술은 직접 번역 · 작성
     engLang[2001] = "The target is physically pounded with a long tail, a foreleg, or the like.";
@@ -2907,5 +2908,6 @@ run{
     engLang[2921] = "The user attacks with claws wrapped in heat. This leaves the target with a burn.";
     engLang[2923] = "The user slashes the target with a razor-sharp gust of wind. Critical hits land more easily.";
     engLang[2924] = "The user unleashes all the electricity stored in its body at once. The recoil from this move harshly lowers the user's Sp. Atk stat.";
+    engLang[2925] = "The user draws out a burst of psychic power to wrench the target. The user's Sp. Atk stat is harshly lowered afterward.";
     engLang[2922] = "The user gathers a lot of water into a small ball and fires it all at once. This has a 33%% chance of confusing the target.";
 }

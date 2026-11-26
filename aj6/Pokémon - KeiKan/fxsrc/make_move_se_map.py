@@ -7,6 +7,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); GAME = os.path.dirname(HERE)
 SE = sorted(f[3:-4] for f in os.listdir(os.path.join(GAME, 'assets/sounds/sfx/moves')) if f.startswith('se_'))
 
 MAN = {
+ 'MindForce': 'psybeam',
  'Pound': 'comet_punch', 'KarateChop': 'vital_throw', 'MegaPunch': 'mega_kick2', 'IcePunch': 'icy_wind', 'ThunderPunch': 'thunderbolt2',
  'ViceGrip': 'vicegrip', 'Guillotine': 'vicegrip', 'Whirlwind': 'gust2', 'Slam': 'take_down', 'VineWhip': 'bind', 'Stomp': 'mega_kick2',
  'DoubleKick': 'jump_kick', 'RollingKick': 'mega_kick2', 'HighJumpKick': 'jump_kick', 'FuryAttack': 'horn_attack', 'HornDrill': 'horn_attack',
