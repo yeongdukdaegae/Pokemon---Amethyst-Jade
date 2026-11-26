@@ -188,7 +188,12 @@ run{
                     npcKind = 0;
                 }
                 if [npcKind == 7]{   // 트레이너: 이긴 뒤에는 대사 (npMsg) · 아직이면 prtgRoom.jb 가 배틀 대사 → 배틀
-                    if [trDone.find(npTr[nk]) != 0]{   // 이긴 뒤: 잡담 (트레이너마다 두 가지 중 하나)
+                    if [trDone.find(npTr[nk]) != 0] and [npTr[nk] >= 13] and [npTr[nk] <= 15]{   // 유풍체육관 트레이너 (13 ~ 15): 이긴 뒤에도 말을 걸면 재대결 (지나가는 것으로는 안 걸어옴)
+                        trTalk = nk;
+                        npcKind = -1;
+                        log("유풍체육관 트레이너 재대결: " + npTr[nk]);
+                    }
+                    else if [trDone.find(npTr[nk]) != 0]{   // 이긴 뒤: 잡담 (트레이너마다 두 가지 중 하나)
                         actText = lang[tr.chatL(npTr[nk]) + floor(jaw.random(0, 2))];
                         npcKind = 0;
                     }
