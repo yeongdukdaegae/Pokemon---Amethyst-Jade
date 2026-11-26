@@ -71,7 +71,18 @@ run{
     dis.setObjAlpha("<fsel>", 0);
     sou.setSpeaker("ui");
     loop [ky.z()]{ dis.waitF(1); }
+    var int call zPrev = 0;   // 지난 프레임의 Z (새로 누른 때만 말 걸기)
     loop{
+        // 달리는 중 (방향키를 누르고 있음) 이거나 · Z 를 누른 채 있으면 말 걸지 않음 — 서서 Z 를 새로 눌렀을 때만 (characters/jahui.jb: Z + 방향키 = 달리기)
+        var int call zNow = ky.z();
+        var int call zTap = 0;
+        if [zNow == 1] and [zPrev == 0]{
+            zTap = 1;
+        }
+        if [isKeyInput("left")] or [isKeyInput("right")] or [isKeyInput("up")] or [isKeyInput("down")]{
+            zTap = 0;
+        }
+        zPrev = zNow;
         if [quitTitle == 1]{
             break();
         }
@@ -136,7 +147,7 @@ run{
                 }
             }
         }
-        if [ky.z()] and [canMove == 1] and [nowAct != 0] and [ftIsOpen == 0]{
+        if [zTap == 1] and [canMove == 1] and [nowAct != 0] and [ftIsOpen == 0]{
             // 상호작용: 대사 상자 (화면에 고정 · 4 줄) — Z 로 닫음
             canMove = 0;
             sou.playSfx("ui", "choose", 2000);
