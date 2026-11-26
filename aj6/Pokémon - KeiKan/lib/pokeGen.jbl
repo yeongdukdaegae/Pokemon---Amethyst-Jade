@@ -239,15 +239,23 @@ func compound makeSet(int id, int level, int boy, int ability, int m1, int m2, i
     p[14] = evS;
     p[16] = ability;
     p[18] = 0;   // 정해 둔 구성 (트레이너): 성격 보정 없음 (노력)
-    var compound call mv = [];
-    mv.add(m1);
-    mv.add(m2);
-    mv.add(m3);
-    mv.add(m4);
+    var compound call mv = [];   // 기술 0 = 없음 (넣지 않음 · 야생 포켓몬처럼 기술이 4 개보다 적을 수 있음)
+    if [m1 != 0]{
+        mv.add(m1);
+    }
+    if [m2 != 0]{
+        mv.add(m2);
+    }
+    if [m3 != 0]{
+        mv.add(m3);
+    }
+    if [m4 != 0]{
+        mv.add(m4);
+    }
     var compound call pp = [];
     var compound call ppu = [];
     k = 1;
-    loop [k <= 4]{
+    loop [k <= mv.length]{
         pp.add(movedex[mv[k]][7]);
         ppu.add(0);
         k = k + 1;
