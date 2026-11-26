@@ -548,11 +548,16 @@ run{
                                             partyHp.add(uphk[25]);
                                             uph = uph + 1;
                                         }
+                                        fm.bagClose();   // 가방 (레이어 60 ~) 이 포켓몬 창 (40 ~) 을 덮지 않게 잠시 닫음 → 고른 뒤 다시 그림
                                         puAny = 1;
                                         puKeep = 0;
                                         pu.choose(mX, mY, mW, mH, 0, 0, 0);
                                         puAny = 0;
                                         fmResult = puResult;
+                                        fm.bagDraw(mX, mY, mW, mH);
+                                        lastCat = 0;   // 칸 · 분류 이름 · 커서를 다시 채움
+                                        lastBx = 0;
+                                        lastBy = 0;
                                         if [fmResult > 0]{
                                             var int call uIdx = fmResult;
                                             var int call uK = 0;
