@@ -2908,6 +2908,6 @@ run{
     engLang[2921] = "The user attacks with claws wrapped in heat. This leaves the target with a burn.";
     engLang[2923] = "The user slashes the target with a razor-sharp gust of wind. Critical hits land more easily.";
     engLang[2924] = "The user unleashes all the electricity stored in its body at once. The recoil from this move harshly lowers the user's Sp. Atk stat.";
-    engLang[2925] = "The user draws out a burst of psychic power to wrench the target. The user's Sp. Atk stat is harshly lowered afterward.";
+    engLang[2925] = "The user gathers its psychic power in one place and scrambles the target's thoughts. This harshly lowers the user's Sp. Atk stat.";
     engLang[2922] = "The user gathers a lot of water into a small ball and fires it all at once. This has a 33%% chance of confusing the target.";
 }
