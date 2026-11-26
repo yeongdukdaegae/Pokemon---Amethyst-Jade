@@ -1101,9 +1101,9 @@ run{
     korLang[140] = "팬텀";
     korLang[141] = "롱스톤";
     korLang[143] = "스라크";
-    korLang[101] = "헤렘";
+    korLang[101] = "호롱";
     korLang[102] = "텔렘";
-    korLang[103] = "텔레폴";
+    korLang[103] = "개로드";
     korLang[151] = "이상해씨";
     korLang[152] = "이상해풀";
     korLang[153] = "이상해꽃";
