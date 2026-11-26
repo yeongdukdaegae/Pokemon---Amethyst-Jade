@@ -161,13 +161,13 @@ func load(int id){
         trNameL = 7516;
         trLoseL = 7519;
         trAi = 4;
-        var compound call hy1 = pg.makeSet(14, 10, 0, 51, 365, 98, 64, 45, 0, 252, 0, 0, 4, 252);    // 앗치 Lv.10: 날카로운눈 (일반 특성) · 쪼아대기 · 전광석화 · 쪼기 · 울음소리
+        var compound call hy1 = pg.makeSet(14, 10, 0, 51, 33, 98, 64, 45, 0, 252, 0, 0, 4, 252);    // 앗치 Lv.10: 날카로운눈 (일반 특성) · 몸통박치기 · 전광석화 · 쪼기 · 울음소리
         hy1[15] = 1;
         oppParty.add(hy1);
         var compound call hy2 = pg.makeSet(77, 11, 0, 120, 17, 98, 33, 45, 0, 252, 0, 0, 4, 252);    // 찌르꼬 Lv.11: 이판사판 · 날개치기 · 전광석화 · 몸통박치기 · 울음소리
         hy2[15] = 1;
         oppParty.add(hy2);
-        var compound call hy3 = pg.makeSet(15, 13, 0, 51, 64, 365, 98, 343, 4, 252, 0, 0, 0, 252);   // 아크치 Lv.13 (에이스): 날카로운눈 (일반 특성) · 쪼기 · 쪼아대기 · 전광석화 · 탐내다
+        var compound call hy3 = pg.makeSet(15, 13, 0, 51, 64, 33, 98, 343, 4, 252, 0, 0, 0, 252);   // 아크치 Lv.13 (에이스): 날카로운눈 (일반 특성) · 쪼기 · 몸통박치기 · 전광석화 · 탐내다
         hy3[15] = 1;
         oppParty.add(hy3);
     }
