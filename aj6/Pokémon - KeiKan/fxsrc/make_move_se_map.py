@@ -5,6 +5,10 @@ import re, os, json
 
 HERE = os.path.dirname(os.path.abspath(__file__)); GAME = os.path.dirname(HERE)
 SE = sorted(f[3:-4] for f in os.listdir(os.path.join(GAME, 'assets/sounds/sfx/moves')) if f.startswith('se_'))
+import subprocess
+def se_ms(n):   # 효과음 길이 (ms) — 맞는 소리를 기술 효과음 뒤에 내려고 (battleCore.jbl 의 seSettle)
+    o = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', os.path.join(GAME, 'assets/sounds/sfx/moves', 'se_' + n + '.mp3')], capture_output=True, text=True).stdout.strip()
+    return int(float(o) * 1000) if o else 0
 
 MAN = {
  'Brainstorm': 'psybeam',
@@ -95,10 +99,13 @@ def main():
             f"    var list call seNames = [{names}];\n"
             f"    var list call seMoves = [{', '.join(str(a) for a, b in pairs)}];\n"
             f"    var list call seIdx = [{', '.join(str(b) for a, b in pairs)}];\n"
+            f"    var list call seLen = [{', '.join(str(se_ms(x)) for x in SE)}];   // 효과음마다 길이 (ms)\n"
             "    var int call at = seMoves.find(mv);\n"
             "    var string call r = \"\";\n"
+            "    seMs = 0;\n"
             "    if [at != 0]{\n"
             "        r = seNames[seIdx[at]];\n"
+            "        seMs = seLen[seIdx[at]];\n"
             "    }\n"
             "    return(r);\n"
             "}\n"

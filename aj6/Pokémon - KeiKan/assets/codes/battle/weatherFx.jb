@@ -16,6 +16,7 @@ var public float call battleL;
 var public float call battleR;
 var public float call battleB;
 var public float call battleT;
+var public int call bFrame;   // 배틀 중 프레임 수 (lib/battleCore.jbl 의 seSettle 이 기술 효과음 시간을 잼)
 
 run{
     var int call cur = -1;
@@ -50,6 +51,7 @@ run{
     var int call wf = 0;
     loop [wxRun == 1]{
         wf = wf + 1;
+        bFrame = bFrame + 1;
         if [weather != cur]{   // 날씨가 바뀜: 그림 · 크기 · 자리를 새로
             cur = weather;
             wi = 1;

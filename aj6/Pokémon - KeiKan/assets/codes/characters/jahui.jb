@@ -12,6 +12,7 @@ var public float call gyVx;
 var public float call gyVy;
 
 run{
+    var int call runOn = 0;   // 달리기 (Z + 방향키 = 1.5 배) — 잠깐 꺼 둠 (1 로 바꾸면 다시 켜짐)
     dis.BelongObj("prtg");
     // 콜라이더는 플레이어(prtg) 자신에게 — [x, y] 는 콜라이더 가운데 (플레이어 위치 그대로)
     // (예전: 없는 id "prtgcol" 로 만들어서 플레이어가 아닌 [0, 0] 에 보이지 않는 벽이 따로 생겼고, 플레이어는 콜라이더가 없어 벽을 통과함)
@@ -60,7 +61,7 @@ run{
                 direction = 4;
             }
             var float call mul = 1;
-            if [ky.z() == 1]{
+            if [ky.z() == 1] and [runOn == 1]{
                 mul = 1.5;
             }
             if [mx != 0] and [my != 0]{

@@ -1381,7 +1381,7 @@ run{
                 bc.setMsg("wildappeared", lang[3895], msgS, msgW);
                 bc.waitMsg(1200);
                 battleOver = 3;
-                goTo(6439);   // 배틀 끝 (도주)
+                goTo(6440);   // 배틀 끝 (도주)
             }
             bc.setMsg("wildappeared", lang[3896], msgS, msgW);
             bc.waitMsg(1200);
@@ -1758,7 +1758,7 @@ run{
         }
         if [pendingMove != 0]{
             if [caughtNow == 1]{   // 잡음: 행동 없이 턴 끝의 경험치 처리로
-                goTo(5434);   // 포획 경험치
+                goTo(5435);   // 포획 경험치
             }
             // ── 한 턴: 메뉴 상자는 그대로 · 메뉴 글자와 커서는 숨김 (턴이 끝나면 다시) · 왼쪽 상자에 메시지 ──
             dis.disableObj("bselect");
@@ -2905,6 +2905,7 @@ run{
                                 }
                             }
                             if [hd > 0] or [disgHit == 1]{   // 맞는 효과음: 체력이 깎이기 시작할 때 (이펙트 · 깜빡임 뒤) · 상성에 맞게 · 탈이 받아낸 공격은 보통
+                                bc.seSettle();   // 기술 효과음이 끝난 뒤에 (길어도 0.7 초)
                                 sou.setSpeaker("battlesfx");
                                 if [disgHit == 1] or [ef == 1]{
                                     sou.playSfx("battlesfx", "hit", 3000);
@@ -4637,7 +4638,7 @@ run{
                 k = k + 1;
             }
             if [battleOver == 3]{   // 날려버리기 · 울부짖기 · 순간이동: 배틀이 그대로 끝남
-                goTo(6439);   // 배틀 끝 (도망)
+                goTo(6440);   // 배틀 끝 (도망)
             }
             // 턴 끝: 방어 · 버티기는 그 턴만 · 이번 턴에 안 썼으면 연속 횟수는 0
             var int call zs = 1;
@@ -6005,7 +6006,7 @@ run{
             }
             forceSw = 0;
             if [battleOver != 0]{
-                goTo(6439);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
+                goTo(6440);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
             }
             if ([myChg != 0] or [myRech == 1]) and [myHp > 0]{   // 모으는 중 · 반동으로 쉬는 턴: 메뉴 없이 다음 턴
                 var compound call cgM = myPoke[22];
