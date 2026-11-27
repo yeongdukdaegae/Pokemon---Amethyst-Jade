@@ -84,10 +84,25 @@ run{
             openFile("data/save/import.json");
             var compound call impD = [];
             loadJson("data/save/import.json", "impD");
+            // 휴대폰 · 구글 드라이브: 고른 파일이 늦게 들어올 수 있음 → "가져오는 중" 을 띄우고 최대 30 초 기다림 · X = 그만 (fieldMenu.jb 의 불러오기와 같음)
+            var int call impW = 0;
+            if [impD.length < 7]{
+                dis.setTxtContent("resetButton", lang[7524]);
+                loop [impD.length < 7] and [impW < 120]{
+                    wait(250);
+                    loadJson("data/save/import.json", "impD");
+                    impW = impW + 1;
+                    if [ky.x()]{
+                        impW = 120;
+                    }
+                }
+                loop [ky.x()]{ dis.waitF(1); }
+            }
             var int call impOk = 0;
             if [impD.length >= 7]{
-                if [impD[1] == "keikan"]{
+                if [impD[1] == "keikanrpt"]{   // .rpt 로 내보낸 리포트만 (예전 .jbx 는 첫 칸이 "keikan" → 받지 않음)
                     impOk = 1;
+                    impD[1] = "keikan";
                 }
             }
             if [impOk == 1]{
