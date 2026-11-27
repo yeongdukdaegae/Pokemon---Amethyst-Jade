@@ -729,12 +729,21 @@ run{
                             openFile("data/save/import.json");
                             var compound call impD = [];
                             loadJson("data/save/import.json", "impD");
-                            // 휴대폰: 파일 고르기 창이 닫힌 뒤 고른 파일이 늦게 들어올 수 있음 (에디터가 1 초 안에 안 들어오면 "취소" 로 봄) → 최대 6 초 동안 들어오길 기다림
+                            // 휴대폰: 파일 고르기 창이 닫힌 뒤 고른 파일이 늦게 들어올 수 있음 (에디터가 1 초 안에 안 들어오면 "취소" 로 봄 · 구글 드라이브 등 다른 곳의 파일은 내려받느라 더 걸림)
+                            //   → "가져오는 중" 을 띄우고 최대 30 초 동안 들어오길 기다림 · X = 그만 (취소)
                             var int call impW = 0;
-                            loop [impD.length < 7] and [impW < 24]{
-                                wait(250);
-                                loadJson("data/save/import.json", "impD");
-                                impW = impW + 1;
+                            if [impD.length < 7]{
+                                fm.panelShow(mX, mY, mW, mH, lang[7248], lang[7524]);
+                                loop [impD.length < 7] and [impW < 120]{
+                                    wait(250);
+                                    loadJson("data/save/import.json", "impD");
+                                    impW = impW + 1;
+                                    if [ky.x()]{
+                                        impW = 120;
+                                    }
+                                }
+                                loop [ky.x()]{ dis.waitF(1); }
+                                fm.panelHide();
                             }
                             var int call impOk = 0;
                             if [impD.length >= 7]{
