@@ -135,6 +135,7 @@ var public int call wxRun;     // 날씨 연출 (weatherFx.jb): 1 = 그림 · 0 
 var int call weatherT;       // 날씨가 남은 턴
 var int call terrain;        // 필드: 0 없음 · 1 일렉트릭필드 · 2 그래스필드 · 3 미스트필드 · 4 사이코필드 (지금은 상태 · 메시지 · 이펙트 색만 — 위력 · 회복 등 효과는 아직)
 var int call terrainT;       // 필드가 남은 턴
+var int call hzKO;           // 1 = 나올 때 장판으로 쓰러짐 → 턴 처리 블록의 쓰러짐 처리 (포획 경험치) 로 (goTo 는 바깥 블록으로만 가서 한 번 거쳐 감)
 var int call entryFor;       // 나올 때 발동하는 특성을 처리할 쪽: 0 없음 · 1 내 포켓몬 · 2 상대 · 3 둘 다
 // 상태 이상: 0 없음 · 1 화상 · 2 마비 · 3 독 · 4 맹독 · 5 잠듦 · 6 얼음 (내 포켓몬은 데이터 [27] 에 남음)
 var int call myStatus;
@@ -1388,7 +1389,7 @@ run{
                 bc.setMsg("wildappeared", lang[3895], msgS, msgW);
                 bc.waitMsg(1200);
                 battleOver = 3;
-                goTo(6585);   // 배틀 끝 (도주)
+                goTo(6611);   // 배틀 끝 (도주)
             }
             bc.setMsg("wildappeared", lang[3896], msgS, msgW);
             bc.waitMsg(1200);
@@ -1765,7 +1766,12 @@ run{
         }
         if [pendingMove != 0]{
             if [caughtNow == 1]{   // 잡음: 행동 없이 턴 끝의 경험치 처리로
-                goTo(5485);   // 포획 경험치
+                goTo(5491);   // 포획 경험치
+            }
+            if [hzKO == 1]{   // 나올 때 장판으로 쓰러짐: 행동 없이 쓰러짐 처리로
+                hzKO = 0;
+                pendingMove = 0;
+                goTo(5491);   // 포획 경험치 (장판으로 쓰러짐)
             }
             // ── 한 턴: 메뉴 상자는 그대로 · 메뉴 글자와 커서는 숨김 (턴이 끝나면 다시) · 왼쪽 상자에 메시지 ──
             dis.disableObj("bselect");
@@ -4688,7 +4694,7 @@ run{
                 k = k + 1;
             }
             if [battleOver == 3]{   // 날려버리기 · 울부짖기 · 순간이동: 배틀이 그대로 끝남
-                goTo(6585);   // 배틀 끝 (도망)
+                goTo(6611);   // 배틀 끝 (도망)
             }
             // 턴 끝: 방어 · 버티기는 그 턴만 · 이번 턴에 안 썼으면 연속 횟수는 0
             var int call zs = 1;
@@ -6056,7 +6062,7 @@ run{
             }
             forceSw = 0;
             if [battleOver != 0]{
-                goTo(6585);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
+                goTo(6611);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
             }
             if ([myChg != 0] or [myRech == 1]) and [myHp > 0]{   // 모으는 중 · 반동으로 쉬는 턴: 메뉴 없이 다음 턴
                 var compound call cgM = myPoke[22];
@@ -6068,7 +6074,7 @@ run{
                     pendingMove = cgM[1];   // 쉬는 턴: 기술은 나가지 않음 (턴을 넘기려고 넣어 둠)
                     pendingSlot = 1;
                 }
-                goTo(1079);   // 행동 선택 메뉴로 (모으는 기술의 2 턴째)
+                goTo(1080);   // 행동 선택 메뉴로 (모으는 기술의 2 턴째)
             }
             dis.setTxtContent("wildappearedc1", replaceStr(lang[14], "{poke}", myName));   // 다시 "무엇을 할까?"
             dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
@@ -6085,7 +6091,7 @@ run{
         // ── 나올 때 발동하는 특성: 위협 · 잔비 · 모래날림 · 프레셔 · 틀깨기 · 트레이스 — entryFor: 1 내 포켓몬 · 2 상대 · 3 둘 다 ──
         if [entryFor != 0]{
             // 장판 (나온 쪽에 깔린 것): 스텔스록 (바위 상성 · 최대 체력의 1/8 × 상성) · 압정 (땅에 닿는 포켓몬 · 1/8 · 1/6 · 1/4) · 독압정 (독 · 2 겹이면 맹독 · 독 타입은 흡수해 없앰) · 끈적끈적네트 (스피드 1 랭크 내림)
-            //   장판으로는 쓰러지지 않음 (체력 1 은 남김 — 나올 때 쓰러지는 흐름은 아직 없음)
+            //   장판으로 쓰러지면: 쓰러지는 연출 → 아래 "포획 경험치" (쓰러짐 처리: 경험치 · 다음 포켓몬 · 전멸) 로 goTo
             var int call hz = 1;
             loop [hz <= 2]{
                 var int call hzHp = myHp;
@@ -6121,8 +6127,8 @@ run{
                     }
                     var int call hq = 1;
                     loop [hq <= 2]{
-                        if [hzDm[hq] > 0] and [hzHp > 1]{
-                            var int call hzNew = floor(max(1, hzHp - hzDm[hq]));
+                        if [hzDm[hq] > 0] and [hzHp > 0]{
+                            var int call hzNew = floor(max(0, hzHp - hzDm[hq]));
                             bc.setMsg("wildappeared", replaceStr(lang[7524 + hq], "{poke}", hzNm), msgS, msgW);
                             su.drainHpMs(hzBox, hzHp, hzNew, hzMax, 500);
                             log("장판 데미지 (" + hq + " = 1 바위 · 2 압정): " + hzNm + " " + hzHp + " → " + hzNew);
@@ -6134,10 +6140,23 @@ run{
                                 oppHp = hzNew;
                             }
                             bc.waitMsg(900);
+                            if [hzNew == 0]{   // 장판으로 쓰러짐
+                                if [hz == 2]{
+                                    bc.cryFaint(oppPoke[1]);
+                                    dis.setObjAlpha("opppoke", 0) for 300;
+                                    bc.setMsg("wildappeared", replaceStr(oppFaintT, "{poke}", nowPokeName), msgS, msgW);
+                                }
+                                else{
+                                    bc.cryFaint(myPoke[1]);
+                                    bc.setMsg("wildappeared", replaceStr(lang[1300], "{poke}", myName), msgS, msgW);
+                                }
+                                log("장판으로 쓰러짐: " + hzNm);
+                                bc.waitMsg(1500);
+                            }
                         }
                         hq = hq + 1;
                     }
-                    if [sTSpikes[hz] > 0] and [hzGr == 1]{
+                    if [sTSpikes[hz] > 0] and [hzGr == 1] and [hzHp > 0]{
                         if [hzT1 == 8] or [hzT2 == 8]{   // 독 타입: 독압정을 흡수해 없앰
                             sTSpikes[hz] = 0;
                             bc.hazDraw(hz, sRocks[hz], sSpikes[hz], sTSpikes[hz], sWeb[hz]);
@@ -6169,7 +6188,7 @@ run{
                             }
                         }
                     }
-                    if [sWeb[hz] == 1] and [hzGr == 1]{
+                    if [sWeb[hz] == 1] and [hzGr == 1] and [hzHp > 0]{
                         bc.setMsg("wildappeared", replaceStr(lang[7527], "{poke}", hzNm), msgS, msgW);
                         bc.waitMsg(700);
                         log("장판: 끈적끈적네트 → " + hzNm);
@@ -6178,6 +6197,13 @@ run{
                     }
                 }
                 hz = hz + 1;
+            }
+            if [myHp == 0] or [oppHp == 0]{   // 장판으로 쓰러짐 → 쓰러짐 처리 (경험치 · 다음 포켓몬 · 전멸)
+                entryFor = 0;
+                partyHp[myIdx] = myHp;
+                hzKO = 1;
+                pendingMove = 1;
+                goTo(1767);   // 턴 처리 (장판으로 쓰러짐 → 그 안의 쓰러짐 처리로)
             }
             if [entryFor != 2] and [sHealW[1] == 1] and [myHp > 0]{   // 치유소원: 다음에 나온 포켓몬의 체력 · 상태 이상을 모두 회복
                 sHealW[1] = 0;
@@ -6290,13 +6316,13 @@ run{
             var compound call swM = myPoke[22];
             pendingMove = swM[1];   // 턴을 진행하려고 넣어 둠 (나가지 않음)
             pendingSlot = 1;
-            goTo(1079);   // 행동 선택 메뉴로 (교체한 턴 진행)
+            goTo(1080);   // 행동 선택 메뉴로 (교체한 턴 진행)
         }
         if [oppSwTurn == 1]{   // 상대가 교체한 턴: 맡아 둔 내 기술로 턴을 진행
             oppSwTurn = 0;
             pendingMove = heldMove;
             pendingSlot = heldSlot;
-            goTo(1079);   // 행동 선택 메뉴로 (상대가 교체한 턴 진행)
+            goTo(1080);   // 행동 선택 메뉴로 (상대가 교체한 턴 진행)
         }
         isUi = 1;
         setup("assets/codes/ui/menuSelection.jb");   // 방향키로 selectedBox 를 옮김 (isUi 가 1 인 동안)
@@ -6362,7 +6388,7 @@ run{
                         pendBall = blIds[luResult];
                         bg.take(pendBall, 1);   // 던진 볼은 가방에서 하나 줄어듦
                     }
-                    goTo(1079);   // 행동 선택 메뉴로 (볼 메뉴에서 돌아옴)
+                    goTo(1080);   // 행동 선택 메뉴로 (볼 메뉴에서 돌아옴)
                 }
                 if [choice == 2] and [battleForm == 2]{
                     isUi = 0;
@@ -6373,7 +6399,7 @@ run{
                     dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                     dis.setTxtContent("wildappearedc3", "");
                     dis.setTxtContent("wildappearedc4", "");
-                    goTo(1079);   // 행동 선택 메뉴로 (트레이너의 포켓몬은 잡을 수 없음)
+                    goTo(1080);   // 행동 선택 메뉴로 (트레이너의 포켓몬은 잡을 수 없음)
                 }
                 if [choice == 4]{
                     // 도주: 야생이면 다음 줄 (메뉴 줄) 에서 도망칠지 판정 · 트레이너 배틀은 도망칠 수 없음
@@ -6425,11 +6451,11 @@ run{
                         dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                         dis.setTxtContent("wildappearedc3", "");
                         dis.setTxtContent("wildappearedc4", "");
-                        goTo(1079);   // 행동 선택 메뉴로 (갇혀서 도주 불가)
+                        goTo(1080);   // 행동 선택 메뉴로 (갇혀서 도주 불가)
                     }
                     if [battleForm == 1]{
                         pendRun = 1;
-                        goTo(1079);   // 행동 선택 메뉴로 (도주 판정)
+                        goTo(1080);   // 행동 선택 메뉴로 (도주 판정)
                     }
                     bc.setMsg("wildappeared", lang[3897], msgS, msgW);
                     bc.waitMsg(1300);
@@ -6437,7 +6463,7 @@ run{
                     dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                     dis.setTxtContent("wildappearedc3", "");
                     dis.setTxtContent("wildappearedc4", "");
-                    goTo(1079);   // 행동 선택 메뉴로 (트레이너 배틀은 도주 불가)
+                    goTo(1080);   // 행동 선택 메뉴로 (트레이너 배틀은 도주 불가)
                 }
                 if [choice == 3]{
                     // 포켓몬: 교체 화면 (배틀 화면 + 대화 상자 자리를 덮음) — 고르면 교체 · X 로 메뉴로
@@ -6450,7 +6476,7 @@ run{
                         pendSwitch = swTo;
                     }
                     selectedBox = [1, 1];
-                    goTo(1079);   // 행동 선택 메뉴로 (교체 화면에서 돌아옴)
+                    goTo(1080);   // 행동 선택 메뉴로 (교체 화면에서 돌아옴)
                 }
                 if [choice == 1]{
                     // 싸운다: 메뉴 상자 자리에 기술 4 개 (4 × 1) — selectUi 로 고름 (위아래 · Z) · X 로 메뉴로 돌아감
@@ -6576,7 +6602,7 @@ run{
                         mu.removeMoveButton("mbtn%j%");
                         j = j + 1;
                     }
-                    goTo(1079);   // 행동 선택 메뉴로 (위의 dis.enableObj("battlemenu"); 줄) — 기술을 골랐으면 거기서 한 턴 진행
+                    goTo(1080);   // 행동 선택 메뉴로 (위의 dis.enableObj("battlemenu"); 줄) — 기술을 골랐으면 거기서 한 턴 진행
                 }
             }
             dis.waitF(1);
