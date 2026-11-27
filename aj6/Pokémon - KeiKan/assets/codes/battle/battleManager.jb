@@ -264,6 +264,9 @@ var list call sWish;
 var list call sYawn;
 var list call sBond;
 var list call sRocks;
+var list call sSpikes;   // 압정뿌리기 겹 (0 ~ 3) · 독압정 겹 (0 ~ 2) · 끈적끈적네트 (0 · 1) — [내 쪽 · 상대 쪽]
+var list call sTSpikes;
+var list call sWeb;
 var list call sHealW;
 var list call sStock;
 // 미래예지 · 파멸의소원: [내 쪽이 맞음, 상대 쪽이 맞음] — 남은 턴 · 기술 · 쓴 포켓몬의 특공 (랭크 반영) · 레벨 · 자속
@@ -334,6 +337,10 @@ run{
     sYawn = [0, 0];
     sBond = [0, 0];
     sRocks = [0, 0];
+    sSpikes = [0, 0];
+    sTSpikes = [0, 0];
+    sWeb = [0, 0];
+    bc.hazReset();   // 장판 그림 (lib/battleCore.jbl)
     sHealW = [0, 0];
     sStock = [0, 0];
     sMist = [0, 0];
@@ -1381,7 +1388,7 @@ run{
                 bc.setMsg("wildappeared", lang[3895], msgS, msgW);
                 bc.waitMsg(1200);
                 battleOver = 3;
-                goTo(6440);   // 배틀 끝 (도주)
+                goTo(6585);   // 배틀 끝 (도주)
             }
             bc.setMsg("wildappeared", lang[3896], msgS, msgW);
             bc.waitMsg(1200);
@@ -1758,7 +1765,7 @@ run{
         }
         if [pendingMove != 0]{
             if [caughtNow == 1]{   // 잡음: 행동 없이 턴 끝의 경험치 처리로
-                goTo(5435);   // 포획 경험치
+                goTo(5485);   // 포획 경험치
             }
             // ── 한 턴: 메뉴 상자는 그대로 · 메뉴 글자와 커서는 숨김 (턴이 끝나면 다시) · 왼쪽 상자에 메시지 ──
             dis.disableObj("bselect");
@@ -3962,8 +3969,51 @@ run{
                             }
                             else{
                                 sRocks[3 - side] = 1;
+                                bc.hazDraw(3 - side, sRocks[3 - side], sSpikes[3 - side], sTSpikes[3 - side], sWeb[3 - side]);
                                 bc.setMsg("wildappeared", lang[1490 + side], msgS, msgW);
                             }
+                        }
+                        if [uMove == 191] or [uMove == 390] or [uMove == 564]{   // 압정뿌리기 (3 겹까지) · 독압정 (2 겹까지) · 끈적끈적네트: 상대 쪽에 깔림 → 나오는 포켓몬에게 (lib/battleCore.jbl 의 hazDraw 로 발판에 보임)
+                            var int call hzOk = 0;
+                            var int call hzMsg = 7529;
+                            if [uMove == 191] and [sSpikes[3 - side] < 3]{
+                                sSpikes[3 - side] = sSpikes[3 - side] + 1;
+                                hzOk = 1;
+                            }
+                            if [uMove == 390] and [sTSpikes[3 - side] < 2]{
+                                sTSpikes[3 - side] = sTSpikes[3 - side] + 1;
+                                hzOk = 1;
+                                hzMsg = 7531;
+                            }
+                            if [uMove == 564] and [sWeb[3 - side] == 0]{
+                                sWeb[3 - side] = 1;
+                                hzOk = 1;
+                                hzMsg = 7533;
+                            }
+                            if [hzOk == 1]{
+                                bc.hazDraw(3 - side, sRocks[3 - side], sSpikes[3 - side], sTSpikes[3 - side], sWeb[3 - side]);
+                                bc.setMsg("wildappeared", lang[hzMsg + side - 1], msgS, msgW);
+                            }
+                            else{
+                                bc.setMsg("wildappeared", lang[1307], msgS, msgW);
+                            }
+                        }
+                        if [uMove == 229] and [sRocks[side] + sSpikes[side] + sTSpikes[side] + sWeb[side] > 0]{   // 고속스핀: 내 쪽 장판을 날려버림
+                            sRocks[side] = 0;
+                            sSpikes[side] = 0;
+                            sTSpikes[side] = 0;
+                            sWeb[side] = 0;
+                            bc.hazDraw(side, 0, 0, 0, 0);
+                            bc.setMsg("wildappeared", replaceStr(lang[7535], "{poke}", aName), msgS, msgW);
+                        }
+                        if [uMove == 432] and [sRocks[1] + sSpikes[1] + sTSpikes[1] + sWeb[1] + sRocks[2] + sSpikes[2] + sTSpikes[2] + sWeb[2] > 0]{   // 안개제거: 양쪽 장판이 모두 사라짐
+                            sRocks = [0, 0];
+                            sSpikes = [0, 0];
+                            sTSpikes = [0, 0];
+                            sWeb = [0, 0];
+                            bc.hazDraw(1, 0, 0, 0, 0);
+                            bc.hazDraw(2, 0, 0, 0, 0);
+                            bc.setMsg("wildappeared", lang[7536], msgS, msgW);
                         }
                         if ([uMove == 212] or [uMove == 335] or [uMove == 169] or [uMove == 753]) and [tgAlive > 0]{   // 검은눈빛 · 블록 · 거미집 · 문어굳히기: 상대가 도망칠 수 없음
                             bc.setMsg("wildappeared", replaceStr(lang[1493], "{poke}", tgName), msgS, msgW);
@@ -4638,7 +4688,7 @@ run{
                 k = k + 1;
             }
             if [battleOver == 3]{   // 날려버리기 · 울부짖기 · 순간이동: 배틀이 그대로 끝남
-                goTo(6440);   // 배틀 끝 (도망)
+                goTo(6585);   // 배틀 끝 (도망)
             }
             // 턴 끝: 방어 · 버티기는 그 턴만 · 이번 턴에 안 썼으면 연속 횟수는 0
             var int call zs = 1;
@@ -6006,7 +6056,7 @@ run{
             }
             forceSw = 0;
             if [battleOver != 0]{
-                goTo(6440);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
+                goTo(6585);   // 배틀 끝 (맨 아래 "── 배틀 끝" 다음 줄)
             }
             if ([myChg != 0] or [myRech == 1]) and [myHp > 0]{   // 모으는 중 · 반동으로 쉬는 턴: 메뉴 없이 다음 턴
                 var compound call cgM = myPoke[22];
@@ -6018,7 +6068,7 @@ run{
                     pendingMove = cgM[1];   // 쉬는 턴: 기술은 나가지 않음 (턴을 넘기려고 넣어 둠)
                     pendingSlot = 1;
                 }
-                goTo(1072);   // 행동 선택 메뉴로 (모으는 기술의 2 턴째)
+                goTo(1079);   // 행동 선택 메뉴로 (모으는 기술의 2 턴째)
             }
             dis.setTxtContent("wildappearedc1", replaceStr(lang[14], "{poke}", myName));   // 다시 "무엇을 할까?"
             dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
@@ -6034,6 +6084,101 @@ run{
         }
         // ── 나올 때 발동하는 특성: 위협 · 잔비 · 모래날림 · 프레셔 · 틀깨기 · 트레이스 — entryFor: 1 내 포켓몬 · 2 상대 · 3 둘 다 ──
         if [entryFor != 0]{
+            // 장판 (나온 쪽에 깔린 것): 스텔스록 (바위 상성 · 최대 체력의 1/8 × 상성) · 압정 (땅에 닿는 포켓몬 · 1/8 · 1/6 · 1/4) · 독압정 (독 · 2 겹이면 맹독 · 독 타입은 흡수해 없앰) · 끈적끈적네트 (스피드 1 랭크 내림)
+            //   장판으로는 쓰러지지 않음 (체력 1 은 남김 — 나올 때 쓰러지는 흐름은 아직 없음)
+            var int call hz = 1;
+            loop [hz <= 2]{
+                var int call hzHp = myHp;
+                if [hz == 2]{
+                    hzHp = oppHp;
+                }
+                if ([entryFor == 3] or [entryFor == hz]) and [hzHp > 0] and [sRocks[hz] + sSpikes[hz] + sTSpikes[hz] + sWeb[hz] > 0]{
+                    var int call hzT1 = mT1;
+                    var int call hzT2 = mT2;
+                    var int call hzAb = myAb;
+                    var int call hzMax = myStats[1];
+                    var string call hzBox = "mystat";
+                    var string call hzNm = myName;
+                    if [hz == 2]{
+                        hzT1 = oT1;
+                        hzT2 = oT2;
+                        hzAb = oppAb;
+                        hzMax = oppStats[1];
+                        hzBox = "oppstat";
+                        hzNm = replaceStr(oppPreT, "{poke}", nowPokeName);
+                    }
+                    var int call hzGr = 1;   // 땅에 닿음 (비행 타입 · 부유는 아님)
+                    if [hzT1 == 10] or [hzT2 == 10] or [hzAb == 26]{
+                        hzGr = 0;
+                    }
+                    var list call hzDm = [0, 0];   // [바위, 압정]
+                    if [sRocks[hz] == 1]{
+                        hzDm[1] = max(1, floor(hzMax * bc.typeEff(13, hzT1, hzT2) / 8));
+                    }
+                    if [sSpikes[hz] > 0] and [hzGr == 1]{
+                        var list call spF = [8, 6, 4];
+                        hzDm[2] = max(1, floor(hzMax / spF[sSpikes[hz]]));
+                    }
+                    var int call hq = 1;
+                    loop [hq <= 2]{
+                        if [hzDm[hq] > 0] and [hzHp > 1]{
+                            var int call hzNew = floor(max(1, hzHp - hzDm[hq]));
+                            bc.setMsg("wildappeared", replaceStr(lang[7524 + hq], "{poke}", hzNm), msgS, msgW);
+                            su.drainHpMs(hzBox, hzHp, hzNew, hzMax, 500);
+                            log("장판 데미지 (" + hq + " = 1 바위 · 2 압정): " + hzNm + " " + hzHp + " → " + hzNew);
+                            hzHp = hzNew;
+                            if [hz == 1]{
+                                myHp = hzNew;
+                            }
+                            else{
+                                oppHp = hzNew;
+                            }
+                            bc.waitMsg(900);
+                        }
+                        hq = hq + 1;
+                    }
+                    if [sTSpikes[hz] > 0] and [hzGr == 1]{
+                        if [hzT1 == 8] or [hzT2 == 8]{   // 독 타입: 독압정을 흡수해 없앰
+                            sTSpikes[hz] = 0;
+                            bc.hazDraw(hz, sRocks[hz], sSpikes[hz], sTSpikes[hz], sWeb[hz]);
+                            bc.setMsg("wildappeared", replaceStr(lang[7528], "{poke}", hzNm), msgS, msgW);
+                            bc.waitMsg(900);
+                        }
+                        else{
+                            var int call hzSt = myStatus;
+                            if [hz == 2]{
+                                hzSt = oppStatus;
+                            }
+                            if [hzSt == 0] and [bc.ailImmune(3, hzT1, hzT2) == 0] and [ab.blocksAil(hzAb, 3, weather) == 0]{
+                                var int call hzP = 3;
+                                if [sTSpikes[hz] >= 2]{
+                                    hzP = 4;
+                                }
+                                if [hz == 1]{
+                                    myStatus = hzP;
+                                    myTox = 0;
+                                }
+                                else{
+                                    oppStatus = hzP;
+                                    oppTox = 0;
+                                }
+                                su.setStatus(hzBox, hzP);
+                                bc.setMsg("wildappeared", replaceStr(lang[1370 + hzP], "{poke}", hzNm), msgS, msgW);
+                                log("장판: 독압정 → " + hzNm + " 상태 " + hzP);
+                                bc.waitMsg(900);
+                            }
+                        }
+                    }
+                    if [sWeb[hz] == 1] and [hzGr == 1]{
+                        bc.setMsg("wildappeared", replaceStr(lang[7527], "{poke}", hzNm), msgS, msgW);
+                        bc.waitMsg(700);
+                        log("장판: 끈적끈적네트 → " + hzNm);
+                        ab.changeStage(hz, 6, -1, 1, 0);
+                        ab.popEnd();
+                    }
+                }
+                hz = hz + 1;
+            }
             if [entryFor != 2] and [sHealW[1] == 1] and [myHp > 0]{   // 치유소원: 다음에 나온 포켓몬의 체력 · 상태 이상을 모두 회복
                 sHealW[1] = 0;
                 bc.setMsg("wildappeared", replaceStr(lang[1496], "{poke}", myName), msgS, msgW);
@@ -6145,13 +6290,13 @@ run{
             var compound call swM = myPoke[22];
             pendingMove = swM[1];   // 턴을 진행하려고 넣어 둠 (나가지 않음)
             pendingSlot = 1;
-            goTo(1072);   // 행동 선택 메뉴로 (교체한 턴 진행)
+            goTo(1079);   // 행동 선택 메뉴로 (교체한 턴 진행)
         }
         if [oppSwTurn == 1]{   // 상대가 교체한 턴: 맡아 둔 내 기술로 턴을 진행
             oppSwTurn = 0;
             pendingMove = heldMove;
             pendingSlot = heldSlot;
-            goTo(1072);   // 행동 선택 메뉴로 (상대가 교체한 턴 진행)
+            goTo(1079);   // 행동 선택 메뉴로 (상대가 교체한 턴 진행)
         }
         isUi = 1;
         setup("assets/codes/ui/menuSelection.jb");   // 방향키로 selectedBox 를 옮김 (isUi 가 1 인 동안)
@@ -6217,7 +6362,7 @@ run{
                         pendBall = blIds[luResult];
                         bg.take(pendBall, 1);   // 던진 볼은 가방에서 하나 줄어듦
                     }
-                    goTo(1072);   // 행동 선택 메뉴로 (볼 메뉴에서 돌아옴)
+                    goTo(1079);   // 행동 선택 메뉴로 (볼 메뉴에서 돌아옴)
                 }
                 if [choice == 2] and [battleForm == 2]{
                     isUi = 0;
@@ -6228,7 +6373,7 @@ run{
                     dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                     dis.setTxtContent("wildappearedc3", "");
                     dis.setTxtContent("wildappearedc4", "");
-                    goTo(1072);   // 행동 선택 메뉴로 (트레이너의 포켓몬은 잡을 수 없음)
+                    goTo(1079);   // 행동 선택 메뉴로 (트레이너의 포켓몬은 잡을 수 없음)
                 }
                 if [choice == 4]{
                     // 도주: 야생이면 다음 줄 (메뉴 줄) 에서 도망칠지 판정 · 트레이너 배틀은 도망칠 수 없음
@@ -6280,11 +6425,11 @@ run{
                         dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                         dis.setTxtContent("wildappearedc3", "");
                         dis.setTxtContent("wildappearedc4", "");
-                        goTo(1072);   // 행동 선택 메뉴로 (갇혀서 도주 불가)
+                        goTo(1079);   // 행동 선택 메뉴로 (갇혀서 도주 불가)
                     }
                     if [battleForm == 1]{
                         pendRun = 1;
-                        goTo(1072);   // 행동 선택 메뉴로 (도주 판정)
+                        goTo(1079);   // 행동 선택 메뉴로 (도주 판정)
                     }
                     bc.setMsg("wildappeared", lang[3897], msgS, msgW);
                     bc.waitMsg(1300);
@@ -6292,7 +6437,7 @@ run{
                     dis.setTxtContent("wildappearedc2", replaceStr(lang[15], "{poke}", myName));
                     dis.setTxtContent("wildappearedc3", "");
                     dis.setTxtContent("wildappearedc4", "");
-                    goTo(1072);   // 행동 선택 메뉴로 (트레이너 배틀은 도주 불가)
+                    goTo(1079);   // 행동 선택 메뉴로 (트레이너 배틀은 도주 불가)
                 }
                 if [choice == 3]{
                     // 포켓몬: 교체 화면 (배틀 화면 + 대화 상자 자리를 덮음) — 고르면 교체 · X 로 메뉴로
@@ -6305,7 +6450,7 @@ run{
                         pendSwitch = swTo;
                     }
                     selectedBox = [1, 1];
-                    goTo(1072);   // 행동 선택 메뉴로 (교체 화면에서 돌아옴)
+                    goTo(1079);   // 행동 선택 메뉴로 (교체 화면에서 돌아옴)
                 }
                 if [choice == 1]{
                     // 싸운다: 메뉴 상자 자리에 기술 4 개 (4 × 1) — selectUi 로 고름 (위아래 · Z) · X 로 메뉴로 돌아감
@@ -6431,7 +6576,7 @@ run{
                         mu.removeMoveButton("mbtn%j%");
                         j = j + 1;
                     }
-                    goTo(1072);   // 행동 선택 메뉴로 (위의 dis.enableObj("battlemenu"); 줄) — 기술을 골랐으면 거기서 한 턴 진행
+                    goTo(1079);   // 행동 선택 메뉴로 (위의 dis.enableObj("battlemenu"); 줄) — 기술을 골랐으면 거기서 한 턴 진행
                 }
             }
             dis.waitF(1);
@@ -6570,6 +6715,7 @@ run{
             trOn = 0;
         }
         dis.removeObj("opppoke");
+        bc.hazClear();   // 장판 그림
         dis.removeObj("oppbase");
         dis.removeObj("mybase");
         dis.removeObj("mypoke");

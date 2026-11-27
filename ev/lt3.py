@@ -80,6 +80,13 @@ async def main():
           if k[1:] in await log(): break
           await pg.wait_for_timeout(200)
         continue
+      if k.startswith('N') and ':' in k:   # N3:글자 — 그 글자가 로그에 3 번째로 나올 때까지 Z (배틀에서 턴마다 같은 줄이 나올 때)
+        nn,tx=k[1:].split(':',1); nn=int(nn)
+        for q in range(900):
+          if (await log()).count(tx) >= nn: break
+          if q % 12 == 0: await key('z',90)
+          else: await pg.wait_for_timeout(60/SPD[0])
+        continue
       if k.startswith('Q'):   # 그 글자가 로그에 나올 때까지 Z (게임 시간 약 0.7 초마다) · 나오면 바로 다음으로
         for q in range(600):
           if k[1:] in await log(): break
